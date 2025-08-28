@@ -111,6 +111,8 @@ public plugin_init()
 	RegisterHookChain(RG_CBasePlayer_Spawn, "CBasePlayer_Spawn", true);
 	RegisterHookChain(RG_CBasePlayer_Killed, "CBasePlayer_Killed");
 
+	RegisterHam(Ham_TakeDamage , "player" , "Damge_DisableFall")
+
 	DisableHamForward(HAM_Item_PostFrame = RegisterHam(Ham_Item_PostFrame, "weapon_knife", "Item_PostFrame", false));
 	
 	Message_WeaponListID = get_user_msgid("WeaponList");
@@ -161,6 +163,27 @@ public plugin_precache()
 public plugin_natives()
 {
 	register_native("Get_Whipsword", "Native_Get_WhipSword");
+}
+
+public GetHasSword(const Playerid){
+	for(new i = 0 ; i < 6 ; i++){
+        new PlayerItem = get_member(Playerid , m_rgpPlayerItems , i)
+        while (PlayerItem > 0){
+            new Gun = PlayerItem
+			if(get_entvar(Gun , var_impulse) == Weapon_DefinitionID){
+				return true
+			}
+            PlayerItem = get_member(PlayerItem , m_pNext)
+        }
+    }
+	return false
+}
+
+public Damge_DisableFall(this , attack , attackcaller , Float:damge , damgbit){
+	if((damgbit & DMG_FALL) && attack == attackcaller && GetHasSword(this)){
+		return HAM_SUPERCEDE
+	}
+	return HAM_IGNORED
 }
 
 public Native_Get_WhipSword(iPlugin, iParams)

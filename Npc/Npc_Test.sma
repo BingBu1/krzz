@@ -6,18 +6,49 @@
 #include <Npc_Manager>
 #include <animation>
 
-new Npcid , Moduleid
+new Reg_Npcid , Moduleid
 
 public plugin_init(){
     register_plugin("测试Npc行为" , "1.0" , "Bing")
-    Npcid = NpcRegister(200.0 , Moduleid ,500.0 , 0.5, 30.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0)
-    NpcSetNameAndLevel(Npcid , "管家" , 0)
+    Reg_Npcid = NpcRegister(200.0 , Moduleid ,500.0 , 0.1, 30.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0 , NpcMode_Ranged)
+    NpcSetNameAndLevel(Reg_Npcid , "管家" , 0)
 }
 
 public plugin_precache(){
     Moduleid = precache_model("models/Kr_npcs/officer.mdl")
+    precache_sound("weapons/mp5-1.wav")
 }
 
 public NpcOnCreate(Npcid){
     SetBodyGroup(Npcid , 2  , 5)
+}
+
+public NpcDoAttack(Npcid , Target){
+    if(get_prop_int(Npcid , var_npcid) != Reg_Npcid){
+        return
+    }
+    new Float:fOrigin[3] , Float:TarOrigin[3]
+    get_entvar(Npcid , var_origin , fOrigin)
+    get_entvar(Target , var_origin , TarOrigin)
+    fOrigin[2] += 30.0
+    TarOrigin[2] += 30.0
+    MakeBullets(fOrigin , TarOrigin)
+    NpcTakeDamge(Npcid , Target )
+    emit_sound(Npcid, CHAN_WEAPON, "weapons/mp5-1.wav", 1.0, ATTN_NORM, 0, PITCH_NORM)
+}
+
+public NpcOnSkill(Npcid , target){
+
+}
+
+stock MakeBullets(Float:Start[3] , Float:End[3]){
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
+    write_byte(TE_TRACER)
+    write_coord_f(Start[0])
+    write_coord_f(Start[1])
+    write_coord_f(Start[2])
+    write_coord_f(End[0])
+    write_coord_f(End[1])
+    write_coord_f(End[2])
+    message_end()
 }

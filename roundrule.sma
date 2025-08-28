@@ -240,7 +240,7 @@ public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damag
         }
         case HUMAN_RULE_Primary_Weapon_Mastery,HUMAN_RULE_Secondary_Weapon_Mastery:{
             new wpn = get_member(idattacker, m_pActiveItem)
-            if(!wpn)
+            if(wpn <= 0)
                 return HAM_IGNORED
             new slot = rg_get_iteminfo(wpn, ItemInfo_iSlot)
             if(Rule == HUMAN_RULE_Primary_Weapon_Mastery){

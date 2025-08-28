@@ -17,6 +17,18 @@ new bool:FirstInit[33]
 
 public plugin_init(){
 	register_plugin("弹药袋系统", "1.0", "Bing")
+
+    register_concmd("Kr_AmmoAdd" , "AddAmmoAdmin" , ADMIN_RCON)
+}
+
+public AddAmmoAdmin(id, level, cid){
+    if (read_argc() < 3){
+        server_print("参数<id><ammo>");
+        return PLUGIN_HANDLED
+    }
+    new pl_id = read_argv_int(1)
+    new Float:addammo = read_argv_float(2)
+    AddAmmoPak(pl_id , addammo)
 }
 
 public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){

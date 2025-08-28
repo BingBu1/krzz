@@ -263,7 +263,7 @@ public client_disconnected(id){
     FirstShow[id] = false
     IsHanJian[id] = false
     if(GetAliveTPlayer(id) == 0){
-        rg_round_end(3.0 , WINSTATUS_TERRORISTS , ROUND_GAME_OVER)
+        rg_round_end(3.0 , WINSTATUS_NONE , ROUND_GAME_RESTART)
     }
 }
 
@@ -694,14 +694,14 @@ public KillAllT(){
 public FaildSound(){
     new soundnum = random_num(RiBenWin,RiBenWin2)
     EmitSoundToall( Jp_EndRoundSound[soundnum])
-    judian_leavel--
+    Setleavel(judian_leavel - 1)
 }
 
 public WinSound(){
     new Rand[2] = {EndJudian , ChineseWin}
     new Emit = Rand[random_num(0,1)]
     EmitSoundToall( Jp_EndRoundSound[Emit])
-    judian_leavel++
+    Setleavel(judian_leavel + 1)
 }
 
 public EmitSoundToall(Sound[]){
@@ -766,7 +766,7 @@ public ChangeJudian(){
     ExecuteForward(call_forwards[kr_On_judian_Change_Post],_,Current_judian)
     new iEntity = -1
     while ((iEntity = rg_find_ent_by_class(iEntity, "hostage_entity")) > 0){
-        if (pev_valid(iEntity)){
+        if (pev_valid(iEntity) && KrGetFakeTeam(iEntity) == CS_TEAM_CT){
             set_pev(iEntity, pev_flags,  FL_KILLME)
         }
     }//移除上个据点npc
@@ -941,7 +941,14 @@ public native_Getleavel(){
 }
 
 public native_Setleavel(){
-    judian_leavel = get_param(1)
+    new Maxlv = get_cvar_num("Kr_MaxLv")
+    new SetLv = get_param(1)
+    if(get_param(1) > Maxlv){
+        judian_leavel = Maxlv
+    }else{
+        judian_leavel = SetLv
+    }
+    
     ExecuteForward(call_forwards[kr_OnLevelChange_Post],_,judian_leavel)
     //加时间
     new timer = get_member_game(m_iRoundTime)

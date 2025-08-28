@@ -4,6 +4,7 @@
 ========================================= */
 
 #include <amxmodx>
+#include <amxmisc>
 #include <engine>
 #include <fakemeta_util>
 #include <hamsandwich>
@@ -99,6 +100,10 @@ new const TRACER_ENTITY[][] = { "info_target", "func_breakable", "func_pushable"
 /* =========================================
 ---------- Plugin Core Function ------------
 ========================================= */
+public event_roundstart(){
+	g_Had_Base = 0
+	arrayset(g_PlayerWeapon , 0 , sizeof g_PlayerWeapon)
+}
 
 public plugin_init()
 {
@@ -109,6 +114,7 @@ public plugin_init()
 	
 	// Event
 	register_event("CurWeapon", "Event_CurWeapon", "be", "1=1")
+	register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 	register_message(get_user_msgid("DeathMsg"), "message_DeathMsg")
 	
 	// Forward
@@ -141,10 +147,15 @@ public plugin_init()
 	
 	// if (LibraryExists(LIBRARY_MD, LibType_Library)) md_loadimage("sprites/chainsr_aim_bg2.tga")
 	register_clcmd(weapon_spr, "hook_weapon")
-	register_clcmd("umbra", "Get_Base")
+	register_clcmd("umbra", "admingive")
 	BulidCrashGunWeapon("暗影狙击", W_CHAINSR, "Get_Base", plid)
 }
 
+public admingive(id){
+	if(is_user_admin(id)){
+		Get_Base(id)
+	}
+}
 public hook_weapon(id) {
 	engclient_cmd(id, weapon_chainsr)
 }
@@ -277,7 +288,7 @@ public Get_Base(id)
 	new iFlag = get_member(id, m_iHideHUD)
 	g_defFlag |= iFlag
 	
-	rg_drop_items_by_slot(id ,InventorySlotType:PRIMARY_WEAPON_SLOT);
+	rg_drop_items_by_slot(id , InventorySlotType:PRIMARY_WEAPON_SLOT);
 	new wpnent = rg_give_item(id , weapon_chainsr , GT_DROP_AND_REPLACE)
 	Set_BitVar(g_Had_Base, id)
 	

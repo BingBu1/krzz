@@ -49,7 +49,8 @@ new bool:FireKickBack
 public fw_UpdateClientData_Post(Player, SendWeapons, CD_Handle)
 {
     new wpn = get_member(Player , m_pActiveItem)
-
+    if(is_nullent(wpn))
+        return FMRES_IGNORED
 	if(!is_user_alive(Player) || get_entvar(wpn , var_impulse) == WaeponIDs) {
         return FMRES_IGNORED
     }

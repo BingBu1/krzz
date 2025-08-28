@@ -24,7 +24,7 @@ public event_roundstart(){
 }
 
 public plugin_precache(){
-    precache_model("models/player/chick/chick.mdl")
+    precache_model("models/player/allstarchicken/allstarchicken.mdl")
 }
 
 public client_putinserver(id){
@@ -48,7 +48,7 @@ public fw_CmdStart(id, uc_handle, seed){
         g_PlayerCmdTime[id] = curtime;
     }
 
-    if(g_PlayerUpdateRate[id] > 0.4 && playerhack[id] < 5){
+    if(g_PlayerUpdateRate[id] > 0.5 && playerhack[id] < 5){
         playerhack[id]++
     }
     if(playerhack[id] == 5){
@@ -57,12 +57,12 @@ public fw_CmdStart(id, uc_handle, seed){
         get_user_name(id , playername , 31)
         rg_remove_all_items(id)
         set_view(id, CAMERA_3RDPERSON)
-        rg_set_user_model(id, "chick")
+        rg_set_user_model(id, "allstarchicken")
         client_print(id, print_chat, "你被检测到加速作弊，惩罚成为小鸡。")
         m_print_color(id , "!g[提示]%s因作弊已被惩罚变为小鸡。",playername)
     }else if(playerhack[id] == 6){
         rg_remove_all_items(id)
-        rg_set_user_model(id, "chick")
+        rg_set_user_model(id, "allstarchicken")
     }
 }
 

@@ -298,6 +298,8 @@ public Find_near_ent(id){
 	while(ent = find_ent_by_class(ent , "hostage_entity")){
 		if(get_entvar(ent, var_takedamage) == DAMAGE_NO || get_entvar(ent, var_deadflag) == DEAD_DEAD)
 			continue
+		if(KrGetFakeTeam(ent) == CS_TEAM_T)
+			continue
 		new Float:target_org[3]
 		get_entvar(ent, var_origin, target_org)
 		new Float:hitorigin[3]

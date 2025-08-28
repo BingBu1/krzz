@@ -226,17 +226,18 @@ public KillTank_reward(id){
     new name[32]
     get_user_name(id, name, 31)
     if(Randreward == 0) {
-        new Float:Base = 1.0
-        new Float:Max = (Base + float(Getleavel())) * 2.0
-        Max = floatmin(Max, 40.0)
-        new Float:Rand = random_float(Base, Max)
+        new const Float:Base = 1.0
+        new Float:MinAmmo = 1.0 + float(Getleavel()) / 0.5
+        new Float:MaxAmmo = (Base + float(Getleavel())) * 2.0
+        new Float:Rand = random_float(MinAmmo, MaxAmmo)
         AddAmmoPak(id, Rand)
         m_print_color(0, "!g[冰布提示] %s 击败了坦克获取到了奖励%f大洋" ,name , Rand)
     }else if (Randreward == 1){ //积分奖励
-        new Base = 100
-        new Max = Base * Getleavel()
+        new const Base = 100
+        new Min = (Base + Getleavel()) * 2
+        new Max = (Base + Getleavel()) * 20
         Max = min(Max , 20000)
-        new Rand = random_num(Base, Max)
+        new Rand = random_num(Min, Max)
 
         AddXp(id, Rand)
         m_print_color(0, "!g[冰布提示] %s 击败了坦克获取到了奖励%d额外积分" ,name , Rand)
