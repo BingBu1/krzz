@@ -56,6 +56,14 @@ new LvName[][]={
     "国副统领",
     "一国领袖",
     "精神领袖",
+    "抗战之光",
+    "华夏脊梁",
+    "历史丰碑",
+    "时代楷模",
+    "万世楷模",
+    "永恒光辉",
+    "千秋伟业",
+    "历史丰碑",
 }
 
 new const g_remove_entities[][] = { "func_bomb_target", "info_bomb_target", "info_vip_start", "func_vip_safetyzone", "func_escapezone", "hostage_entity",
@@ -129,7 +137,19 @@ public plugin_init(){
 
     reg_forward()
     LoadMapconfig()
-    // TestBigInt()
+    FuckMapTank()
+}
+
+public FuckMapTank(){
+    new ent = -1
+    while((ent = rg_find_ent_by_class(ent , "func_tankmortar")) > 0){
+        fm_set_kvd(ent , "bullet_damage" , "10" )
+    }
+    ent = -1
+    while((ent = rg_find_ent_by_class(ent , "func_tank")) > 0){
+        fm_set_kvd(ent , "bullet_damage" , "10" )
+        // fm_set_kvd(ent , "firerate" , "1" )
+    }
 }
 
 public KrEndRound(){
@@ -155,7 +175,7 @@ public TestBigInt(){
 public SavePlayers(){
     new maxplayer = get_maxplayers()
     for(new i = 1 ;i < maxplayer; i++){
-        if(!is_user_connected(i))
+        if(!is_user_connected(i) || is_user_bot(i))
             continue
         SavePlayer(i)
         SaveAmmo(i)
@@ -401,6 +421,8 @@ public ShowHud(){
 
     new playernums = get_maxplayers()
     for (new i = 1; i < playernums; i++){
+        if(!is_user_connected(i) || is_user_bot(i))
+            continue
         if(is_nullent(i) || is_valid_ent(i)){
             set_hudmessage(0,255,100,-1.0,0.88,.holdtime = 2.0)
             ShowSyncHudMsg(i,Hud_Damage,"伤害计数: %.1f" , TakeDamge[i])
@@ -410,13 +432,17 @@ public ShowHud(){
             new name[32]
             lv = GetLv(i)
             xp = GetXp(i)
-            XpNeed = GetXpNeed(i) - GetXp(i)
+            // XpNeed = GetXpNeed(i) - GetXp(i)
             Ammo = GetAmmoPak(i)
-            copy(name, 31 , LvName[min(lv/50,14-1)])
+            new xpstr[50],xpneedstr[50]
+            GetXpBingInt(i , xpstr , 49)
+            GetXpNeedBingInt(i , xpneedstr , 49)
+            new const MaxLen = sizeof LvName
+            copy(name, 31 , LvName[min(lv/50 , MaxLen - 1)])
             set_hudmessage(0,255,100,-1.0,0.9,.holdtime = 2.0)
             ShowSyncHudMsg(i,Hud_xp,
-            "【当前等级】: %d 【当前积分】:%d 【距离升级】:%d^n【你的大洋】:%.2f 【军衔】:%s" , 
-            lv,xp,XpNeed,Ammo,name
+            "【当前等级】: %d 【当前积分】:%s 【需求积分】:%s^n【你的大洋】:%.2f 【军衔】:%s" , 
+            lv,xpstr,xpneedstr,Ammo,name
             )
             
         }
@@ -574,7 +600,7 @@ public eventHud(id){
  * 重置玩家重生位置
  */
 public PlayerSpawn_Post(this){
-    if(!is_entity(this) && !is_user_connected(this) && is_user_bot(this))
+    if(!is_entity(this) || !is_user_connected(this) || is_user_bot(this))
         return HC_CONTINUE
     new lv = GetLv(this) //因为默认等级为1
     new Float:MaxHeal = 255.0
@@ -856,11 +882,17 @@ public Npc_SpawnThink(ent){
         return
     }
     //初始化
-    if(body == CurrentSpawnbody && !IsSpawnPointOccupied(Origin, ent)){
+    new bool:isOccupied = IsSpawnPointOccupied(Origin, ent)
+    if(isOccupied){
+        //尝试往高处生产
+        Origin[2] += 60.0
+        isOccupied = IsSpawnPointOccupied(Origin, ent)
+    }
+    if(body == CurrentSpawnbody && !isOccupied){
         spawnent = CreateJpNpc(0,CS_TEAM_CT,Origin,Angles,CurrentSpawnbody)
     }
     //如果不存在其他据点默认使用据点一的位置进行生成！
-    else if(DontHasOtherJudian[TrueJudian] && body == 1 && !IsSpawnPointOccupied(Origin, ent)){
+    else if(DontHasOtherJudian[TrueJudian] && body == 1 && !isOccupied){
         spawnent = CreateJpNpc(0,CS_TEAM_CT,Origin,Angles,CurrentSpawnbody)
     }
     if(spawnent > 0){
@@ -872,8 +904,10 @@ public Npc_SpawnThink(ent){
             set_entvar(spawnent , var_max_health , Heal)
         }
         CanSpawnNum--
+        set_entvar(ent , var_nextthink, get_gametime() + 0.05)
+        return
     }
-    set_entvar(ent , var_nextthink, get_gametime() + 0.05)
+    set_entvar(ent , var_nextthink, get_gametime() + 0.2)
     return
 }
 
@@ -925,7 +959,7 @@ public Npc_OnDamagePost(this,attacker,Float:Damage){
             AddAmmoPak(attacker, 0.01 * float(daminc))
             PlayerDamgeInc[attacker] += daminc
             if(PlayerDamgeInc[attacker] >= 20){
-                AddXp(PlayerDamgeInc[attacker] , 100)
+                AddXp(attacker , 100)
                 PlayerDamgeInc[attacker] = 0
                 m_print_color(attacker , "!g[积分奖励]!t您达到积分奖励条件奖励100积分")
             }
@@ -1007,8 +1041,8 @@ stock bool:IsSpawnPointOccupied(const Float:origin[3] , pentToSkip)
     static Float:CheckPoint2[3]
     xs_vec_copy(origin, CheckPoint)
     xs_vec_copy(origin, CheckPoint2)
-    CheckPoint2[2] -= 50.0
-    CheckPoint[2] += 50.0
+    CheckPoint2[2] -= 30.0
+    CheckPoint[2] += 30.0
     //// void )			(const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr);
     engfunc(EngFunc_TraceHull, CheckPoint, CheckPoint2, DONT_IGNORE_MONSTERS, HULL_HUMAN, pentToSkip, tr)
     new Float:TR_flFractions
@@ -1020,10 +1054,12 @@ stock bool:IsSpawnPointOccupied(const Float:origin[3] , pentToSkip)
         if(touchent < 0)
             return false
         new flags = get_entvar(touchent, var_flags)
-        if(flags & FL_MONSTER || flags & FL_CLIENT)
+        if(flags & FL_MONSTER || flags & FL_CLIENT){
             return true
-        if(GetIsNpc(touchent) == true)
+        }
+        if(GetIsNpc(touchent) == true){
             return true
+        }
         return false
     }
     return false
@@ -1065,4 +1101,20 @@ stock remove_weaponbox_pakitem(boxid){
             rg_remove_entity(Items)
         }
     }
+}
+
+stock fm_set_kvd(entity, const key[], const value[], const classname[] = "") {
+	if (classname[0])
+		set_kvd(0, KV_ClassName, classname);
+	else {
+		new class[32];
+		pev(entity, pev_classname, class, sizeof class - 1);
+		set_kvd(0, KV_ClassName, class);
+	}
+
+	set_kvd(0, KV_KeyName, key);
+	set_kvd(0, KV_Value, value);
+	set_kvd(0, KV_fHandled, 0);
+
+	return dllfunc(DLLFunc_KeyValue, entity, 0);
 }

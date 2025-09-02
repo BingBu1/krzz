@@ -4,7 +4,7 @@
 #include <props>
 #include <fakemeta>
 
-new WallModuleName[] = "models/rainych/krzz/wall/kangri_wall.mdl"
+new WallModuleName[] = "models/Kr_wall/new_wall.mdl"
 new Current_judian
 // new Array:CreateWalls
 

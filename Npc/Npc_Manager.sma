@@ -10,27 +10,39 @@
 #include <props>
 #include <xs>
 
-#define Max_Npcs 50
+#define Max_SpawnNpc 50
+#define Max_NpcReg 50
 #define SeeMax 200
+#define Hostage_m_block 0x1eb
 //=======================================
-new Kr_Npc[Max_Npcs][Npc_Register]
-new Kr_NpcName[Max_Npcs][32]
-new Kr_NpcLevel[Max_Npcs]
+new Kr_Npc[Max_NpcReg][Npc_Register]
+new Kr_NpcName[Max_NpcReg][32]
+new Kr_NpcLevel[Max_NpcReg]
 new Aiid
+new Float:FullThink , Float:ClearTrie
 
-new Kr_NpcOnCreate , Kr_NpcDoAttack , Kr_NpcDoSkill
+new Kr_NpcOnCreate , Kr_NpcDoAttack , Kr_NpcDoSkill , Kr_CreateNpcNums
+
+new Trie:CaCheSee
 
 public plugin_init(){
     register_plugin("Npc管理" , "1.0" , "Bing")
     register_clcmd("say /npc" , "npcMenu")
     register_clcmd("say npc" , "npcMenu")
+    register_clcmd("say /npccommand" , "NpcCommand")
+    register_clcmd("say npccommand" , "NpcCommand")
+    register_clcmd("say command" , "NpcCommand")
+    register_clcmd("say /command" , "NpcCommand")
     
     RegisterHam(Ham_Think, "hostage_entity", "Ai_Think")
-    //RegisterHam(Ham_Think, "hostage_entity", "Ai_Think_Post" , true)
+    RegisterHam(Ham_Think, "hostage_entity", "Ai_Think_Post" , true)
 
     RegisterHam(Ham_TakeDamage, "hostage_entity", "Ai_DamgePost", 1)
 
+    register_logevent("EventRoundEnd", 2, "1=Round_End")
+
     plugin_forward() // 初始化回调函数
+    CaCheSee = TrieCreate()
 }
 
 public plugin_forward(){
@@ -40,7 +52,14 @@ public plugin_forward(){
 }
 
 public plugin_end(){
+    TrieDestroy(CaCheSee)
+}
 
+public EventRoundEnd(){
+    TrieDestroy(CaCheSee)
+    CaCheSee = TrieCreate()
+    Kr_CreateNpcNums = 0
+    // TrieClear(CaCheSee)
 }
 
 public client_disconnected(i){
@@ -68,17 +87,39 @@ public plugin_natives(){
 }
 
 
+public NpcCommand(id){
+    new menuid = menu_create("Npc命令" , "CommandAll")
+    menu_additem(menuid , "全部跟随我")
+    menu_additem(menuid , "全部停下")
+    menu_display(id , menuid)
+}
+
+public CommandAll(id,menu,item){
+    if(item == MENU_EXIT || !is_user_alive(id) || cs_get_user_team(id) == CS_TEAM_CT){
+        menu_destroy(menu)
+        return
+    }
+    switch(item){
+        case 0 :{
+            FollowAllNpc(id)
+        }
+        case 1:{
+            StopAllNpc(id)
+        }
+    }
+}
+
 public npcMenu(id){
-    new userlv = GetXp(id)
-    new const canbuyFormat[] = "\r[%s] %d 等级 \y%f大洋"
-    new const nocanbuyFormat[] = "\d[%s] %d 等级 \y%f大洋"
+    new userlv = GetLv(id)
+    new const canbuyFormat[] = "%s(\y%.0f大洋)(%d级) "
+    new const nocanbuyFormat[] = "\d%s(\y%.0f大洋)(%d级)"
     new menuid = menu_create("购买抗日伙伴" , "NpcBuyMenu")
     for(new i = 0 ; i < Aiid; i++){
         static name[32] , infonum[7]
         if(userlv > Kr_NpcLevel[i]){
-            formatex(name , charsmax(name) , canbuyFormat , Kr_NpcName[i] , Kr_NpcLevel[i] , Kr_Npc[i][Npc_Money])
+            formatex(name , charsmax(name) , canbuyFormat , Kr_NpcName[i] , Kr_Npc[i][Npc_Money],Kr_NpcLevel[i] )
         }else{
-            formatex(name , charsmax(name) , nocanbuyFormat ,  Kr_NpcName[i] , Kr_NpcLevel[i] , Kr_Npc[i][Npc_Money])
+            formatex(name , charsmax(name) , nocanbuyFormat ,  Kr_NpcName[i] , Kr_Npc[i][Npc_Money],Kr_NpcLevel[i] )
         }
         num_to_str(i , infonum , 6)
         menu_additem(menuid , name , infonum)
@@ -86,7 +127,7 @@ public npcMenu(id){
     menu_display(id , menuid)
 }
 
-public NpcBuyMenu(id,menu,item){
+public NpcBuyMenu(id, menu, item){
     if(item == MENU_EXIT || !is_user_alive(id) || cs_get_user_team(id) == CS_TEAM_CT){
         menu_destroy(menu)
         return
@@ -94,7 +135,26 @@ public NpcBuyMenu(id,menu,item){
     new SelNpcid , idBuff[7] ,access
     menu_item_getinfo(menu , item , access , idBuff , 6)
     SelNpcid = str_to_num(idBuff)
+    
+    new lv = GetLv(id)
+    new Float:NeedAmmo = Kr_Npc[SelNpcid][Npc_Money]
+    new Float:Ammo = GetAmmoPak(id)
+
+    if(Ammo < NeedAmmo){
+        m_print_color(id , "[提示] !t 大洋不足。")
+        menu_destroy(menu)
+        return
+    }
+    
+    if(lv < Kr_NpcLevel[SelNpcid]){
+        m_print_color(id , "[提示] !t 你的等级不足以召唤，以后会推出跨级体验(多消耗大洋)")
+        menu_destroy(menu)
+        return
+    }
+    SubAmmoPak(id , NeedAmmo)
     CreateNpc(id , SelNpcid)
+    menu_destroy(menu)
+    return
 }
 
 public NPC_Killed(this , killer){
@@ -110,6 +170,7 @@ public Ai_DamgePost(this, idinflictor, idattacker, Float:damage, damagebits){
     if(GetNpcFakeTeam(this) == CS_TEAM_CT)
         return
     if(get_entvar(this , var_health)  <= 0.0){
+        Kr_CreateNpcNums--
         new Npcid = get_prop_int(this , var_npcid)
         new Float:Deadtime = Kr_Npc[Npcid][Npc_DeadRemoveTime]
         new Float:RemoveTime = get_gametime() + Deadtime
@@ -130,6 +191,10 @@ public Ai_DamgePost(this, idinflictor, idattacker, Float:damage, damagebits){
 
 
 public CreateNpc(other , SelNpcid){
+    if(Kr_CreateNpcNums >= Max_SpawnNpc){
+        m_print_color(other , "!t[提示]NPC已达最大上限50，不可生成。")
+        return -1
+    }
     new Float:WatchOrigin[3]
     new Float:zeroVec[3] = {0.0, 0.0, 0.0}
     GetWatchEnd(other , WatchOrigin , 200.0)
@@ -138,13 +203,15 @@ public CreateNpc(other , SelNpcid){
         log_amx("[提醒] 创建抗日伙伴失败")
         return npc
     }
-    log_amx("Moduleid %d heal :%f" , Kr_Npc[SelNpcid][Npc_Module] , Kr_Npc[SelNpcid][Npc_Heal])
     set_entvar(npc , var_modelindex , Kr_Npc[SelNpcid][Npc_Module])
     set_entvar(npc , var_sequence , Kr_Npc[SelNpcid][Npc_Idel_seqid])
     set_entvar(npc , var_health , Kr_Npc[SelNpcid][Npc_Heal])
     set_entvar(npc , var_max_health , Kr_Npc[SelNpcid][Npc_Heal])
     set_entvar(npc , var_nextthink , get_gametime() + 0.1)
     set_entvar(npc , var_origin , WatchOrigin)
+
+    //因为setmember没有被迫自己写
+    set_pdata_int(npc , Hostage_m_block , true)
 
     set_prop_int(npc , var_npcid , SelNpcid)
     set_prop_int(npc , var_master , other)
@@ -157,6 +224,7 @@ public CreateNpc(other , SelNpcid){
     set_prop_float(npc , var_skillcd , get_gametime())
     set_prop_float(npc , var_nextSerNpc , get_gametime())
     set_prop_float(npc , var_LastSeeTime , get_gametime())
+    set_prop_float(npc , var_NextFullThink , get_gametime())
     set_prop_int(npc , var_LastSee , 0)
 
     if(CheckStuck(npc)){
@@ -165,18 +233,19 @@ public CreateNpc(other , SelNpcid){
         npcMenu(other)
         return -1
     }
-    SetAnimEventHandle(npc, "HandleAnimEvent")
+    SetUse(npc , "OnUse")
     ExecuteForward(Kr_NpcOnCreate , _ , npc)
+    Kr_CreateNpcNums++
     return npc
 }
 
-public HandleAnimEvent(const id, event, const event_option[], len_option){
+public OnUse(const ent, const activator, const caller, USE_TYPE:useType, Float:value){
 
 }
 
 public native_NpcRegister(id , nums){
-    if(Aiid >= Max_Npcs){
-        log_amx("[提醒] Npc注册数量已达上限%d" , Max_Npcs)
+    if(Aiid >= Max_NpcReg){
+        log_amx("[提醒] Npc注册数量已达上限%d" , Max_NpcReg)
         return -1
     }
     new oldid = Aiid
@@ -213,7 +282,8 @@ public native_NpcSetTinkRate(id , nums){
 
 public Ai_Think(npc_id){
     new FakeTeam = GetNpcFakeTeam(npc_id)
-    if(FakeTeam == CS_TEAM_CT)
+    //跳过默认NPC
+    if(FakeTeam == CS_TEAM_CT && prop_exists(npc_id , var_master) == false)
         return HAM_IGNORED
     new Float:GameTime = get_gametime()
     new npc_regid = get_prop_int(npc_id , var_npcid)
@@ -227,34 +297,45 @@ public Ai_Think(npc_id){
     }
     if(NeedRemoveSelf(npc_id))
         rg_remove_entity(npc_id)
+    
+    new Float:flTime = StudioFrameAdvance(npc_id)
+    // DispatchAnimEvent(npc_id, flTime)
 
-    new Float:NextThink = Kr_Npc[npc_regid][Npc_ThinkRate]
+    FullThink = get_prop_float(npc_id , var_NextFullThink)
+    if(FullThink > GameTime)
+        return HAM_SUPERCEDE
+    set_prop_float(npc_id , var_NextFullThink , GameTime + 0.1)
     new master = get_prop_int(npc_id , var_master)
-    set_entvar(npc_id , var_nextthink , GameTime + NextThink)
     new NpcState = get_prop_int(npc_id, var_state)
     new m_AttackEnt
-    m_AttackEnt = FindNearAttackNpc(npc_id)
+    new NpcLoadMode = Kr_Npc[npc_regid][NpcMode]
+
+    m_AttackEnt = FindNearAttackNpc(npc_id , NpcLoadMode)
 
     if(m_AttackEnt <= 0 && NpcState == NpcState_FollowMaster){
-        cs_set_hostage_foll(npc_id , master)
+        new folling = cs_get_hostage_foll(npc_id)
+        if(folling != master){
+            cs_set_hostage_foll(npc_id , master)
+        }
         return HAM_IGNORED
     }else if(m_AttackEnt <= 0 && NpcState == NpcState_Idel ){
         cs_set_hostage_foll(npc_id)
         return HAM_IGNORED
     }
     cs_set_hostage_foll(npc_id , m_AttackEnt)
-    if(!is_valid_ent(m_AttackEnt) || get_entvar(m_AttackEnt , var_deadflag) == DEAD_DEAD){
+    if(get_entvar(m_AttackEnt , var_deadflag) || is_nullent(m_AttackEnt)){
         cs_set_hostage_foll(npc_id , master)
+        return HAM_IGNORED
     }
     new Float:V_Angle[3],Float:TargetOrigin[3],Float:fOrigin[3]
     get_entvar(m_AttackEnt , var_v_angle , V_Angle)
     get_entvar(m_AttackEnt , var_origin , TargetOrigin)
     get_entvar(npc_id , var_origin , fOrigin)
     new Float:disance = fm_distance_to_boxent(npc_id , m_AttackEnt)
-    if(disance <= Kr_Npc[npc_regid][Npc_AttackDistance]){
+    
+    if(disance <= Kr_Npc[npc_regid][Npc_AttackDistance] && is_entity(m_AttackEnt)){
         new Float:last = get_prop_float(npc_id , var_lastattack)
         new Float:skilltime = get_prop_float(npc_id , var_skillcd)
-        new NpcLoadMode = Kr_Npc[npc_regid][NpcMode]
 
         if(GameTime > last){
             new Float:vDir[3] ,  Float:AttackOrig[3] , Float:vecVelocity[3] , Float:NewAngle[3]
@@ -264,7 +345,7 @@ public Ai_Think(npc_id){
 		    xs_vec_add(fOrigin, vDir, AttackOrig)
             Stock_GetSpeedVector(fOrigin , TargetOrigin , 0.01 , vecVelocity)
             vector_to_angle(vecVelocity , NewAngle)
-            if(NewAngle[0] > 90.0) NewAngle[0] = -(360.0 - NewAngle[0]);
+            if(NewAngle[0] > 90.0) NewAngle[0] = -(360.0 - NewAngle[0])
             NewAngle[0] = 0.0
             set_entvar(npc_id , var_angles , NewAngle)
             ExecuteForward(Kr_NpcDoAttack , _ , npc_id , m_AttackEnt)
@@ -277,29 +358,34 @@ public Ai_Think(npc_id){
             ExecuteForward(Kr_NpcDoSkill , _ , npc_id , m_AttackEnt) // 需要自己在回调设置skillcd
         }
         if(NpcLoadMode == NpcMode_Ranged){
-            StudioFrameAdvance(npc_id)
             return HAM_SUPERCEDE
         }
         return HAM_IGNORED
-    }else{
-        cs_set_hostage_foll(npc_id , master)
+    }else if((NpcLoadMode == NpcMode_Warrior && disance >= 600.0) || NpcLoadMode == NpcMode_Ranged){
+        if(NpcState == NpcState_FollowMaster){
+            cs_set_hostage_foll(npc_id , master)
+        }
     }
     return HAM_IGNORED
 }
 
 public Ai_Think_Post(npc_id){
-    new Float:Vel[3]
-    get_entvar(npc_id , var_velocity , Vel)
-    new Float:Speed = xs_vec_len(Vel)
     if(get_entvar(npc_id ,var_deadflag) == DEAD_DEAD || GetNpcFakeTeam(npc_id) == CS_TEAM_CT)
         return
+    
     new npc_regid = get_prop_int(npc_id , var_npcid)
     new Float:NextThink = Kr_Npc[npc_regid][Npc_ThinkRate]
-    set_entvar(npc_id , var_nextthink , get_gametime() + NextThink)
+    set_entvar(npc_id , var_nextthink , get_gametime() + 0.03)
+
     new SequenceFinished = get_member(npc_id , m_fSequenceFinished)
     if(!SequenceFinished && get_prop_int(npc_id , var_seqanim) == Npc_Attack){
         return
     }
+
+    new Float:Vel[3]
+    get_entvar(npc_id , var_velocity , Vel)
+    new Float:Speed = xs_vec_len(Vel)
+
     if(Speed > 135.0){
         new Seq = LookupActivity(npc_id , 4) //ACT_RUN
         set_prop_int(npc_id , var_seqanim , Npc_Run)
@@ -348,11 +434,11 @@ stock GetNpcFakeTeam(id){
 	return FakeTeam
 }
 
-stock FindNearAttackNpc(npc){
+stock FindNearAttackNpc(npc , NpcMode:Mode){
     new ent = -1
     new target = -1
 
-    new Float:Dis = 0.0 , Float:fOrigin[3] , Float:m_Origin[3]
+    new Float:Dis = 999999.0 , Float:fOrigin[3] , Float:m_Origin[3] , Float:TmpDis
     
     new regid = get_prop_int(npc , var_npcid)
     new Float:AttackDisacne = Kr_Npc[regid][Npc_AttackDistance] + 100.0
@@ -363,29 +449,42 @@ stock FindNearAttackNpc(npc){
     if(get_gametime() < NextSer && GetIsNpc(folent) && get_entvar(folent , var_deadflag) != DEAD_DEAD){
         return folent
     }
-    set_prop_float(npc , var_nextSerNpc , get_gametime() + 1.0)
+    set_prop_float(npc , var_nextSerNpc , get_gametime() + random_float(0.2,0.5))
     get_entvar(npc , var_origin , m_Origin)
 
     new Array:NpcHandle = GetNpcList()
     new size = ArraySize(NpcHandle)
     new npcteam = GetNpcFakeTeam(npc)
-
-    for(new i = 0 ; i < size ; i++){
-        new ent = ArrayGetCell(NpcHandle , i)
+    while ((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
         if(is_nullent(ent))continue
         if(ent == npc || GetNpcFakeTeam(ent) == npcteam) continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
-        get_entvar(ent , var_origin , fOrigin)
-        if(vector_distance(fOrigin , m_Origin) > AttackDisacne)continue
 
-        new bool:see = Stock_CanSee(npc , ent)
-        if(see == false)continue
+        get_entvar(ent , var_origin , fOrigin)
         
-        new Float:TmpDis = get_distance(fOrigin , m_Origin)
-        if(TmpDis < Dis || Dis <= 0.0){
+        TmpDis = fm_distance_to_boxent(npc , ent)
+        if((TmpDis < Dis && get_entvar(ent , var_deadflag) == DEAD_NO)){
             target = ent
             Dis = TmpDis
         }
+    }
+    if(target == -1){
+        set_prop_float(npc , var_nextSerNpc , get_gametime() + random_float(1.5,2.5))
+        return -1
+    }
+    if(Mode == NpcMode_Ranged){
+        //只对最近敌人进行可视判断
+        new iterations = 0;
+        const MAX_ITER = 5;
+        new TrHit = 0
+        new bool:ret = Stock_CanSee(npc , target , TrHit)
+        if(ret){
+            return target
+        }
+        else if(TrHit > 0 && GetIsNpc(TrHit) && KrGetFakeTeam(TrHit) == CS_TEAM_T) {
+            return target
+        }
+        return -1  
     }
     return target
 }
@@ -422,19 +521,45 @@ stock bool:Ez_CanSee(ent1 , ent2){
     return false
 }
 
-stock bool:Stock_CanSee(entindex1, entindex2){
-    if (!is_nullent(entindex1) || !is_nullent(entindex2))
-		return false
-
-	return TraceCanSee(entindex1 , entindex2)
+stock ClearTries(Float:Timer){
+    new Float:Time = Timer
+    if(ClearTrie > Time)
+        return
+    ClearTrie = Time + 10.0
+    TrieDestroy(CaCheSee)
+    CaCheSee = TrieCreate()
 }
 
-stock TraceCanSee(entindex1, entindex2){
+stock bool:Stock_CanSee(entindex1, entindex2 , &TrHit){
+    if (is_nullent(entindex1) || is_nullent(entindex2))
+		return false
+    static buff[10]
+    new data[Npc_Cache]
+    new Float:GameTime = get_gametime()
+    ClearTries(GameTime)
+    formatex(buff , 9 , "%d_%d" , entindex1, entindex2)
+    if(TrieKeyExists(CaCheSee , buff)){
+        TrieGetArray(CaCheSee , buff , data ,sizeof data)
+        if(GameTime < data[NpcCache_NextSeeTime]){
+            return data[NpcCache_CanSee]
+        }
+    }
+    new bool:IsSee = TraceCanSee(entindex1 , entindex2 , TrHit)
+    data[NpcCache_Ent1] = entindex1
+    data[NpcCache_Ent2] = entindex2
+    data[NpcCache_CanSee] = IsSee
+    data[NpcCache_NextSeeTime] = GameTime + random_float(0.35,0.5)
+    TrieSetArray(CaCheSee , buff , data , sizeof data)
+	return IsSee
+}
+
+stock TraceCanSee(entindex1, entindex2 , & TrHit){
 
 	new flags = get_entvar(entindex1, var_flags)
-	
-	if (flags & EF_NODRAW)
-		return false
+	TrHit = 0
+	if (flags & EF_NODRAW){
+        return false
+    }
 	
 	new Float:lookerOrig[3],Float:targetBaseOrig[3],Float:targetOrig[3],Float:temp[3],i
 	get_entvar(entindex1, var_origin, lookerOrig)
@@ -452,15 +577,19 @@ stock TraceCanSee(entindex1, entindex2){
 	{
 		new Float:flFraction
 		get_tr2(0, TraceResult:TR_flFraction, flFraction)
-		
-		if (flFraction == 1.0 || (get_tr2(0, TraceResult:TR_pHit) == entindex2)) return true
+		TrHit = get_tr2(0, TraceResult:TR_pHit)
+		if (flFraction == 1.0 ||  TrHit == entindex2){
+             return true
+        }
 		else
 		{
 			for(i = 0; i < 3; i++) targetOrig[i] = targetBaseOrig[i]
 			engfunc(EngFunc_TraceLine, lookerOrig, targetOrig, 0, entindex1, 0) //  checks the body of seen player
 			get_tr2(0, TraceResult:TR_flFraction, flFraction)
-			
-			if (flFraction == 1.0 || (get_tr2(0, TraceResult:TR_pHit) == entindex2)) return true
+			TrHit = get_tr2(0, TraceResult:TR_pHit)
+			if (flFraction == 1.0 || TrHit == entindex2){
+                return true
+            }
 			else
 			{
 				targetOrig[0] = targetBaseOrig [0]
@@ -468,8 +597,8 @@ stock TraceCanSee(entindex1, entindex2){
 				targetOrig[2] = targetBaseOrig [2] - 17.0
 				engfunc(EngFunc_TraceLine, lookerOrig, targetOrig, 0, entindex1, 0) //  checks the legs of seen player
 				get_tr2(0, TraceResult:TR_flFraction, flFraction)
-				
-				if (flFraction == 1.0 || (get_tr2(0, TraceResult:TR_pHit) == entindex2))
+				TrHit = get_tr2(0, TraceResult:TR_pHit)
+				if (flFraction == 1.0 ||  TrHit == entindex2)
 					return true
 			}
 		}
@@ -538,5 +667,31 @@ public SendAnim(iEntity, iAnim , ACT)
         set_member(iEntity , m_Activity , ACT)
         ResetSequenceInfo(iEntity)
         StudioFrameAdvance(iEntity)
+    }
+}
+
+stock StopAllNpc(id){
+    new Array:NpcHandle = GetNpcList()
+    new size = ArraySize(NpcHandle)
+    for(new i = 0 ; i < size ; i++){
+        new ent = ArrayGetCell(NpcHandle , i)
+        if(is_nullent(ent))continue
+        if(KrGetFakeTeam(ent) == CS_TEAM_CT)continue
+        if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
+        if(get_prop_int(ent , var_master) != id)continue
+        set_prop_int(ent , var_state , NpcState_Idel)
+    }
+}
+
+stock FollowAllNpc(id){
+    new Array:NpcHandle = GetNpcList()
+    new size = ArraySize(NpcHandle)
+    for(new i = 0 ; i < size ; i++){
+        new ent = ArrayGetCell(NpcHandle , i)
+        if(is_nullent(ent))continue
+        if(KrGetFakeTeam(ent) == CS_TEAM_CT)continue
+        if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
+        if(get_prop_int(ent , var_master) != id)continue
+        set_prop_int(ent , var_state , NpcState_FollowMaster)
     }
 }

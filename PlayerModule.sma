@@ -18,10 +18,11 @@ new BgmStart[StartBgm][]= {
     "corssfire_bgm/N_Vip_CrossFire.wav"
 }
 
-new linghu [][]= {
+new PreModules [][]= {
     "models/player/linghu_red/linghu_red.mdl",
     "models/player/linghu_yellow/linghu_yellow.mdl",
-    "models/player/FOX_BL/FOX_BL.mdl"
+    "models/player/FOX_BL/FOX_BL.mdl",
+    "models/player/pujing/pujing.mdl"
 }
 
 new modelNames[][]={
@@ -39,7 +40,8 @@ new modelNames[][]={
     "海军",
     "老蒋",
     "毛爷爷",
-    "灵狐者"
+    "灵狐者",
+    "普京"
 }
 
 new hero[33]
@@ -57,8 +59,8 @@ public plugin_init(){
 
 public plugin_precache(){
     precache_model(Jp_PlayerModule)
-    for(new i = 0 ; i < sizeof linghu ; i++){
-        precache_model(linghu[i])
+    for(new i = 0 ; i < sizeof PreModules ; i++){
+        precache_model(PreModules[i])
     }   
     for(new i = 0 ; i < sizeof BgmStart ; i++){
         UTIL_Precache_Sound(BgmStart[i])
@@ -77,7 +79,7 @@ public PlayerSpawn_Post(this){
     if(!is_nullent(this) && !is_user_alive(this)){
         return HC_CONTINUE
     }
-    if(cs_get_user_team(this) == CS_TEAM_T && !is_user_bot(this) && !hero[this]){
+    if(!is_user_bot(this) && !hero[this]){
         SetModuleByLv(this)
     }else if(hero[this]){
         rg_set_user_model(this, "linghu_red")
@@ -121,7 +123,7 @@ public DropItems(const this, const pszItemName[]){
     if(!is_user_connected(this))
         return
     new body = get_entvar(this, var_body)
-    if(body == 0 && !hero[this] || cs_get_user_team(this) == CS_TEAM_CT){
+    if(body == 0 && !hero[this]){
         SetModuleByLv(this)
     }
 }
@@ -131,11 +133,12 @@ public SetModuleByLv(this){
     new lv = GetLv(this)
     new setlv = (lv / 50) + 1
     new team = get_user_team(this)
+    log_amx("%d , setlv = %d" ,this , setlv)
     switch(team){
         case CS_TEAM_T:{
             if(setlv > 14){
                 SetOtherModule(this,setlv)
-                return;
+                return
             }
             rg_set_user_model(this, "rainych_krall1")
             set_entvar(this, var_body , setlv)
@@ -152,9 +155,12 @@ public SetModuleByLv(this){
 }
 
 public SetOtherModule(this , divlv){
-    if(divlv == 15){
+    if(divlv >= 15){
         rg_set_user_model(this, "rainych_krall1")
         UTIL_EmitSound_ByCmd2(this, BgmStart[Lv_CrossFire], 300.0 )
+    }
+    if(divlv >= 16){
+        rg_set_user_model(this, "pujing")
     }
 }
 

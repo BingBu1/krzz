@@ -7,6 +7,8 @@
 #include <fakemeta_util>
 #include <xp_module>
 #include <roundrule>
+#include  <engine>
+#include <hamsandwich>
 enum TankModle_e{
     Tk_alive,
     Tk_die
@@ -14,7 +16,7 @@ enum TankModle_e{
 
 new has_tank
 
-new CurrentTankEnt
+new CurrentTankEnt 
 
 new TankModle[][]={
 "models/rainych/krzz/tank.mdl",
@@ -26,7 +28,7 @@ new firesound[][]={
     "weapons/357_shot2.wav"
 }
 
-new g_Explosion,sTrail
+new g_Explosion,sTrail,HealSpr
 
 new BossNpc
 
@@ -34,9 +36,14 @@ new TankBoom[] = "sprites/blueflare1.spr"
 
 new const GRENADE_TRAIL[] = "sprites/laserbeam.spr"
 
+new MaxBossNpc
+
 public plugin_init(){
     register_plugin("特殊日本Npc", "1.0", "Bing")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
+
+    register_forward(FM_AddToFullPack , "Fw_AddToFullPack")
+    MaxBossNpc = 3
 }
 
 public plugin_precache(){
@@ -48,6 +55,7 @@ public plugin_precache(){
     }
     g_Explosion = precache_model("sprites/zerogxplode.spr")
     sTrail = precache_model(GRENADE_TRAIL)
+    HealSpr = precache_model("sprites/zb_healthbar.spr")
     precache_model(TankBoom)
 }
 
@@ -60,22 +68,131 @@ public native_GetTankNpcEnt(){
     return CurrentTankEnt
 }
 
+public Fw_AddToFullPack(const es, e, ent, HOST, hostflags, player, set){
+    if(player)
+        return FMRES_IGNORED
+    if(is_nullent(ent) || !FClassnameIs(ent , "hostage_entity"))
+        return FMRES_IGNORED
+    new spr = get_entvar(ent , var_impulse)
+
+    if(!spr)
+        return FMRES_IGNORED 
+
+    new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
+    get_entvar(ent , var_origin , PlayerOrigin)
+    
+    Health = get_entvar(ent , var_health)
+    MaxHealth = get_entvar(ent , var_max_health)
+
+    PlayerOrigin[2] += 72.0
+	engfunc(EngFunc_SetOrigin, spr, PlayerOrigin)
+    // set_entvar(spr , var_origin , PlayerOrigin)
+    new Float:ratio = (Health / MaxHealth) * 99.0
+    if(ratio < 0.0) ratio = 0.0
+    set_entvar(spr , var_frame , ratio)
+
+    set_es( es, ES_MoveType, MOVETYPE_FOLLOW )
+	set_es( es, ES_RenderMode, kRenderNormal )
+	set_es( es, ES_RenderAmt, 220 )
+    
+
+    return FMRES_IGNORED
+}
+
+public CreateHealBar(Npc){
+    new spr = rg_create_entity("env_sprite")
+    if(is_nullent(spr))
+        return 0
+    set_entvar(spr , var_classname , "HBar")
+    set_entvar(spr, var_renderamt, 255.0)
+	set_entvar(spr, var_frame, 0.0)
+	set_entvar(spr, var_animtime, get_gametime())
+    set_entvar(spr , var_scale , 0.5)
+    set_entvar(spr , var_owner , Npc)
+    set_entvar(spr, var_spawnflags, SF_SPRITE_STARTON)
+
+    //--
+    set_entvar(Npc , var_impulse , spr)
+    
+    engfunc(EngFunc_SetModel , spr , "sprites/zb_healthbar.spr")
+    return spr
+}
+
+public CreateEliteNpc(ent , lv , Judian){
+    new bool:White = lv > 30
+    new bool:Blue = lv > 300
+    new bool:Green = lv > 150
+    new bool:Red = lv > 500
+    if(!White && !Blue && ! Green && !Red)
+        return false
+    if(White && RandFloatEvents(0.01)){
+        new Float:Heal = 500.0 + (30.0 * float(lv))
+        Heal = floatmin(Heal , 15000.0)
+        new Float:Color[3]= {255.0,255.0,255.0}
+        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
+        set_entvar(ent, var_rendercolor, Color)
+        set_entvar(ent ,var_renderamt , 1.0)
+        set_entvar(ent, var_health, Heal)
+        set_entvar(ent, var_max_health, Heal)
+        set_entvar(ent, var_iuser1 , 1)
+        BossNpc++
+        return true
+    }
+    if(Blue && RandFloatEvents(0.01)){
+        new Float:Heal = 1500.0 + (100.0 * float(lv))
+        Heal = floatmin(Heal , 78000.0)
+        new Float:Color[3]= {0.0,0.0,255.0}
+        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
+        set_entvar(ent, var_rendercolor, Color)
+        set_entvar(ent ,var_renderamt , 1.0)
+        set_entvar(ent, var_health, Heal)
+        set_entvar(ent, var_max_health, Heal)
+        set_entvar(ent, var_iuser1 , 2)
+        set_prop_int(ent, "CanStop", 1)
+        BossNpc++
+        return true
+    }
+    if(Green && RandFloatEvents(0.01)){
+        new Float:Heal = 1000.0 + (50.0 * float(lv))
+        Heal = floatmin(Heal , 25000.0)
+        new Float:Color[3]= {0.0,255.0,0.0}
+        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
+        set_entvar(ent, var_rendercolor, Color)
+        set_entvar(ent ,var_renderamt , 1.0)
+        set_entvar(ent, var_health, Heal)
+        set_entvar(ent, var_max_health, Heal)
+        set_entvar(ent, var_iuser1 , 4)
+        BossNpc++
+        return true
+    }
+    if(Red && RandFloatEvents(0.01)){
+        new Float:Heal = 2000.0 + (130.0 * float(lv))
+        Heal = floatmin(Heal , 150000.0)
+        new Float:Color[3]= {255.0,0.0,0.0}
+        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
+        set_entvar(ent, var_rendercolor, Color)
+        set_entvar(ent ,var_renderamt , 1.0)
+        set_entvar(ent, var_health, Heal)
+        set_entvar(ent, var_max_health, Heal)
+        set_entvar(ent, var_iuser1 , 3)
+        set_prop_int(ent, "CanStop", 1)
+        BossNpc++
+        return true
+    }
+    return false
+}
+
 public NPC_CreatePost(ent){
     new Judian_num = GetJuDianNum()
     new level = Getleavel()
-    if(level > 30 && Judian_num < 7 && BossNpc < 3){
-        //尝试产出精英
-        if(RandFloatEvents(0.01) ){
-            new Float:Heal = 100.0 + (60.0 * float(level))
-            Heal = floatmin(Heal , 15000.0)
-            new Float:Color[3]= {255.0,255.0,255.0}
-            set_entvar(ent, var_renderfx, kRenderFxGlowShell)
-            set_entvar(ent, var_rendercolor, Color)
-            set_entvar(ent ,var_renderamt , 1.0)
-            set_entvar(ent, var_health, Heal)
-            set_entvar(ent, var_max_health, Heal)
-            set_entvar(ent, var_iuser1 , 1)
-            BossNpc++
+    if(level > 30 && Judian_num <= 7 && BossNpc < MaxBossNpc){
+        new bool:IsCreate = CreateEliteNpc(ent , level , Judian_num)
+        new spr
+        if(IsCreate){
+            spr = CreateHealBar(ent)
+            if(!spr){
+                log_error(AMX_ERR_NONE , "创建血条实体失败。")
+            }
         }
     }
     if(Judian_num == 8 && !has_tank){
@@ -186,6 +303,7 @@ public event_roundstart(){
     has_tank = false
     CurrentTankEnt = 0
     BossNpc = 0
+    remove_entity_name("HBar")
 }
 
 public native_is_tank(){
@@ -200,9 +318,36 @@ public native_is_tank(){
 }
 
 public NPC_Killed(this , killer){
-    if(get_entvar(this,var_iuser1) == 1){
+    if(get_entvar(this,var_iuser1) >= 1){
+        new MonsterLv = get_entvar(this,var_iuser1)
         new lv = Getleavel()
-        new baseaddxp = 100 + random_num(0 , lv * 5)
+        new money = cs_get_user_money(killer)
+        new baseaddxp
+        switch(MonsterLv){
+            case 1 :{
+                money += 3000
+                baseaddxp = 100 + random_num(100 , lv * 5)
+            }
+            case 2:{
+                baseaddxp = 500 + random_num(250 , lv * (5 + MonsterLv))
+                money += 8000
+            }
+            case 3:{
+                baseaddxp = 1000 + random_num(500 , lv * (5 + MonsterLv))
+                money += 15000
+            }
+            case 4 :{
+                money += 5000
+                baseaddxp = 350 + random_num(300 , lv * (5 + MonsterLv))
+                MonsterLv = 2
+            }
+        }
+        new spr = get_entvar(this , var_impulse)
+        if(spr > 0){
+            rg_remove_entity(spr)
+        }
+        cs_set_user_money(killer , money)
+        baseaddxp *= MonsterLv 
         AddXp(killer, baseaddxp)
         m_print_color(killer , "!g[击杀]击杀精英额外获得%d积分", baseaddxp)
         set_entvar(this, var_iuser1, 0)
@@ -221,13 +366,13 @@ public NPC_Killed(this , killer){
 public KillTank_reward(id){
     if(!is_user_connected(id))
         return
-    new Randreward = random_num(0,1)
+    new Randreward = UTIL_RandFloatEvents(0.3)
     //大洋奖励
     new name[32]
     get_user_name(id, name, 31)
     if(Randreward == 0) {
         new const Float:Base = 1.0
-        new Float:MinAmmo = 1.0 + float(Getleavel()) / 0.5
+        new Float:MinAmmo = Base + float(Getleavel()) * 0.5
         new Float:MaxAmmo = (Base + float(Getleavel())) * 2.0
         new Float:Rand = random_float(MinAmmo, MaxAmmo)
         AddAmmoPak(id, Rand)
@@ -391,6 +536,8 @@ public tk_Touch(const this, const other) {
     // 标记删除
     set_entvar(this, var_flags, FL_KILLME)
 
+    rg_radius_damage(org , this, this , 200.0 , 200.0, DMG_GRENADE)
+
     new maxPlayers = get_maxplayers()
     for (new i = 1; i <= maxPlayers; i++) {
         if (!is_user_alive(i) || !is_user_connected(i))
@@ -435,10 +582,10 @@ stock get_aim_origin_vector(iPlayer, Float:forw, Float:right, Float:up, Float:vS
 {
 	new Float:vOrigin[3], Float:vAngle[3], Float:vForward[3], Float:vRight[3], Float:vUp[3]
 	
-	pev(iPlayer, pev_origin, vOrigin)
-	pev(iPlayer, pev_view_ofs, vUp)
+	pev(iPlayer, var_origin, vOrigin)
+	pev(iPlayer, var_view_ofs, vUp)
 	xs_vec_add(vOrigin, vUp, vOrigin)
-	pev(iPlayer, pev_v_angle, vAngle)
+	pev(iPlayer, var_v_angle, vAngle)
 	
 	angle_vector(vAngle, ANGLEVECTOR_FORWARD, vForward)
 	angle_vector(vAngle, ANGLEVECTOR_RIGHT, vRight)
@@ -457,4 +604,42 @@ stock bool:RandFloatEvents(Float:Probability){
     if(randnum <= Probability)
         return true
     return false
+}
+
+stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage, Float:radius, dmg_bits)
+{
+    new ent = -1
+    new Float:target_origin[3]
+    new Float:distance
+    new Float:final_damage
+	new Float:Origin_[3]
+	new Float:Heal;
+    
+    while ((ent = find_ent_in_sphere(ent, origin, radius)) > 0)
+    {
+        if (!is_valid_ent(ent) || is_nullent(ent)) continue
+		if(get_entvar(ent,var_takedamage) == DAMAGE_NO) continue
+
+		new deadflag
+		get_entvar(ent , var_deadflag,deadflag)
+		
+		if(deadflag != DEAD_NO) continue
+
+        get_entvar(ent, var_origin, target_origin)
+        distance = vector_distance(origin, target_origin)
+
+        // ���Եݼ��˺���ԽԶԽ�ͣ�
+        final_damage = damage 
+        if (final_damage <= 0.0) continue;
+
+		if(ent == attacker) continue;
+
+        if(FClassnameIs(ent , "player")) continue;
+
+		get_entvar(ent , var_health , Heal);
+
+		new kill = Heal - final_damage;
+		set_entvar(ent, var_dmg_inflictor, attacker);
+		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits);
+    }
 }

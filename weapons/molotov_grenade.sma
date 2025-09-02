@@ -260,7 +260,7 @@ public plugin_init() {
 
 	bind_pcvar_num(
 		create_cvar(
-			"molotov_demage_radius_mode", "2", FCVAR_SERVER,
+			"molotov_demage_radius_mode", "1", FCVAR_SERVER,
 			.description = fmt("%L", LANG_SERVER, "CVAR_DEMAGE_RADIUS_MODE"),
 			.has_min = true, .min_val = 1.0,
 			.has_max = true, .max_val = 2.0
@@ -279,7 +279,7 @@ public plugin_init() {
 
 	bind_pcvar_float(
 		create_cvar(
-			"molotov_demage_value", "20.0", FCVAR_SERVER,
+			"molotov_demage_value", "100.0", FCVAR_SERVER,
 			.description = fmt("%L", LANG_SERVER, "CVAR_DEMAGE_VALUE"),
 			.has_min = true, .min_val = 0.0
 			),
@@ -369,7 +369,7 @@ public plugin_init() {
 	g_eCvar[CVAR_BUY_ACCESS] = read_flags(szAccess);
 	
 	MsgIdAmmoPickup = get_user_msgid("AmmoPickup");
-
+	m_cavr_def()
 #if WEAPON_NEW_ID == WEAPON_GLOCK
 	MsgIdWeaponList = get_user_msgid("WeaponList");
 	UTIL_WeapoList(
@@ -387,6 +387,12 @@ public plugin_init() {
 #endif
 }
 
+public m_cavr_def(){
+	g_eCvar[CVAR_DEMAGE_VALUE] = 100.0
+	g_eCvar[CVAR_DEMAGE_RADIUS_MODE] = 1
+	g_eCvar[CVAR_DEMAGE_MODE] = 0
+}
+
 
 public OnConfigsExecuted() {
 	g_eCvar[CVAR_BUYTIME] = get_cvar_float("mp_buytime");
@@ -399,6 +405,7 @@ public plugin_natives()
 {
     register_native("IsUserHasMolotov", "NativeIsUserHasMolotov", false);
     register_native("GiveUserMolotov", "NativeGiveUserMolotov", false);
+    register_native("CreateNade", "native_ThrowNade", false);
 }
 
 public NativeGiveUserMolotov(plugin, params)
@@ -941,7 +948,17 @@ giveAmmo(const id, const amount, const ammo, const max) {
 	emessage_end();
 }
 
-throwNade(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time) {
+public native_ThrowNade(id, nums){
+	new id = get_param(1)
+	new item = get_param(2)
+	new Float:vecSrc[3], Float:vecThrow[3]
+	get_array_f(3 , vecSrc , sizeof vecSrc)
+	get_array_f(4 , vecThrow , sizeof vecThrow)
+	new Float:time = get_param_f(5)
+	throwNade(id , item , vecSrc , vecThrow , time)
+}
+
+public throwNade(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time) {
 	new grenade = rg_create_entity("grenade");
 	if (is_nullent(grenade) || is_nullent(item)) {
 		return 0;

@@ -10,7 +10,7 @@ new Reg_Npcid , Moduleid
 
 public plugin_init(){
     register_plugin("测试Npc行为" , "1.0" , "Bing")
-    Reg_Npcid = NpcRegister(200.0 , Moduleid ,500.0 , 0.1, 30.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0 , NpcMode_Ranged)
+    Reg_Npcid = NpcRegister(200.0 , Moduleid ,1000.0 , 0.1, 30.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0 , NpcMode_Ranged)
     NpcSetNameAndLevel(Reg_Npcid , "管家" , 0)
 }
 
@@ -19,8 +19,13 @@ public plugin_precache(){
     precache_sound("weapons/mp5-1.wav")
 }
 
+public HandleAnimEvent(const id, event, const event_option[], len_option){
+    server_print("npcTest : id %d event %d" , id , event)
+}
+
 public NpcOnCreate(Npcid){
     SetBodyGroup(Npcid , 2  , 5)
+    SetAnimEventHandle(Npcid, "HandleAnimEvent")
 }
 
 public NpcDoAttack(Npcid , Target){
@@ -38,7 +43,7 @@ public NpcDoAttack(Npcid , Target){
 }
 
 public NpcOnSkill(Npcid , target){
-
+    set_prop_float(Npcid , var_skillcd , get_gametime() + 5.0)
 }
 
 stock MakeBullets(Float:Start[3] , Float:End[3]){
@@ -51,4 +56,8 @@ stock MakeBullets(Float:Start[3] , Float:End[3]){
     write_coord_f(End[1])
     write_coord_f(End[2])
     message_end()
+}
+
+stock CreateLove(Npcid){
+
 }

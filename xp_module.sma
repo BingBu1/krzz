@@ -6,6 +6,10 @@
 #include <sqlx>
 #include <xp_module>
 #include <bigint>
+
+#define XpKey "%d_XP"
+#define XpNeedKey "%d_XPNeed"
+
 new bool:PlayerLoad[33]
 new PlayerXp[33],PlayerLeavl[33],PlayerXpNeeded[33]
 new k_civilian[33],k_soldier[33],k_officer[33],k_tank[33]
@@ -16,7 +20,23 @@ new IsSqlLoad
 #define MaxXp 10000
 public plugin_init(){
 	register_plugin("Xp系统抗日", "1.0", "Bing")
+    register_concmd("AddLv" , "AddPlayerLv")
     //SqlInit()
+}
+
+public AddPlayerLv(){
+    new argc = read_argc()
+    if(argc >= 2){
+        static NeedxpStr[50]
+        new ent = read_argv_int(1)
+        new buff[20]
+        GetXpNeedKey(ent , buff , 19)
+        GetNextLevelXpBigInt(ent , NeedxpStr , charsmax(NeedxpStr))
+        // MapSetValueByStr(buff , NeedxpStr)
+        MapGetNums("Lv" , NeedxpStr , 49)
+        log_amx("计算为%s" , NeedxpStr)
+    }
+        
 }
 
 public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
@@ -103,7 +123,7 @@ public OnQueryPlayerInfo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
         steamid)
         SQL_ThreadQuery(g_SqlTuple, "OnInsertComplete", querystr, Data ,DataSize)
     }else{
-        new steamid[32]
+        new steamid[32] , BigXp[32], XpNeeded[32] , Keys[32]
         SQL_ReadResult(Query,0,steamid,charsmax(steamid))
 
         PlayerLeavl[id] = SQL_ReadResult(Query,1)
@@ -113,7 +133,17 @@ public OnQueryPlayerInfo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
         k_soldier[id]        = SQL_ReadResult(Query, 5)
         k_officer[id]        = SQL_ReadResult(Query, 6)
         k_tank[id]           = SQL_ReadResult(Query, 7)
+
+        SQL_ReadResult(Query,2,BigXp,charsmax(BigXp))
+        SQL_ReadResult(Query,3,XpNeeded,charsmax(XpNeeded)) 
+
         PlayerLoad[id] = true
+
+        formatex(Keys , charsmax(Keys) , XpKey , id)
+        InitByMap(Keys , BigXp)
+        formatex(Keys , charsmax(Keys) , XpNeedKey , id)
+        InitByMap(Keys , XpNeeded)
+        log_amx("%s 大数加载测试Xp %s Need %s" , steamid , BigXp , XpNeeded)
         log_amx("加载成功: %s 等级: %d XP: %d/%d", steamid, PlayerLeavl[id], PlayerXp[id], PlayerXpNeeded[id])
     }
 }
@@ -127,6 +157,8 @@ public plugin_natives(){
     register_native("GetXpNeed","native_GetXpNeed")
     register_native("GetLv","native_GetLv")
     register_native("GetXp","native_GetXp")
+    register_native("GetXpBingInt","native_GetXp2")
+    register_native("GetXpNeedBingInt","native_GetXpNeed2")
     register_native("AddXp","native_AddXp")
 
     register_native("AddKillRiMin","native_AddKillRiMin")
@@ -163,23 +195,65 @@ public GetNextLevelNeedXp(ent){
     return (defaultXp * Lv * Lv)
 }
 
-public CheckXpCanUp(ent){
-    new xp = PlayerXp[ent]
-    new xpneed = PlayerXpNeeded[ent]
-    if(xp >= xpneed){
-        PlayerLeavl[ent]++
-        PlayerXp[ent] = xp - xpneed
-        PlayerXpNeeded[ent] = GetNextLevelNeedXp(ent)
-        if(PlayerXp[ent] >= PlayerXpNeeded[ent]){
-            //如果经验依然溢出递归
-            CheckXpCanUp(ent)
-        }
+stock GetNextLevelXpBigInt(ent , value[] , len){
+    static bool:IsInit
+    if(!IsInit){
+        InitByMap("Lv" , "0")
     }
+    MapSetValue("Lv" , 10)
+    new Lv = PlayerLeavl[ent]
+    new BaseMul = Lv * Lv
+    MapValueMulSave("Lv" , BaseMul)
+    MapGetNums("Lv" , value , len)
+}
+
+public CheckXpCanUp(ent){
+    new xpkey[10] , xpneedkey[10]
+    GetXpNeedKey(ent , xpneedkey, 9)
+    GetXpKey(ent , xpkey, 9)
+    if(MapCmpByChars(xpkey , xpneedkey , ">=")){
+        PlayerLeavl[ent]++
+        MapValueSubSaveByKey(xpkey , xpneedkey) //减去
+        static NeedxpStr[50]
+        GetNextLevelXpBigInt(ent , NeedxpStr , charsmax(NeedxpStr))
+        MapSetValueByStr(xpneedkey , NeedxpStr)
+    }
+    // new xp = PlayerXp[ent]
+    // new xpneed = PlayerXpNeeded[ent]
+    // if(xp >= xpneed){
+    //     PlayerLeavl[ent]++
+    //     PlayerXp[ent] = xp - xpneed
+    //     PlayerXpNeeded[ent] = GetNextLevelNeedXp(ent)
+    //     if(PlayerXp[ent] >= PlayerXpNeeded[ent]){
+    //         //如果经验依然溢出递归
+    //         CheckXpCanUp(ent)
+    //     }
+    // }
 }
 
 public native_GetXpNeed(id,nums){
     new ent = get_param(1)
     return PlayerXpNeeded[ent]
+}
+
+public native_GetXp2(id,nums){
+    new ent = get_param(1)
+    new len = get_param(3)
+    new buff[20]
+    static OutPut[50]
+    GetXpKey(ent ,buff , charsmax(buff))
+    MapGetNums(buff , OutPut , 49)
+    set_string(2, OutPut , len)
+}
+
+public native_GetXpNeed2(id,nums){
+    new ent = get_param(1)
+    new len = get_param(3)
+    new buff[20]
+    static OutPut[50]
+    GetXpNeedKey(ent ,buff , charsmax(buff))
+    MapGetNums(buff , OutPut , 49)
+    set_string(2, OutPut , len)
 }
 
 public native_GetLv(id,nums){
@@ -195,8 +269,13 @@ public native_GetXp(id,num){
 public native_AddXp(id,nums){
     new ent = get_param(1)
     new addxp = get_param(2)
-    PlayerXp[ent] += addxp
-    CheckXpCanUp(ent)
+    if(ent < 33 && is_user_connected(ent)){
+        new key[10]
+        GetXpKey(ent , key , 9)
+        MapValueAddSave(key , addxp)
+        PlayerXp[ent] += addxp
+        CheckXpCanUp(ent)
+    }
 }
 
 public native_AddKillRiMin(id,nums){
@@ -244,10 +323,16 @@ public native_SavePlayer(id,nums){
     new data[1]
     new querystr[255]
     new szSteamID[32]
-    new fmtstr[]= "UPDATE xp_table SET userlevel = %d, current_xp = %d, xp_needed = %d, kills_civilian = %d, kills_soldier = %d, kills_officer = %d, kills_tank = %d WHERE steamid = '%s'"
+    new key[10] , Xp[40], XpNeed[40]
+    new fmtstr[]= "UPDATE xp_table SET userlevel = %d, current_xp = %s, xp_needed = %s, kills_civilian = %d, kills_soldier = %d, kills_officer = %d, kills_tank = %d WHERE steamid = '%s'"
     data[0] = ent
     get_user_authid(ent, szSteamID, charsmax(szSteamID))
-    formatex(querystr, charsmax(querystr), fmtstr, PlayerLeavl[ent], PlayerXp[ent], PlayerXpNeeded[ent], k_civilian[ent], k_soldier[ent], k_officer[ent], k_tank[ent], szSteamID);
+    GetXpKey(ent , key , 9)
+    MapGetNums(key , Xp , 39)
+    GetXpNeedKey(ent , key , 9)
+    MapGetNums(key , XpNeed , 39)
+    // formatex(querystr, charsmax(querystr), fmtstr, PlayerLeavl[ent], PlayerXp[ent], PlayerXpNeeded[ent], k_civilian[ent], k_soldier[ent], k_officer[ent], k_tank[ent], szSteamID);
+    formatex(querystr, charsmax(querystr), fmtstr, PlayerLeavl[ent], Xp, XpNeed, k_civilian[ent], k_soldier[ent], k_officer[ent], k_tank[ent], szSteamID);
     SQL_ThreadQuery(g_SqlTuple,"PlayerUpdate",querystr,data,sizeof data)
 }
 
@@ -260,4 +345,15 @@ public PlayerUpdate(FailState,Handle:Query,Error[],Errcode,Data[],DataSize){
     }
 
     client_print_color(Data[0],print_chat,"[^3冰布]^1保存数据成功。")
+}
+
+
+
+
+stock GetXpKey(id , buff[] , len){
+    formatex(buff , len , XpKey , id)   
+
+}
+stock GetXpNeedKey(id , buff[] , len){
+    formatex(buff , len , XpNeedKey , id)   
 }

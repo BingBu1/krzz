@@ -40,6 +40,7 @@ public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
 
 public plugin_natives(){
     register_native("AddAmmoPak", "native_AddAmmoPak")
+    register_native("SubAmmoPak", "native_SubAmmoPak")
     register_native("GetAmmoPak", "native_GetAmmoPak")
     register_native("SaveAmmo", "native_SaveAmmo")
     register_native("SetAmmo", "native_SetAmmo")
@@ -145,6 +146,16 @@ public native_AddAmmoPak(pl_id, num){
     if(!is_user_connected(id))
         return
     AmmoPak[id] += amount
+}
+
+public native_SubAmmoPak(pl_id, num){
+    if(!IsSqlLoad)
+        return
+    new id = get_param(1)
+    new Float:amount = get_param(2)
+    if(!is_user_connected(id))
+        return
+    AmmoPak[id] -= amount
 }
 
 public native_GetAmmoPak(pl_id, num){

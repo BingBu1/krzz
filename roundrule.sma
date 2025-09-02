@@ -9,6 +9,7 @@
 #include <xs>
 
 #include <animation>
+
 new const HumanRule[][] = {
     "掷弹兵",
     "痛苦强化",
@@ -20,7 +21,9 @@ new const HumanRule[][] = {
     "急行军",
     "跳跃精英",
     "最后一发",
-    "吸血"
+    "吸血",
+    "火焰净化",
+    "无限火力",
 }
 
 new const RiJunRule[][]={
@@ -30,7 +33,8 @@ new const RiJunRule[][]={
     "日军:致命暴击",
     "日军:伤害减免",
     "日军:坦克狂潮",
-    "日军:兴奋剂"
+    "日军:兴奋剂",
+    "日军:自爆"
 }
 
 new const HUNMAN_RULE_Text[][]= {
@@ -44,7 +48,9 @@ new const HUNMAN_RULE_Text[][]= {
     "移速提升50",
     "跳跃时伤害提升50%",
     "最后一发子弹打出核弹轰炸",
-    "血量低于150时攻击可以吸血伤害的1%"
+    "血量低于150时攻击可以吸血伤害的1%",
+    "投掷手雷时将投掷出燃烧瓶",
+    "武器无线弹夹无需换单"
 }
 
 new const RIJUN_RULE_Text[][]= {
@@ -55,6 +61,7 @@ new const RIJUN_RULE_Text[][]= {
     "日军受到伤害降低5%",
     "平常波次有概率生成坦克",
     "50%概率无法被武器打出控制",
+    "死亡时10%概率自爆"
 }
 
 new CurrentHunManRule = -1
@@ -67,11 +74,15 @@ new bool:RuleInitOk
 
 new HOOK_ThrowHeGrenade
 
-new g_Explosion
+new g_Explosion ,JpBoomSpr
+
+native CreateNade(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time)
+
 public plugin_init(){
     register_plugin("抗日随机规则", "1.0", "Bing")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
     HOOK_ThrowHeGrenade = RegisterHookChain(RG_ThrowHeGrenade , "m_ThrowHeGrenade")
+    RegisterHookChain(RG_CBasePlayer_ThrowGrenade, "CBasePlayer_ThrowGrenade_Pre", false);
     RegisterHookChain(RG_CBaseEntity_FireBullets3 , "m_FireBullets")
     RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed , "m_MaxSpeed")
     RegisterHam(Ham_TakeDamage, "hostage_entity" , "RULE_HostageTakeDamage")
@@ -81,6 +92,7 @@ public plugin_init(){
 
 public plugin_precache(){
     g_Explosion = precache_model("sprites/zerogxplode.spr")
+    JpBoomSpr = precache_model("sprites/ef_zbs93boss_explo.spr")
 }
 
 
@@ -93,12 +105,27 @@ public plugin_natives(){
 
 public event_roundstart(){
     RuleInitOk = false
+     server_cmd("mp_infinite_ammo 0")
     RoundRule()
     new Rule = GetHunManRule()
     if(Rule == HUMAN_RULE_Hero_Appearance){
         set_task(0.5, "AllHero")
     }else if (Rule == HUMAN_RULE_Random_Weapon){
         set_task(0.5, "RandomWeapon")
+    }
+
+    if(Rule == HUMAN_RULE_InfAmmo){
+        server_cmd("mp_infinite_ammo 1")
+    }
+}
+
+
+public NPC_Killed( this ,  killer){
+    new Rule = GetRiJunRule()
+    if(Rule == JAP_RULE_Boom){
+        if(UTIL_RandFloatEvents(0.1)){
+            JpBoom(this)
+        }
     }
 }
 
@@ -202,33 +229,55 @@ public native_GetRuleAllText(id, nums){
     }
 }
 
-public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Float:time, const team, const usEvent){
-    if(GetHunManRule() == HUMAN_RULE_Grenadier && is_user_connected(index) && cs_get_user_team(index) == CS_TEAM_T){
-        DisableHookChain(HOOK_ThrowHeGrenade)
-        new grenade_ent
-        grenade_ent = rg_spawn_grenade(WEAPON_HEGRENADE,index,vecStart,vecVelocity,time,team,usEvent)
-        if(grenade_ent){
-            set_entvar(grenade_ent, var_dmg, 200.0)
-        }
-        vecStart[2] += 20.0
-        grenade_ent = rg_spawn_grenade(WEAPON_HEGRENADE,index,vecStart,vecVelocity,time,team,usEvent)
-        if(grenade_ent){
-            set_entvar(grenade_ent, var_dmg, 200.0)
-        }
-        vecStart[2] += 20.0
-        grenade_ent = rg_spawn_grenade(WEAPON_HEGRENADE,index,vecStart,vecVelocity,time,team,usEvent)
-        if(grenade_ent){
-            set_entvar(grenade_ent, var_dmg, 200.0)
-        }
-        EnableHookChain(HOOK_ThrowHeGrenade)
-        SetHookChainReturn(ATYPE_INTEGER , grenade_ent)
-        return HC_SUPERCEDE
+public CBasePlayer_ThrowGrenade_Pre(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time, const const usEvent) {
+	new Rule = GetHunManRule()
+    if(Rule == HUMAN_RULE_Fire){
+        new grenade = CreateNade(id, item, vecSrc, vecThrow, 30.0);
+
+	    SetHookChainReturn(ATYPE_INTEGER, grenade);
+
+	    return HC_SUPERCEDE;
     }
+}
+
+public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Float:time, const team, const usEvent){
+    new Rule = GetHunManRule()
+    if(GetIsNpc(index))
+        return HC_CONTINUE
+    switch(Rule){
+        case HUMAN_RULE_Grenadier:{
+            DisableHookChain(HOOK_ThrowHeGrenade)
+            new grenade_ent
+            grenade_ent = rg_spawn_grenade(WEAPON_HEGRENADE,index,vecStart,vecVelocity,time,team,usEvent)
+            if(grenade_ent){
+                set_entvar(grenade_ent, var_dmg, 200.0)
+            }
+            vecStart[2] += 20.0
+            grenade_ent = rg_spawn_grenade(WEAPON_HEGRENADE,index,vecStart,vecVelocity,time,team,usEvent)
+            if(grenade_ent){
+                set_entvar(grenade_ent, var_dmg, 200.0)
+            }
+            vecStart[2] += 20.0
+            grenade_ent = rg_spawn_grenade(WEAPON_HEGRENADE,index,vecStart,vecVelocity,time,team,usEvent)
+            if(grenade_ent){
+                set_entvar(grenade_ent, var_dmg, 200.0)
+            }
+            EnableHookChain(HOOK_ThrowHeGrenade)
+            SetHookChainReturn(ATYPE_INTEGER , grenade_ent)
+            return HC_SUPERCEDE
+        }
+        default:{
+            return HC_CONTINUE
+        }
+    }
+    // if(GetHunManRule() == HUMAN_RULE_Grenadier && is_user_connected(index) && cs_get_user_team(index) == CS_TEAM_T){
+        
+    // }
     return HC_CONTINUE
 }
 
 public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damagebits){
-    if(cs_get_user_team(idattacker) != CS_TEAM_T)
+    if(idattacker > get_maxplayers() || cs_get_user_team(idattacker) != CS_TEAM_T)
         return HC_CONTINUE
     new Rule = GetHunManRule()
     switch(Rule){
@@ -250,10 +299,9 @@ public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damag
             }else{
                 if(slot != 1 || !UTIL_RandFloatEvents(0.05))
                     return HAM_IGNORED
-                damagebits |= DMG_ALWAYSGIB
                 new Float:heal = get_entvar(this , var_max_health)
                 SetHamParamFloat(4 , heal*2) //副武器秒杀
-                rg_spawn_random_gibs(this , 3)
+                rg_spawn_random_gibs(this , 1)
             }
         }
         case HUMAN_RULE_Vampirism:{
@@ -410,4 +458,41 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
 		set_pev(ent, pev_dmg_inflictor, attacker)
 		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
     }
+}
+
+stock JpBoom(Npc){
+    if(!GetIsNpc(Npc))
+        return
+    new ent = -1 , Float:fOrigin[3]
+    new const explosionRadius = 200.0
+    new const Float:maxDamage = 30.0           // 爆炸中心的最大伤害
+    new const Float:minDamage = 10.0           // 爆炸边缘的最小伤害
+    get_entvar(Npc , var_origin , fOrigin)
+    while ((ent = find_ent_in_sphere(ent, fOrigin, explosionRadius)) != 0){
+        if(FClassnameIs(ent , "player") || FClassnameIs(ent , "hostage_entity")){
+            if(get_entvar(ent ,var_deadflag) == DEAD_DEAD) continue
+            new Float:targetOrigin[3]
+            get_entvar(ent, var_origin, targetOrigin)
+            new Float:distance = get_distance_f(fOrigin, targetOrigin)
+            new Float:damageFactor = 1.0 - (distance / explosionRadius)
+            if(damageFactor < 0.0)
+                damageFactor = 0.0
+            new Float:actualDamage = minDamage + (maxDamage - minDamage) * damageFactor
+            ExecuteHamB(Ham_TakeDamage , ent , Npc, GetFakeClient() , actualDamage , DMG_BULLET)
+        }
+    }
+    new iOrigin[3]
+    iOrigin[0] = floatround(fOrigin[0])
+    iOrigin[1] = floatround(fOrigin[1])
+    iOrigin[2] = floatround(fOrigin[2])
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
+	write_byte(TE_EXPLOSION)
+	write_coord(iOrigin[0])
+	write_coord(iOrigin[1])
+	write_coord(iOrigin[2])
+	write_short(JpBoomSpr)
+	write_byte(30)
+	write_byte(15)
+	write_byte(0)
+	message_end()
 }

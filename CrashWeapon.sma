@@ -86,7 +86,7 @@ public ResetWaeponProbility(){
 }
 
 public TakeDamge_Pre(this, idinflictor, idattacker, Float:damage, damagebits){
-    if(Has_KongFu[idattacker] && this != idattacker){
+    if(is_user_alive(idattacker) && Has_KongFu[idattacker] && this != idattacker){
         SetHamParamFloat(4 , damage + damage * KongFu_AttackMul[idattacker])
     }
     return HAM_IGNORED

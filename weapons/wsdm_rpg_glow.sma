@@ -30,9 +30,9 @@ new const DAMAGE_ENTITY_NAME[] = "trigger_hurt"
 new ENTITY_NAME[] = "wpn_rpgrocket"
 
 // Models
-new P_MODEL[] = "models/p_rpg.mdl"
-new V_MODEL[] = "models/v_rpg.mdl"
-new W_MODEL[] = "models/w_rpg.mdl"
+new P_MODEL[] = "models/p_rpg_glow.mdl"
+new V_MODEL[] = "models/v_rpg_glow.mdl"
+new W_MODEL[] = "models/w_rpg_glow.mdl"
 
 // Rocket model and sound
 new ROCKET_MDL[] = "models/rpgrocket.mdl"
@@ -46,7 +46,7 @@ new ishaveprg[33]
 
 new weaponidmenu
 
-#define cost 80.0
+#define cost 150.0
 
 enum Rpg
 {
@@ -72,9 +72,9 @@ public plugin_init()
 
 	RegisterHam(Ham_AddPlayerItem, "player", "OnPlayerPickupWeapon", 1)
 
-	weaponidmenu = BulidWeaponMenu("追踪火箭筒", cost)
+	weaponidmenu = BulidWeaponMenu("幽灵火箭筒", cost)
 
-	BulidCrashGunWeapon("追踪火箭筒", W_MODEL , "FreeGive", plid)
+	BulidCrashGunWeapon("幽灵火箭筒", W_MODEL , "FreeGive", plid)
 }
 
 public ItemSel_Post(id, items, Float:cost1){
@@ -117,7 +117,7 @@ public CreateWeaponFunc(){
    BuildWeaponFlags(Waeponid, WFlag_NoHUD)
    BuildWeaponReload(Waeponid, anim_reload, 61.0 / 30.0)
    BuildWeaponFireSound(Waeponid, ROCKET_SOUND)
-   BuildWeaponAmmunition(Waeponid, 1, ammo)
+   BuildWeaponAmmunition(Waeponid, 5, ammo)
    BuildWeaponPrimaryAttack(Waeponid, 25.0/30.0, 0.0, 0.0, anim_fire)
    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPre, "PrimaryAttackPre")
    RegisterWeaponForward(Waeponid, WForward_DeployPost, "DeployPost")
@@ -188,8 +188,13 @@ public m_Touch(toucher, touched){
 public PrimaryAttackPre(EntityID){
 	new id = get_pdata_cbase(EntityID, m_pPlayer);
 	new Float:origin[3]
-	get_position(id,20.0,0,0,origin)
+	get_position(id,20.0,20.0,-10.0,origin)
 	CreateRpg(id,origin)
+	get_position(id,20.0,-20.0,-10.0,origin)
+	CreateRpg(id,origin)
+	get_position(id,20.0,0.0,30.0,origin)
+	CreateRpg(id,origin)
+
 }
 
 public CreateRpg(ids , Float:Sp_Origin[3]){

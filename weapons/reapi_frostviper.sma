@@ -2,7 +2,8 @@
 /* =========================================
 -------- Plugin Datas and Headers ----------
 ========================================= */
-
+#include <animation>
+#include <cstrike>
 #include <amxmodx>
 #include <amxmisc>
 #include <engine>
@@ -35,7 +36,8 @@ new const SOUND_FIRE[][] =
 	"weapons/frostbite-2.wav",
 	"weapons/frostbite-3.wav",
 
-	"weapons/frostbite_idle.wav"
+	"weapons/frostbite_idle.wav",
+	"weapons/frostbite-2_exp.wav"
 }
 
 #define CSW_FROSTBITE CSW_M249
@@ -79,6 +81,7 @@ new g_IsConnected, g_IsAlive, g_PlayerWeapon[33]
 
 new HookChain:gl_HookChain_IsPenetrableEntity_Post
 new Float:g_flSpread[33], g_iShotsFired[33], Float:g_flAccuracy[33]
+new ExpB
 
 // Please ignore
 native ccx_custom_pmodel(id, cswpnid, const name[]);
@@ -143,6 +146,9 @@ public plugin_precache()
 	
 	Stock_PrecacheSoundsFromModel(V_FROSTBITE)
 	Stock_PrecacheFromWeaponList(weapon_spr)
+
+	precache_model("models/ef_frostbite_projectile.mdl")
+	ExpB = precache_model("sprites/exp_bmode.spr")
 	
 	g_cachde_mf[0] = engfunc(EngFunc_PrecacheModel, MF_1)
 	g_cachde_mf[1] = engfunc(EngFunc_PrecacheModel, MF_2)
@@ -445,7 +451,7 @@ public CWeapon_Fire(iWpn, id, iClip, Float: flNextAttack)
 		iDamage = ArrayGetCell(g_config_dmgbullet, 0)
 
 	EnableHookChain(gl_HookChain_IsPenetrableEntity_Post);
-	rg_fire_bullets3(iWpn, id, vecSrc, vecAiming, g_flSpread[id], 8192.0, 2, BULLET_PLAYER_556MM, iDamage, 0.9, false, get_member(id, random_seed));
+	rg_fire_bullets3(id, id, vecSrc, vecAiming, g_flSpread[id], 8192.0, 2, BULLET_PLAYER_556MM, iDamage, 0.9, false, get_member(id, random_seed));
 	DisableHookChain(gl_HookChain_IsPenetrableEntity_Post);
 
 	rg_set_animation(id, PLAYER_ATTACK1);
@@ -551,15 +557,100 @@ public Ham_CWeapon_PostFrame_Pre(ent)
 	if (is_nullent(ent) || !Had_Weapon(ent, WEAPON_CODE))
 		return HAM_IGNORED	
 	
-	new Float:fTimer1
+	new Float:fTimer1 , button
+	new player = get_member(ent , m_pPlayer)
 	get_entvar(ent, var_fuser1, fTimer1)
-
+	button = get_entvar(player ,var_button )
+	// oldbutton = get_entvar(player ,var_oldbuttons)
 	if(fTimer1 && fTimer1 < get_gametime())
 	{
 		SendSound(id, CHAN_ITEM, SOUND_FIRE[3])
 		set_entvar(ent, var_fuser1, get_gametime() + 5.2)
 	}
+	if(button & IN_ATTACK2){
+		SecFire(player , ent)
+	}
 	return HAM_IGNORED
+}
+
+public SecFire(ent , iWpn){
+	if(get_member(ent , m_flNextAttack) > 0.0){
+		return
+	}
+
+	CreateModeBEnt(ent , iWpn)
+	
+	Stock_SendWeaponAnim(ent, iWpn, 1)
+	emit_sound(ent, CHAN_WEAPON, SOUND_FIRE[1], VOL_NORM, ATTN_NORM, 0, random_num(95,120))
+	set_member(ent, m_flNextAttack, 0.5)
+}
+
+public CreateModeBEnt(const iPlayer , const iWpn){
+	new iEnt = rg_create_entity("info_target")
+	new Float:fOrigin[3] ,Float:Start[3],Float:fAngles[3]
+	get_entvar(iPlayer, var_v_angle, fAngles)
+    fAngles[0] *= -1.0
+	get_entvar(iPlayer , var_origin , fOrigin)
+	get_position(iPlayer , 5.0, 0.0, 20.0, Start)
+	set_entvar(iPlayer , var_fuser1 , get_gametime() + 1.0)
+
+
+
+	set_entvar(iEnt ,var_origin , Start)
+	set_entvar(iEnt ,var_solid , SOLID_TRIGGER)
+	set_entvar(iEnt ,var_movetype , MOVETYPE_FLY)
+	new Float:fVel[3]
+	velocity_by_aim(iPlayer, 800, fVel)
+    set_entvar(iEnt, var_velocity, fVel)	
+	set_entvar(iEnt , var_owner , iPlayer)
+	set_entvar(iEnt,var_angles, fAngles)
+	set_entvar(iEnt , var_sequence , 0)
+	set_entvar(iEnt , var_framerate , 1.0)
+
+	engfunc(EngFunc_SetModel , iEnt , "models/ef_frostbite_projectile.mdl")
+	SetTouch(iEnt , "projectile_touch")
+	SetThink(iEnt , "projectile_Thick")
+	set_size(iEnt , Float:{-1.0 , -50.0, -50.0} , Float:{1.0,50.0,50.0})
+	return iEnt
+}
+
+public projectile_touch(const this , const pToucher){
+	new owner = get_entvar(this , var_owner)
+	if(owner == pToucher)
+		return
+	if(get_entvar(pToucher , var_solid) == SOLID_BSP || FClassnameIs(pToucher , "worldspawn")){
+		Exp(this , owner)
+		rg_remove_entity(this)
+		emit_sound(this, CHAN_WEAPON, SOUND_FIRE[4], VOL_NORM, ATTN_NORM, 0, random_num(95,120))
+	}
+	if(get_entvar(pToucher , var_iuser2) == this && get_entvar(this , var_iuser2) == true)
+		return
+	set_entvar(pToucher , var_iuser2 , this)
+	set_entvar(this , var_iuser2 , true)
+	ExecuteHamB(Ham_TakeDamage , pToucher , this , owner , 1000.0 , DMG_BULLET)
+}
+
+public projectile_Thick(const this){
+	StudioFrameAdvance(this)
+	
+	set_entvar(this , var_nextthink , get_gametime() + 0.1)
+}
+
+public Exp(const expEnt , owner){
+	new Float:ExpOrigin[3]
+	get_entvar(expEnt , var_origin , ExpOrigin)
+	message_begin(MSG_BROADCAST ,SVC_TEMPENTITY)
+	write_byte(TE_EXPLOSION)
+	engfunc(EngFunc_WriteCoord, ExpOrigin[0])
+	engfunc(EngFunc_WriteCoord, ExpOrigin[1])
+	engfunc(EngFunc_WriteCoord, ExpOrigin[2])
+	write_short(ExpB)	// sprite index
+	write_byte(20)	// scale in 0.1's
+	write_byte(20)	// framerate
+	write_byte(TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NODLIGHTS)	// flags
+	message_end()
+
+	rg_radius_damage(ExpOrigin ,owner ,  owner, 1500.0 , 350.0 , DMG_BULLET)
 }
 
 public Ham_CWeapon_Holster_Post(ent) 
@@ -1070,6 +1161,64 @@ stock Stock_PrecacheFromWeaponList(const szWeaponList[])
 	}
 
 	fclose(pFile);
+}
+
+stock get_position(id,Float:forw, Float:right, Float:up, Float:vStart[])
+{
+	new Float:vOrigin[3], Float:vAngle[3], Float:vForward[3], Float:vRight[3], Float:vUp[3]
+	
+	pev(id, pev_origin, vOrigin)
+	pev(id, pev_view_ofs,vUp) //for player
+	xs_vec_add(vOrigin,vUp,vOrigin)
+	pev(id, pev_v_angle, vAngle) // if normal entity ,use pev_angles
+	
+	angle_vector(vAngle,ANGLEVECTOR_FORWARD,vForward) //or use EngFunc_AngleVectors
+	angle_vector(vAngle,ANGLEVECTOR_RIGHT,vRight)
+	angle_vector(vAngle,ANGLEVECTOR_UP,vUp)
+	
+	vStart[0] = vOrigin[0] + vForward[0] * forw + vRight[0] * right + vUp[0] * up
+	vStart[1] = vOrigin[1] + vForward[1] * forw + vRight[1] * right + vUp[1] * up
+	vStart[2] = vOrigin[2] + vForward[2] * forw + vRight[2] * right + vUp[2] * up
+}
+
+stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage, Float:radius, dmg_bits)
+{
+    new ent = -1
+    new Float:target_origin[3]
+    new Float:distance
+    new Float:final_damage
+	new Float:Origin_[3]
+	new Float:Heal;
+	//server_print("%f %f %f rg_radius_damage in put" , origin[0],origin[1],origin[2]);
+	// get_entvar(inflictor, var_origin, Origin_)
+
+    while ((ent = find_ent_in_sphere(ent, origin, radius)) != 0)
+    {
+        if (!is_valid_ent(ent)) continue
+		if(pev(ent,pev_takedamage) == DAMAGE_NO) continue
+
+		new deadflag
+		pev(ent , pev_deadflag,deadflag)
+		
+		if(deadflag != DEAD_NO) continue
+
+        get_entvar(ent, var_origin, target_origin)
+        distance = vector_distance(origin, target_origin)
+
+        // ���Եݼ��˺���ԽԶԽ�ͣ�
+        final_damage = damage * (1.0 - (distance / radius))
+        if (final_damage <= 0.0) continue;
+
+		if(ent == attacker) continue;
+
+		if(is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
+
+		get_entvar(ent , var_health , Heal);
+
+		new kill = Heal - final_damage;
+		set_pev(ent, pev_dmg_inflictor, attacker)
+		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
+    }
 }
 
 /* ======================================

@@ -13,6 +13,13 @@
 #define Set_BitVar(%1,%2)		(%1 |= (1 << (%2 & 31)));
 #define UnSet_BitVar(%1,%2)		(%1 &= ~(1 << (%2 & 31)));
 
+#define GetWeaponClip(%0)					get_member(%0, m_Weapon_iClip)
+#define SetWeaponClip(%0,%1)				set_member(%0, m_Weapon_iClip, %1)
+#define GetWeaponAmmoType(%0)				get_member(%0, m_Weapon_iPrimaryAmmoType)
+#define GetWeaponAmmo2Type(%0)				get_member(%0, m_Weapon_iSecondaryAmmoType)
+#define GetWeaponAmmo(%0,%1)				get_member(%0, m_rgAmmo, %1)
+#define SetWeaponAmmo(%0,%1,%2)				set_member(%0, m_rgAmmo, %1, %2)
+
 #define CLIP 500
 #define Max_bpammo 1500
 #define WaeponIDs 10000 +5
@@ -64,7 +71,7 @@ public plugin_init(){
     RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
     RegisterHookChain(RG_CBasePlayer_AddPlayerItem, "m_AddPlayerItem")
     KickBackHandle = RegisterHookChain(RG_CBasePlayerWeapon_KickBack, "m_KickBack")
-    FireBulletsHandle = RegisterHookChain(RG_CBaseEntity_FireBullets3, "m_FireBullets3")
+    // FireBulletsHandle = RegisterHookChain(RG_CBaseEntity_FireBullets3, "m_FireBullets3")
 
     register_forward(FM_UpdateClientData , "fw_UpdateClientData_Post")
 
@@ -252,16 +259,30 @@ public m_PrimaryAttack_Post(this){
 }
 
 public m_PrimaryAttack(this){
+    static Float:vecSrc[3], Float:vecAiming[3]
     new Player = get_member(this , m_pPlayer)
+    new id = Player
     if(!Get_BitVar(HasWaepon , Player))
         return HAM_IGNORED
     set_member(this , m_Weapon_flAccuracy, 0.0) //阻止精度下降
     new Cilp = get_member(this , m_Weapon_iClip)
     if(Cilp){
         FireKickBack = true
+    }else{
+        ExecuteHam(Ham_Weapon_PlayEmptySound, this);
+        set_member(this, m_Weapon_flNextPrimaryAttack, 0.2);
+        return HAM_SUPERCEDE;
     }
-    set_member(this, m_Weapon_iClip , 100)
-    return HAM_IGNORED
+    Stock_GetEyePosition(id, vecSrc);
+	Stock_GetAiming(id, vecAiming);
+
+    rg_fire_bullets3(id, id, vecSrc, vecAiming, 0, 8192.0, 5, BULLET_PLAYER_556MM, FireDamage, 0.9, false, get_member(id, random_seed));
+    
+    Stock_SendWeaponAnim(id, this, 1);
+    rg_set_animation(id, PLAYER_ATTACK1);
+    SetWeaponClip(this, --Cilp);
+    set_member(this , m_Weapon_flNextPrimaryAttack , FireCoolDown)
+    return HAM_SUPERCEDE
 }
 
 public m_KickBack(const this, Float:up_base, Float:lateral_base, Float:up_modifier, Float:lateral_modifier, Float:p_max, Float:lateral_max, direction_change){
@@ -386,4 +407,20 @@ stock Stock_SendWeaponAnim(id, iWpn, iAnim)
 		write_byte(iBody);
 		message_end();
 	}
+}
+
+stock Stock_GetEyePosition(id, Float:vecEyeLevel[3])
+{
+	static Float: vecOrigin[3]; get_entvar(id, var_origin, vecOrigin);
+	static Float: vecViewOfs[3]; get_entvar(id, var_view_ofs, vecViewOfs);
+	xs_vec_add(vecOrigin, vecViewOfs, vecEyeLevel);
+}
+
+stock Stock_GetAiming(id, Float:vecAiming[3]) 
+{
+	static Float: vecViewAngle[3]; get_entvar(id, var_v_angle, vecViewAngle);
+	static Float: vecPunchAngle[3]; get_entvar(id, var_punchangle, vecPunchAngle);
+
+	xs_vec_add(vecViewAngle, vecPunchAngle, vecViewAngle);
+	angle_vector(vecViewAngle, ANGLEVECTOR_FORWARD, vecAiming);
 }

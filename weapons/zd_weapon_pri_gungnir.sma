@@ -97,7 +97,7 @@ new const EXP_MODELS[][] =
 // knockback
 #define WKNOCK_CHARGE 90.0 // only charge
 
-#define cost 180.0
+#define cost 120.0
 
 // MACROS
 #define Get_BitVar(%1,%2) (%1 & (1 << (%2 & 31)))
