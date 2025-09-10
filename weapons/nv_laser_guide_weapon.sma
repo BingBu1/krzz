@@ -117,7 +117,7 @@ public plugin_init()
 	
 	Register_Cvars();
 	
-	register_event("CurWeapon", "Event_CurWeapon", "be", "1=1");
+	// register_event("CurWeapon", "Event_CurWeapon", "be", "1=1");
 	register_event("ResetHUD", "newRound", "b"); 
 	register_logevent("logevent_round_end", 2, "1=Round_End") 
 	
@@ -129,6 +129,7 @@ public plugin_init()
 	// Ham
 	RegisterHam(Ham_Item_AddToPlayer, weapon_laser_guide, "fw_Item_AddToPlayer_Post", 1);
 	RegisterHam(Ham_Weapon_PrimaryAttack,weapon_laser_guide,"fw_Primary_Attack");
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy");
 	register_think(Ground_Sprite_ClassName,"think_sprite");
 	
 	register_clcmd("weapon_laser_guide","weapon_hook");
@@ -288,17 +289,25 @@ public logevent_round_end()
 	remove_entity_name(Ground_Sprite_ClassName);
 }
 
-public Event_CurWeapon(id)
-{
-	if(is_user_alive(id))
-	{
-		static CSWID; CSWID = read_data(2);
-		if(CSWID == CSW_LASER && Get_BitVar(g_has_laser,id))
-		{
-			set_pev(id, pev_viewmodel2, V_MODEL);
-			set_pev(id, pev_weaponmodel2, P_MODEL);
-		}
-	}
+// public Event_CurWeapon(id)
+// {
+// 	if(is_user_alive(id))
+// 	{
+// 		static CSWID; CSWID = read_data(2);
+// 		if(CSWID == CSW_LASER && Get_BitVar(g_has_laser,id))
+// 		{
+// 			set_pev(id, pev_viewmodel2, V_MODEL);
+// 			set_pev(id, pev_weaponmodel2, P_MODEL);
+// 		}
+// 	}
+// }
+
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+    new playerid = get_member(this, m_pPlayer)
+    if(Get_BitVar(g_has_laser, playerid)){
+        SetHookChainArg(2,ATYPE_STRING, V_MODEL)
+        SetHookChainArg(3,ATYPE_STRING, P_MODEL)
+    }
 }
 
 

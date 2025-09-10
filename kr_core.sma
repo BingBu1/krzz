@@ -69,6 +69,16 @@ new LvName[][]={
 new const g_remove_entities[][] = { "func_bomb_target", "info_bomb_target", "info_vip_start", "func_vip_safetyzone", "func_escapezone", "hostage_entity",
 		"monster_scientist", "func_hostage_rescue", "info_hostage_rescue", "env_fog", "env_rain", "env_snow", "armoury_entity" }
 
+new const hint[][] = {
+    "!t[游戏提示]本服务器可以砸枪，部分枪械为隐藏枪械只有砸枪可以产出哦。",
+    "!t[游戏提示]本服务器拥有随机规则，不同规则下搭配不同，请慢慢探索",
+    "!t[游戏提示]当抗日伙伴攻击日军时，会传播仇恨请注意搭配。",
+    "!t[游戏提示]砸枪产物和扔掉的武器有时间限制，注意提示不要被大妈扫走了哦。",
+    "!t[游戏提示]英雄是每局开局时选出的特殊人物，拥有强力武器",
+    "!t[游戏提示]积分加成会随着难度而提升，但注意难度高时很难通关哦",
+    "!t[游戏提示]难度越高击杀精英和坦克产出物也会越多。",
+}
+
 new gameconfigdir[] = "addons/amxmodx/configs/krzz"
 //当前据点剩余npc,据点等级,当前据点Npc有多少个重生点
 new CurrentNpsMaxnum,judian_leavel,NpcNum_level,CanSpawnNum
@@ -120,7 +130,7 @@ public plugin_init(){
     register_concmd("KR_GoToCt", "ChangTeamToCt")
     register_concmd("Kr_EndRound", "KrEndRound")
 
-    bind_pcvar_float(register_cvar("clear_weaponbox","60.0"), ClearWaeponTime)    
+    bind_pcvar_float(register_cvar("clear_weaponbox","120.0"), ClearWaeponTime)    
 
     set_cvar_num("mp_freezetime", 0)
     set_cvar_num("mp_roundover", 1)
@@ -134,10 +144,22 @@ public plugin_init(){
     Hud_Damage = CreateHudSyncObj()
     Hud_xp = CreateHudSyncObj()
     set_task(1.0,"ShowHud",.flags = "b")
+    set_task(30.0,"Qa",.flags = "b")
 
     reg_forward()
     LoadMapconfig()
     FuckMapTank()
+}
+
+public Qa(){
+    static CurHits
+    if(CurHits >= sizeof hint){
+        CurHits = 0
+    }
+    set_hudmessage(200, 0 , 0 , 0.6 , 0.8,.holdtime = 5.0 , .fadeouttime = 1.0)
+    show_hudmessage(0 ,hint[CurHits])
+    m_print_color(0 , hint[CurHits])
+    CurHits++
 }
 
 public FuckMapTank(){
@@ -885,15 +907,15 @@ public Npc_SpawnThink(ent){
     new bool:isOccupied = IsSpawnPointOccupied(Origin, ent)
     if(isOccupied){
         //尝试往高处生产
-        Origin[2] += 60.0
+        Origin[2] += 100.0
         isOccupied = IsSpawnPointOccupied(Origin, ent)
     }
     if(body == CurrentSpawnbody && !isOccupied){
-        spawnent = CreateJpNpc(0,CS_TEAM_CT,Origin,Angles,CurrentSpawnbody)
+        spawnent = CreateJpNpc(0,CS_TEAM_CT, Origin, Angles, CurrentSpawnbody)
     }
     //如果不存在其他据点默认使用据点一的位置进行生成！
     else if(DontHasOtherJudian[TrueJudian] && body == 1 && !isOccupied){
-        spawnent = CreateJpNpc(0,CS_TEAM_CT,Origin,Angles,CurrentSpawnbody)
+        spawnent = CreateJpNpc(0,CS_TEAM_CT, Origin ,Angles, CurrentSpawnbody)
     }
     if(spawnent > 0){
         set_entvar(ent, var_Spawnid, spawnent)
@@ -1041,7 +1063,7 @@ stock bool:IsSpawnPointOccupied(const Float:origin[3] , pentToSkip)
     static Float:CheckPoint2[3]
     xs_vec_copy(origin, CheckPoint)
     xs_vec_copy(origin, CheckPoint2)
-    CheckPoint2[2] -= 30.0
+    CheckPoint2[2] -= 35.0
     CheckPoint[2] += 30.0
     //// void )			(const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr);
     engfunc(EngFunc_TraceHull, CheckPoint, CheckPoint2, DONT_IGNORE_MONSTERS, HULL_HUMAN, pentToSkip, tr)

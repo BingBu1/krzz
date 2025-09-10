@@ -52,9 +52,19 @@ public plugin_init(){
     RegisterHookChain(RG_CBasePlayer_RoundRespawn,"PlayerSpawn_Post",true)
     RegisterHookChain(RG_CBasePlayer_DropPlayerItem,"DropItems",true)
     RegisterHookChain(RG_CBasePlayer_MakeBomber,"MakeBoom",true)
+
+    RegisterHam(Ham_Item_AddToPlayer, "weapon_c4", "fw_Item_AddToPlayer_Post", 1)
+
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
     register_clcmd("say /changemodle" , "CreateMoudleMenu")
+}
+
+public fw_Item_AddToPlayer_Post(iWpn, id){
+    set_member(id , m_bHasC4 , 0) //防止压缩器闪退
+    if(get_entvar(id ,var_body) == 1 && !hero[id]){
+        SetModuleByLv(id)
+    }
 }
 
 public plugin_precache(){
@@ -89,6 +99,7 @@ public PlayerSpawn_Post(this){
 }
 
 public MakeBoom(const this){
+    set_member(this , m_bHasC4 , false)
     m_print_color(this, "!g[提示]你被选为抗日英雄,拥有特殊武器以及特殊模型。带领大家走向胜利吧。")
     MakeHero(this)
 }
@@ -112,7 +123,7 @@ public GiveHeroWeapon(id){
     if(!Rand){
         GiveWeaponByNames("暗影狙击", id)
     }else {
-        amxclient_cmd(id , "giveherogun")
+        server_cmd("giveherogun %d" , id)
     }
     
     set_entvar(id, var_health, 500.0) // 500血
@@ -133,7 +144,6 @@ public SetModuleByLv(this){
     new lv = GetLv(this)
     new setlv = (lv / 50) + 1
     new team = get_user_team(this)
-    log_amx("%d , setlv = %d" ,this , setlv)
     switch(team){
         case CS_TEAM_T:{
             if(setlv > 14){

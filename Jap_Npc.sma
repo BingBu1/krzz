@@ -21,7 +21,7 @@
 
 #define Max_heal 200.0 //最大血量随难度增长50级见顶
 #define Max_DamageReduction 0.65 //最大减伤50% 50级见顶一难度增加0.01
-#define Max_Damage 30.0
+#define Max_Damage 45.0
 
 new Jp_Name[][]={
 	Jp_defname,
@@ -68,6 +68,8 @@ new CloseAi
 
 new Array:NpcList
 
+new DeadMsg
+
 public plugin_init()
 {
 	register_plugin("日本人npc", "1.0", "Bing")
@@ -88,6 +90,7 @@ public plugin_init()
 
 	CreateFakeClient()
 	NpcList = ArrayCreate()
+	DeadMsg = get_user_msgid("DeathMsg")
 	// set_task(1.0, "CreateFakeClient", 0)
 
 	InitFowrad()
@@ -142,9 +145,15 @@ public plugin_natives(){
 	register_native("GetNpcList" , "KrGetNpcList" , 1)
 }
 
+Float:ClacLvDamageReduction(){
+	new const Float:TARGET_LEVEL = 500.0;
+	new const Float:LEVEL_COEFFICIENT = Max_DamageReduction / TARGET_LEVEL;
+	return floatmin(float(Getleavel()) * LEVEL_COEFFICIENT, Max_DamageReduction);
+}
+
 public OnLevelChange_Post(Lv){
 	CurrentLeavelHeal = floatmin(100.0 + float(Getleavel()) + 1.0, Max_heal)
-	CurrentLeavelDamageReduction = floatmin(float(Getleavel()) * 0.02, Max_DamageReduction)
+	CurrentLeavelDamageReduction = ClacLvDamageReduction()
 }
 
 public message_statusvalue(msg_id, msg_dest, id){
@@ -223,7 +232,7 @@ public event_roundstart(){
         }
     }
 	CurrentLeavelHeal = floatmin(100.0 + float(Getleavel()) + 1.0, Max_heal)
-	CurrentLeavelDamageReduction = floatmin(float(Getleavel()) * 0.02, Max_DamageReduction)
+	CurrentLeavelDamageReduction = ClacLvDamageReduction()
 	ChangeFakeClientName(0)
     FakeClientTask()
     set_task(1.0,"FakeClientTask",UpdateFakeClientTaskId,"",0,"b")
@@ -236,7 +245,6 @@ public CheckNpcList() {
     // 倒序遍历，从最后一个元素开始
     for (new i = ArraySize(NpcList) - 1; i >= 0; i--) {
         new ent = ArrayGetCell(NpcList, i);
-
         // 1. 如果实体无效或为宿主实体，删除
         if (is_nullent(ent)
             || !FClassnameIs(ent, "hostage_entity")
@@ -294,18 +302,23 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 	}
 
 	new CurTeam = KrGetFakeTeam(this)
+ 	new bool:Attacker_IsPlayer = ExecuteHam(Ham_IsPlayer , idattacker)
+	if(Attacker_IsPlayer && is_user_alive(idattacker) == false)
+		return HAM_SUPERCEDE
+	if(Attacker_IsPlayer && cs_get_user_team(idattacker)== CurTeam){
+		//相同阵营不要伤害
+		return HAM_SUPERCEDE
+	}
 
-	if(is_user_alive(idattacker) == false || (cs_get_user_team(idattacker) == CS_TEAM_CT && CurTeam == CS_TEAM_CT))
-		return HAM_SUPERCEDE
-	
-	if(CurTeam == CS_TEAM_T && cs_get_user_team(idattacker) == CS_TEAM_T)
-		return HAM_SUPERCEDE
-	
 	new Float:newdamage = damage
 	if(CurTeam == CS_TEAM_CT){
 		new Float:vel[3]
 		get_entvar(this, var_velocity,vel)
-		newdamage = damage - damage * CurrentLeavelDamageReduction
+		if(GetHunManRule() == HUMAN_RULE_Depleted_Uranium && CurrentLeavelDamageReduction > 0.1){
+			newdamage = damage * (1.0 - (CurrentLeavelDamageReduction - 0.1))
+		}else{
+			newdamage = damage * (1.0 - CurrentLeavelDamageReduction)
+		}
 		if(vel[0] == 0.0 && vel[1] == 0.0 && vel[2] == 0.0 && cs_get_hostage_foll(this) == 0){
 			newdamage *= 0.5 //如果不动再减伤0.5
 		}
@@ -323,13 +336,18 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 
 	Currentsequence = get_entvar(this, var_sequence)
 	set_entvar(this, var_health, AttackEndHeal)
-	
+	if(GetRiJunRule() == JAP_RULE_Gyokusai_Charge && AttackEndHeal <= 0.0 && get_entvar(this , var_iuser4) == 0){
+		set_entvar(this , var_health , 50.0)
+		set_entvar(this , var_iuser4 , 1)
+		AttackEndHeal = 50.0
+	}
 	if(AttackEndHeal <= 0.0){
 		if(UTIL_RandFloatEvents(0.02)){
 			new head_gib = rg_spawn_head_gib(this)
 			SetThink(head_gib , "RemoveGib")
 			set_entvar(head_gib, var_nextthink , get_gametime() + 2.0)
 		}
+		set_entvar(this , var_iuser4 , 0)
 		ExecuteHam(Ham_TakeDamage, this , 0,  0 , 0, damagebits)
 		set_entvar(this , var_deadflag, DEAD_DEAD)
 		return HAM_SUPERCEDE;
@@ -357,16 +375,18 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		if(think == 0){
 			setnpc_BeAttackInThink(this, 1)
 		}
-		PropagateHate(this)
 		new foll = cs_get_hostage_foll(this)
-		if(foll && FClassnameIs(foll , "player") && is_user_connected(foll) && is_user_alive(foll)){
-			setnpc_Attacker(this, foll)
-		}else{
-			if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == CS_TEAM_T){
-				setnpc_Attacker(this, idinflictor)
-			}else if(is_user_connected(idattacker) && is_user_alive(idattacker)){
-				setnpc_Attacker(this, idattacker)
-			}
+		new fool_isPlayer = FClassnameIs(foll , "player")
+		// if(foll && fool_isPlayer && is_user_connected(foll) && is_user_alive(foll) && !GetIsNpc(idinflictor)){
+		// 	setnpc_Attacker(this, idinflictor)
+		// }else{
+			
+		// }
+		if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == CS_TEAM_T){
+			setnpc_Attacker(this, idinflictor)
+			PropagateHate(this , idinflictor)
+		}else if(is_user_connected(idattacker) && is_user_alive(idattacker)){
+			setnpc_Attacker(this, idattacker)
 		}
 		cs_set_hostage_foll(this)
 	}
@@ -426,12 +446,13 @@ public fw_HostageThink(id){
 	}
 
 	new Beattackstatus = getnpc_BeAttackInThink(id)
-
+	// set_pdata_float(id , 0x62 , 0.0) //去除恐惧
 	if(Beattackstatus == 1){
 		setnpc_BeAttackInThink(id, 2)
 		new Currentsequence = get_entvar(id, var_sequence)
 		if(NpcHeal > 0.0 && is_in_anim(jp_beAttack_anim , sizeof jp_beAttack_anim , Currentsequence)){
 			set_entvar(id , var_sequence, 13)
+			set_member(id , m_Activity , 1)
 		}
 	}else if (Beattackstatus == 2){
 		setnpc_BeAttackInThink(id, 0)
@@ -512,7 +533,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 	DispatchKeyValue(ent,"model",Jp_Model[0])
 	DispatchKeyValue(ent,"origin",origin_str)
 	dllfunc(DLLFunc_Spawn, ent)
-	new Float:val[3] = {0.0, 0.0, 20.0}
+	new Float:val[3] = {0.0, 0.0, -200.0}
 	set_entvar(ent, var_velocity, val)
 	set_entvar(ent, var_origin, origin)
 	set_entvar(ent, var_max_health, CurrentLeavelHeal)
@@ -660,7 +681,7 @@ public FakeClientTask(){
         engfunc(EngFunc_SetOrigin, FakeClient, origin);
 
         set_pev(FakeClient, pev_effects, pev(FakeClient, pev_effects) | EF_NODRAW);
-        //server_print("FakeClient: flag %d", pev(FakeClient, pev_effects))
+
 		set_pev(FakeClient, pev_solid, SOLID_NOT);
 		set_pev(FakeClient, pev_movetype, MOVETYPE_NOCLIP);
 		return;
@@ -678,14 +699,26 @@ public CreateFakeClient(){
 	dllfunc(DLLFunc_ClientConnect, FakeClient,Jp_defname, "127.0.0.1", szMsg)
 	dllfunc(DLLFunc_ClientPutInServer, FakeClient)
 	cs_set_user_team(FakeClient, CS_TEAM_CT)
-	set_entvar(FakeClient,pev_takedamage,DAMAGE_NO)
+	set_entvar(FakeClient,pev_takedamage, DAMAGE_NO)
+	set_entvar(FakeClient , var_effects , get_entvar(FakeClient , var_effects) | EF_NODRAW)
 	set_prop_int(FakeClient,"IsFake", 1)
 }
 
 public fw_HostageTouch(this , other){
+	new thisteam =  KrGetFakeTeam(this)
+	if(GetIsNpc(this) && GetIsNpc(other)){
+		if(thisteam != KrGetFakeTeam(other) &&  thisteam == CS_TEAM_CT){
+			RibenNormlAttack(this , other)
+			return HAM_SUPERCEDE
+		}
+	}
     if(is_user_connected(other) && is_user_alive(other) && is_valid_ent(other)){
-        if(get_user_team(other) == CS_TEAM_CT)
+        if(get_user_team(other) == CS_TEAM_CT){
 			return HAM_IGNORED
+		}else if(thisteam == CS_TEAM_CT){
+			RibenNormlAttack(this , other)
+		}
+		
 		new Float:origin[3], Float:other_origin[3];
     	new Float:vPush[2];
     	new Float:this_velocity[3];
@@ -736,7 +769,7 @@ public play_anim(id , anim , Float:PlayTimer){
 public SendDeathMessage(vim,attacker){
 	static msgs_Deathmsg
 	if(!msgs_Deathmsg){
-		msgs_Deathmsg = get_user_msgid("DeathMsg")
+		msgs_Deathmsg = DeadMsg
 	}
 	new waeponname [32]
 	new wpnid = cs_get_user_weapon(attacker)
@@ -797,11 +830,14 @@ public FindNearhuman(ent){
 public RibenNormlAttack(this ,beattack){
 	new Float:origin[3],Float:Playerorigin[3];
 	new Float:AttackTimeer = getnpc_nextattack(this)
-
 	if(AttackTimeer > get_gametime())
 		return;
-
-	setnpc_nextattack(this, get_gametime() + random_float(1.5, 2.7))
+	new Float:AttackCd = random_float(1.5, 2.7)
+	new Rule = GetRiJunRule()
+	if(Rule == JAP_RULE_Lethal_Rhythm){
+		AttackCd =  random_float(0.5, 0.8)
+	}
+	setnpc_nextattack(this, get_gametime() + AttackCd)
 	get_entvar(this, var_origin, origin)
 	get_entvar(beattack, var_origin, Playerorigin)
 	new Float:distance = vector_distance(origin, Playerorigin)
@@ -816,23 +852,31 @@ public RibenNormlAttack(this ,beattack){
 		return;
 	}
 	play_anim(this, jp_Attack_anim[random_num(0,4)], 1.0)
-	set_msg_block(get_user_msgid("DeathMsg"), BLOCK_ONCE)
+	set_msg_block(DeadMsg, BLOCK_ONCE)
 
-	new Float:damage = 5.0 + float(Getleavel()) //基础攻击力
+	new lvaddDamge = Getleavel() / 10
+	new Float:damage = 5.0 + ( float(lvaddDamge) )//基础攻击力
 	new judian = GetJuDianNum()
 	damage = random_float(damage , damage + float(judian))
-	damage = floatmin(damage, Max_Damage) //最大不要超过50
-	if(GetRiJunRule() == JAP_RULE_Lethal_Critical_Strike && UTIL_RandFloatEvents(0.05)){
+	damage = floatmin(damage, Max_Damage) //最大不要超过45 400级达到顶峰
+	if(Rule == JAP_RULE_Lethal_Critical_Strike && UTIL_RandFloatEvents(0.05)){
 		damage *= 1.5
+	}else if(Rule == JAP_RULE_Desperate_Counterattack){
+		new Float:Health = get_entvar(this , var_health)
+		if(Health < 50.0)
+			damage = 100.0
 	}
-	ExecuteHamB(Ham_TakeDamage, beattack, GetFakeClient(), GetFakeClient(), damage, DMG_CRUSH)
+
+	if(!get_entvar(beattack , var_takedamage) == DAMAGE_NO)
+		ExecuteHamB(Ham_TakeDamage, beattack, GetFakeClient(), GetFakeClient(), damage, DMG_CRUSH)
+
 	if(GetIsNpc(beattack)){
 		return
 	}
-	set_msg_block(get_user_msgid("DeathMsg"), BLOCK_NOT)
+	set_msg_block(DeadMsg, BLOCK_NOT)
 	if(!is_user_alive(beattack)){
 		new soundnum = AttackToDieMan
-		new g_msgDeathMsg = get_user_msgid("DeathMsg");
+		new g_msgDeathMsg = DeadMsg;
 		message_begin(MSG_BROADCAST, g_msgDeathMsg);
 		write_byte(FakeClient);
 		write_byte(beattack);
@@ -962,13 +1006,13 @@ stock FindNearAttackNpc(npc){
 /**
  * 传播仇恨
  */
-stock PropagateHate(const BeAttackNpc){
+stock PropagateHate(const BeAttackNpc , const Attacker){
 	if(GetIsNpc(BeAttackNpc) == false)
 		return
 	static Float:NextPropaTime
 	if(get_gametime() < NextPropaTime)
 		return
-	NextPropaTime = get_gametime() + 5.0
+	NextPropaTime = get_gametime() + 2.0
 
 	new ent = -1
     new Float:Dis = 0.0 , Float:fOrigin[3] , Float:m_Origin[3]
@@ -980,10 +1024,8 @@ stock PropagateHate(const BeAttackNpc){
             continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD || get_entvar(ent , var_solid) == SOLID_NOT)
             continue
-        new Float:TmpDis = fm_boxents_distance(BeAttackNpc , ent)
-		if(TmpDis < 600.0){
-			setnpc_BeAttackInThink(ent , 1)
-		}
+		setnpc_BeAttackInThink(ent , 1)
+		setnpc_Attacker(ent , Attacker)
     }
 }
 

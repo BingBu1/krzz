@@ -115,6 +115,7 @@ public plugin_init()
 
 	RegisterHam(Ham_Spawn, weapon_frostbite, "Ham_CWeapon_Spawn_Post", true);
 	RegisterHam(Ham_Item_Deploy, weapon_frostbite, "Ham_CWeapon_Deploy_Post", true);
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
 	RegisterHam(Ham_Weapon_Reload, weapon_frostbite, "Ham_CWeapon_Reload_Post", true);
 	RegisterHam(Ham_Item_AddToPlayer, weapon_frostbite, "Ham_CWeapon_AddToPlayer_Post", true);
 	RegisterHam(Ham_Weapon_PrimaryAttack, weapon_frostbite, "Ham_CWeapon_PrimaryAttack_Post", true);
@@ -488,6 +489,12 @@ public Ham_CWeapon_Spawn_Post(iWpn)
 	rg_set_iteminfo(iWpn, ItemInfo_iMaxAmmo1, g_config_bpammo);
 }
 
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+    if(Had_Weapon(this, WEAPON_CODE)){
+        SetHookChainArg(3,ATYPE_STRING, P_FROSTBITE)
+    }
+}
+
 public Ham_CWeapon_Deploy_Post(iWpn) 
 {
 	if (is_nullent(iWpn) || !Had_Weapon(iWpn, WEAPON_CODE))
@@ -610,7 +617,8 @@ public CreateModeBEnt(const iPlayer , const iWpn){
 	engfunc(EngFunc_SetModel , iEnt , "models/ef_frostbite_projectile.mdl")
 	SetTouch(iEnt , "projectile_touch")
 	SetThink(iEnt , "projectile_Thick")
-	set_size(iEnt , Float:{-1.0 , -50.0, -50.0} , Float:{1.0,50.0,50.0})
+	set_entvar(iEnt , var_nextthink , get_gametime() + 0.1)
+	set_size(iEnt , Float:{-1.0 , -50.0, -50.0} , Float:{1.0, 50.0, 50.0})
 	return iEnt
 }
 
@@ -623,16 +631,29 @@ public projectile_touch(const this , const pToucher){
 		rg_remove_entity(this)
 		emit_sound(this, CHAN_WEAPON, SOUND_FIRE[4], VOL_NORM, ATTN_NORM, 0, random_num(95,120))
 	}
-	if(get_entvar(pToucher , var_iuser2) == this && get_entvar(this , var_iuser2) == true)
-		return
-	set_entvar(pToucher , var_iuser2 , this)
-	set_entvar(this , var_iuser2 , true)
-	ExecuteHamB(Ham_TakeDamage , pToucher , this , owner , 1000.0 , DMG_BULLET)
+	// if(get_entvar(pToucher , var_iuser2) == this && get_entvar(this , var_iuser2) == true)
+	// 	return
+	// set_entvar(pToucher , var_iuser2 , this)
+	// set_entvar(this , var_iuser2 , true)
+	// ExecuteHamB(Ham_TakeDamage , pToucher , this , owner , 1000.0 , DMG_BULLET)
 }
 
 public projectile_Thick(const this){
 	StudioFrameAdvance(this)
-	
+	new Float:fOrigin[3] , ent = -1
+	get_entvar(this , var_origin , fOrigin)
+	new owner = get_entvar(this , var_owner)
+	new owner_team = cs_get_user_team(owner)
+	while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
+		if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
+		if(get_entvar(ent , var_iuser2) == this)continue
+		if(ent == owner)continue
+		if(ExecuteHam(Ham_IsPlayer , ent) && cs_get_user_team(ent) == owner_team)continue
+		if(is_valid_ent(ent)){
+			ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
+			set_entvar(ent , var_iuser2 , this)
+		}
+	}
 	set_entvar(this , var_nextthink , get_gametime() + 0.1)
 }
 
@@ -1195,28 +1216,18 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
     while ((ent = find_ent_in_sphere(ent, origin, radius)) != 0)
     {
         if (!is_valid_ent(ent)) continue
-		if(pev(ent,pev_takedamage) == DAMAGE_NO) continue
-
-		new deadflag
-		pev(ent , pev_deadflag,deadflag)
-		
-		if(deadflag != DEAD_NO) continue
+        if(ent == attacker) continue;
+		if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
+        if(get_entvar(ent , pev_deadflag) == DEAD_DEAD) continue
 
         get_entvar(ent, var_origin, target_origin)
         distance = vector_distance(origin, target_origin)
 
-        // ���Եݼ��˺���ԽԶԽ�ͣ�
         final_damage = damage * (1.0 - (distance / radius))
         if (final_damage <= 0.0) continue;
 
-		if(ent == attacker) continue;
+		if(ExecuteHam(Ham_IsPlayer , ent) && is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
 
-		if(is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
-
-		get_entvar(ent , var_health , Heal);
-
-		new kill = Heal - final_damage;
-		set_pev(ent, pev_dmg_inflictor, attacker)
 		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
     }
 }

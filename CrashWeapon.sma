@@ -9,6 +9,7 @@
 #include <kr_core>
 #include <xp_module>
 #include <CrashWeapon>
+#include <roundrule>
 enum EventInfo {
     _:EventName[32],          // 事件名称（调试用）
     Float:EventProbability, // 独立触发概率
@@ -77,6 +78,10 @@ public ChangWaeponProbility(){
     }  
 }
 
+public ChangWaeponProbility2(Float:New){
+    Events[0][EventProbability] = New
+}
+
 public SetWaeponProbility(Float:New){
     Events[0][EventProbability] = New
 }
@@ -99,6 +104,11 @@ public event_roundstart(){
     }
     arrayset(Has_KongFu,0,sizeof Has_KongFu)
     arrayset(KongFu_AttackMul,0.0,sizeof KongFu_AttackMul)
+    new Rule  = GetHunManRule()
+    ChangWaeponProbility2(Weapon_EventProbability)
+    if(Rule == HUMAN_RULE_Lucky){
+        ChangWaeponProbility2(0.2)
+    }
 }
 
 public plugin_precache(){

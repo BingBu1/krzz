@@ -15,7 +15,7 @@ new IsReSpawn[33]
 
 new WpnForwad , OnCreateIteam_
 
-new BuyAmmo,GiveHeal
+new BuyAmmo,GiveHeal,NpcMenu
 
 new menuname[64]
 public plugin_init(){
@@ -31,6 +31,7 @@ public plugin_init(){
 }
 
 public plugin_precache(){
+    NpcMenu = BulidWeaponMenu("抗日伙伴", 0.0)
     BuyAmmo = BulidWeaponMenu("购买弹药", 0.04)
     GiveHeal = BulidWeaponMenu("军医治疗", 0.04)
 }
@@ -63,6 +64,7 @@ public CreateMenu(id){
     menu_additem(menuid, "大洋兑换系统", "1")
     menu_additem(menuid, "重返战场", "2")
     menu_additem(menuid, "更换模型", "3")
+    menu_additem(menuid, "购买下局规则", "9")
     menu_additem(menuid, "重新打开选择武器菜单", "8")
     menu_additem(menuid, "下一张地图", "4")
     menu_additem(menuid, "剩余时间", "5")
@@ -75,11 +77,19 @@ public CreateWeaponMenu(id){
     if(get_user_team(id) == CS_TEAM_CT)
         return;
     new wpnmenuid = menu_create("抗日菜单", "WpnMenuHandle")
-
+    new const FormatText[][]={
+        "%s (\r价格: %.2f大洋\y)",
+        "%s"
+    }
     for(new i = 0;i < Waeponid; i++){
         static info[5]
-        formatex(menuname, charsmax(menuname), "%s (\r价格: %.2f大洋\y)" , WeaponName[i]
-        , WeaponCost[i])
+        if(WeaponCost[i] <= 0.0){
+            formatex(menuname, charsmax(menuname), FormatText[1] , WeaponName[i])
+        }else{
+            formatex(menuname, charsmax(menuname), FormatText[0] , WeaponName[i]
+            , WeaponCost[i])
+        }
+        
         num_to_str(i, info , charsmax(info))
 
         new handle = PrepareArray(menuname,charsmax(menuname) , 1)
@@ -141,6 +151,10 @@ public menuHandle(id,menu,item){
             //武器菜单
             client_cmd(id, "say givewpn")
         }
+        case 9:{
+            //购买下局规则
+            client_cmd(id, "say /buyrule")
+        }
     }
     menu_destroy(menu)
 }
@@ -170,7 +184,7 @@ public WpnMenuHandle(id,menu,item){
     }
     new infoid = str_to_num(info)
     new Float:buycost = WeaponCost[infoid]
-    new Float:nowammos= GetAmmoPak(id)
+    new Float:nowammos = GetAmmoPak(id)
     if(nowammos >= buycost){
         ExecuteForward(WpnForwad, _, id, infoid, buycost)
         SetWpnMul(id, buycost)
@@ -230,9 +244,15 @@ public ItemSel_Post(id,item,Float:cost){
     new Float:m_Ammo = GetAmmoPak(id)
     if(item == BuyAmmo){
         AddAmmo(id)
+        return
     }
     if(item == GiveHeal){
         GiveHeal_f(id)
+        return
+    }
+    if(item == NpcMenu){
+        client_cmd(id , "say npc")
+        return
     }
 }
 

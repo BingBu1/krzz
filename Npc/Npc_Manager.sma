@@ -59,7 +59,6 @@ public EventRoundEnd(){
     TrieDestroy(CaCheSee)
     CaCheSee = TrieCreate()
     Kr_CreateNpcNums = 0
-    // TrieClear(CaCheSee)
 }
 
 public client_disconnected(i){
@@ -109,23 +108,64 @@ public CommandAll(id,menu,item){
     }
 }
 
-public npcMenu(id){
+public npcMenu(id) {
     new userlv = GetLv(id)
     new const canbuyFormat[] = "%s(\y%.0f大洋)(%d级) "
     new const nocanbuyFormat[] = "\d%s(\y%.0f大洋)(%d级)"
     new menuid = menu_create("购买抗日伙伴" , "NpcBuyMenu")
-    for(new i = 0 ; i < Aiid; i++){
-        static name[32] , infonum[7]
-        if(userlv > Kr_NpcLevel[i]){
-            formatex(name , charsmax(name) , canbuyFormat , Kr_NpcName[i] , Kr_Npc[i][Npc_Money],Kr_NpcLevel[i] )
-        }else{
-            formatex(name , charsmax(name) , nocanbuyFormat ,  Kr_NpcName[i] , Kr_Npc[i][Npc_Money],Kr_NpcLevel[i] )
-        }
-        num_to_str(i , infonum , 6)
-        menu_additem(menuid , name , infonum)
+
+    // 创建一个临时数组来存储索引
+    new sortIndex[Max_NpcReg]
+    for (new i = 0; i < Aiid; i++) {
+        sortIndex[i] = i
     }
-    menu_display(id , menuid)
+
+    // 简单的冒泡排序 (按等级升序)
+    for (new i = 0; i < Aiid - 1; i++) {
+        for (new j = i + 1; j < Aiid; j++) {
+            if (Kr_NpcLevel[sortIndex[i]] > Kr_NpcLevel[sortIndex[j]]) {
+                new tmp = sortIndex[i]
+                sortIndex[i] = sortIndex[j]
+                sortIndex[j] = tmp
+            }
+        }
+    }
+
+    // 按照排序后的顺序添加菜单
+    for (new k = 0; k < Aiid; k++) {
+        new i = sortIndex[k]   // 真实的 Aiid
+        static name[64], infonum[7]
+
+        if (userlv >= Kr_NpcLevel[i]) {
+            formatex(name, charsmax(name), canbuyFormat, Kr_NpcName[i], Kr_Npc[i][Npc_Money], Kr_NpcLevel[i])
+        } else {
+            formatex(name, charsmax(name), nocanbuyFormat, Kr_NpcName[i], Kr_Npc[i][Npc_Money], Kr_NpcLevel[i])
+        }
+
+        num_to_str(i, infonum, charsmax(infonum)) // infonum 保持 Aiid 对应
+        menu_additem(menuid, name, infonum)
+    }
+
+    menu_display(id, menuid)
 }
+
+// public npcMenu(id){
+//     new userlv = GetLv(id)
+//     new const canbuyFormat[] = "%s(\y%.0f大洋)(%d级) "
+//     new const nocanbuyFormat[] = "\d%s(\y%.0f大洋)(%d级)"
+//     new menuid = menu_create("购买抗日伙伴" , "NpcBuyMenu")
+//     for(new i = 0 ; i < Aiid; i++){
+//         static name[32] , infonum[7]
+//         if(userlv > Kr_NpcLevel[i]){
+//             formatex(name , charsmax(name) , canbuyFormat , Kr_NpcName[i] , Kr_Npc[i][Npc_Money], Kr_NpcLevel[i] )
+//         }else{
+//             formatex(name , charsmax(name) , nocanbuyFormat ,  Kr_NpcName[i] , Kr_Npc[i][Npc_Money],Kr_NpcLevel[i] )
+//         }
+//         num_to_str(i , infonum , 6)
+//         menu_additem(menuid , name , infonum)
+//     }
+//     menu_display(id , menuid)
+// }
 
 public NpcBuyMenu(id, menu, item){
     if(item == MENU_EXIT || !is_user_alive(id) || cs_get_user_team(id) == CS_TEAM_CT){
@@ -151,8 +191,10 @@ public NpcBuyMenu(id, menu, item){
         menu_destroy(menu)
         return
     }
-    SubAmmoPak(id , NeedAmmo)
-    CreateNpc(id , SelNpcid)
+    
+    if(CreateNpc(id , SelNpcid) > 0)
+        SubAmmoPak(id , NeedAmmo)
+
     menu_destroy(menu)
     return
 }
@@ -299,12 +341,14 @@ public Ai_Think(npc_id){
         rg_remove_entity(npc_id)
     
     new Float:flTime = StudioFrameAdvance(npc_id)
-    // DispatchAnimEvent(npc_id, flTime)
+    // DispatchAnimEvent(npc_id, 0.1)
 
     FullThink = get_prop_float(npc_id , var_NextFullThink)
     if(FullThink > GameTime)
         return HAM_SUPERCEDE
     set_prop_float(npc_id , var_NextFullThink , GameTime + 0.1)
+    set_pdata_float(npc_id , 477 , 0.0) //解除原thinkfull
+
     new master = get_prop_int(npc_id , var_master)
     new NpcState = get_prop_int(npc_id, var_state)
     new m_AttackEnt
@@ -455,7 +499,7 @@ stock FindNearAttackNpc(npc , NpcMode:Mode){
     new Array:NpcHandle = GetNpcList()
     new size = ArraySize(NpcHandle)
     new npcteam = GetNpcFakeTeam(npc)
-    while ((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
+    while ((ent = rg_find_ent_by_class(ent , "hostage_entity") ) > 0){
         if(is_nullent(ent))continue
         if(ent == npc || GetNpcFakeTeam(ent) == npcteam) continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
@@ -469,10 +513,10 @@ stock FindNearAttackNpc(npc , NpcMode:Mode){
         }
     }
     if(target == -1){
-        set_prop_float(npc , var_nextSerNpc , get_gametime() + random_float(1.5,2.5))
+        set_prop_float(npc , var_nextSerNpc , get_gametime() + random_float(0.5,1.5))
         return -1
     }
-    if(Mode == NpcMode_Ranged){
+    if(Mode == NpcMode_Ranged || Mode == NpcMode_Warrior){
         //只对最近敌人进行可视判断
         new iterations = 0;
         const MAX_ITER = 5;
@@ -482,7 +526,18 @@ stock FindNearAttackNpc(npc , NpcMode:Mode){
             return target
         }
         else if(TrHit > 0 && GetIsNpc(TrHit) && KrGetFakeTeam(TrHit) == CS_TEAM_T) {
-            return target
+            new observer = TrHit
+            while(iterations < MAX_ITER){
+                ret = Stock_CanSee(observer , target , TrHit)
+                if(ret)
+                    return target
+                if(TrHit <= 0 || !GetIsNpc(TrHit))
+                    break
+                if(KrGetFakeTeam(TrHit) == CS_TEAM_CT)
+                    return TrHit
+                observer = TrHit
+                iterations++
+            }
         }
         return -1  
     }

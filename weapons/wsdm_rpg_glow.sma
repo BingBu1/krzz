@@ -30,9 +30,9 @@ new const DAMAGE_ENTITY_NAME[] = "trigger_hurt"
 new ENTITY_NAME[] = "wpn_rpgrocket"
 
 // Models
-new P_MODEL[] = "models/p_rpg_glow.mdl"
+new P_MODEL[] = "models/p_rpg.mdl"
 new V_MODEL[] = "models/v_rpg_glow.mdl"
-new W_MODEL[] = "models/w_rpg_glow.mdl"
+new W_MODEL[] = "models/w_rpg.mdl"
 
 // Rocket model and sound
 new ROCKET_MDL[] = "models/rpgrocket.mdl"

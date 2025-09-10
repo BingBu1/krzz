@@ -74,19 +74,19 @@ new const EXP_MODELS[][] =
 
 // Weapon Config
 #define ACCURACY 23 // 0 - 100 ; -1 Default
-#define CLIP 50
+#define CLIP 100
 #define BPAMMO 250
 #define SPEED 0.13	//左键攻击速度
 #define SPEED2 1.0	//右键攻击速度
 #define RELOAD_TIME 2.03
 
-#define ELECTRO_DAMAGE random_float(100.0, 600.0)
+#define ELECTRO_DAMAGE random_float(500.0, 1200.0)
 #define ELECTRO_RANGE 500.0
 #define ELECTRO_KNOCKBACK 120.0 // the velocity of victim when got damage
 
 // base damage
 #define WDAMG_PLASMA random_float(500.0, 1000.0)		//右键
-#define WDAMG_CHARGE random_float(1000.0, 2500.0)		//长按右键
+#define WDAMG_CHARGE random_float(3000.0, 5200.0)		//长按右键
 #define WDAMG_BEAM random_float(500.0, 1250.0)		//长按右键光柱爆炸
 
 // range
@@ -128,7 +128,8 @@ public plugin_init()
 	register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 	
 	// Ham
-	RegisterHam(Ham_Item_Deploy, weapon_gungnir, "fw_Item_Deploy_Post", 1)	
+	RegisterHam(Ham_Item_Deploy, weapon_gungnir, "fw_Item_Deploy_Post", 1)
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")		
 	RegisterHam(Ham_Item_AddToPlayer, weapon_gungnir, "fw_Item_AddToPlayer_Post", 1)
 	RegisterHam(Ham_Item_PostFrame, weapon_gungnir, "fw_Item_PostFrame")	
 	RegisterHam(Ham_Weapon_Reload, weapon_gungnir, "fw_Weapon_Reload")
@@ -376,6 +377,14 @@ public fw_SetModel(entity, model[])
 	return FMRES_IGNORED;
 }
 
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+	new playerid = get_member(this, m_pPlayer)
+    if(Get_BitVar(g_Had_Base, playerid)){
+        SetHookChainArg(3,ATYPE_STRING, P_GUNGNIR)
+        SetHookChainArg(2,ATYPE_STRING, V_GUNGNIR)
+    }
+}
+
 public fw_Item_Deploy_Post(Ent)
 {
 	if(pev_valid(Ent) != 2)
@@ -615,7 +624,7 @@ public WE_GUNGNIR(id,iEnt,iClip, bpammo,iButton)
 						continue
 					if(pEntity == id)
 						continue
-					if(can_damage(pEntity , id) == false)
+					if(can_damage(id , pEntity ) == false)
 						continue
 					for(new i = 0 ; i < k ; i ++){
 						if(g_iVic[i] == pEntity){
@@ -858,7 +867,7 @@ public HamF_InfoTarget_Think(iEnt)
 			Stock_GetSpeedVector(vecOri, vecEnd2, 5000.0, vVec)
 			
 			static iBall
-			iBall = Stock_CreateEntityBase(iOwner, "info_target", MOVETYPE_FLY, "models/w_usp.mdl", "gungnir_plasma", SOLID_TRIGGER, 0.01)
+			iBall = Stock_CreateEntityBase(iOwner, "info_target", MOVETYPE_FLY, "sprites/blood.spr", "gungnir_plasma", SOLID_TRIGGER, 0.01)
 			engfunc(EngFunc_SetSize, iBall, Float:{-50.0, -50.0, 0.0}, Float:{50.0, 50.0, 50.0})
 			fm_set_rendering(iBall, kRenderFxGlowShell, 0, 0, 0, kRenderTransAlpha, 0)
 			
@@ -1136,18 +1145,26 @@ stock Float:Stock_Blah(Float:start[3], Float:end[3], ignore_ent)
 	free_tr2(ptr)
 	return get_distance_f(end, EndPos)
 } 
-stock can_damage(id1, id2)
+
+stock bool:can_damage(id1, id2)
 {
-	new flg = get_entvar(id1 , var_flags)
-	if(flg & FL_MONSTER){
-		return 1
+	new flg = get_entvar(id2 , var_flags)
+	if(flg & FL_MONSTER && GetIsNpc(id2)){
+		new team = KrGetFakeTeam(id2)
+		if(!FClassnameIs(id1 , "player"))
+			return false
+		new team2 = cs_get_user_team(id1)
+		return team != team2
 	}
+		
+
 	if(id1 <= 0 || id1 >= 33 || id2 <= 0 || id2 >= 33)
-		return 1
+		return true
 		
 	// Check team
-	return(get_pdata_int(id1, 114) != get_pdata_int(id2, 114))
+	return(get_member(id1, m_iTeam) != get_member(id2, m_iTeam))
 }
+
 stock Stock_Get_Velocity_Angle(entity, Float:output[3])
 {
 	static Float:velocity[3]

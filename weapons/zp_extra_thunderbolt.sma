@@ -20,9 +20,10 @@
 #define WEAPON_SECRETCODE 4234234
 #define DEFAULT_MAP_LIGHT "m"
 
-#define DEFAULT_AMMO 400
-#define RELOAD_TIME 2.67
-#define DAMAGE 8000.0
+#define DEFAULT_AMMO 9999
+// #define RELOAD_TIME 2.67
+#define RELOAD_TIME 0.06
+#define DAMAGE 2500.0
 
 #define ZOOM_DELAY 0.5
 #define ZOOM_DELAY2 0.1
@@ -76,7 +77,7 @@ public plugin_init()
 	RegisterHam(Ham_TraceAttack, "player", "fw_TraceAttack_Post", 1)
 	RegisterHam(Ham_TraceAttack, "hostage_entity", "fw_TraceAttack")
 	RegisterHam(Ham_TraceAttack, "hostage_entity", "fw_TraceAttack_Post", 1)
-	
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
 	register_event("CurWeapon", "Event_CurWeapon", "be", "1=1")
 	register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 	
@@ -84,7 +85,7 @@ public plugin_init()
 	
 	register_clcmd("admin_get_thunderbolt", "get_thunderbolt", ADMIN_RCON)
 	register_clcmd("weapon_sfsniper", "hook_weapon")
-	BulidCrashGunWeapon("特殊武器 雷神", "models/w_sfsniper.mdl" ,"FreeGive", plid)
+	BulidCrashGunWeapon("特殊武器 雷神机关枪", "models/w_sfsniper.mdl" ,"FreeGive", plid)
 }
 
 public event_roundstart(){
@@ -207,6 +208,13 @@ public fw_PlaybackEvent(flags, invoker, eventid, Float:delay, Float:origin[3], F
 	}
 	
 	return FMRES_HANDLED
+}
+
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+    new playerid = get_member(this, m_pPlayer)
+    if(g_had_thunderbolt[playerid]){
+        SetHookChainArg(3,ATYPE_STRING, p_model)
+    }
 }
 
 public Event_CurWeapon(id)
@@ -342,6 +350,7 @@ public thunderbolt_shoothandle(id)
 		
 		set_hudmessage(0, 200, 0, -1.0, -1.0, 0, 0.1, 0.1)
 		ShowSyncHudMsg(id, g_scope_hud, "")
+		set_entvar(id , var_punchangle , Float:{0.0,0.0,0.0})
 	}
 }
 

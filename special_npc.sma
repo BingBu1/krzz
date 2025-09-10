@@ -9,6 +9,7 @@
 #include <roundrule>
 #include  <engine>
 #include <hamsandwich>
+
 enum TankModle_e{
     Tk_alive,
     Tk_die
@@ -75,7 +76,7 @@ public Fw_AddToFullPack(const es, e, ent, HOST, hostflags, player, set){
         return FMRES_IGNORED
     new spr = get_entvar(ent , var_impulse)
 
-    if(!spr)
+    if(!spr || !is_valid_ent(spr))
         return FMRES_IGNORED 
 
     new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
@@ -614,32 +615,22 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
     new Float:final_damage
 	new Float:Origin_[3]
 	new Float:Heal;
-    
+    new CurTmea = KrGetFakeTeam(attacker)
     while ((ent = find_ent_in_sphere(ent, origin, radius)) > 0)
     {
+        if(ent == attacker) continue;
         if (!is_valid_ent(ent) || is_nullent(ent)) continue
-		if(get_entvar(ent,var_takedamage) == DAMAGE_NO) continue
-
-		new deadflag
-		get_entvar(ent , var_deadflag,deadflag)
-		
-		if(deadflag != DEAD_NO) continue
+		if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
+		if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
+        if(ExecuteHam(Ham_IsPlayer , ent))continue
+        if(CurTmea == KrGetFakeTeam(ent))continue
 
         get_entvar(ent, var_origin, target_origin)
         distance = vector_distance(origin, target_origin)
 
-        // ���Եݼ��˺���ԽԶԽ�ͣ�
         final_damage = damage 
         if (final_damage <= 0.0) continue;
 
-		if(ent == attacker) continue;
-
-        if(FClassnameIs(ent , "player")) continue;
-
-		get_entvar(ent , var_health , Heal);
-
-		new kill = Heal - final_damage;
-		set_entvar(ent, var_dmg_inflictor, attacker);
 		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits);
     }
 }

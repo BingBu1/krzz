@@ -9,6 +9,7 @@
 #include <xs>
 
 #include <animation>
+#include <xp_module>
 
 new const HumanRule[][] = {
     "掷弹兵",
@@ -24,17 +25,24 @@ new const HumanRule[][] = {
     "吸血",
     "火焰净化",
     "无限火力",
+    "幸运儿",
+    "贫铀弹头",
+    "尖刺护甲",
+    "九命猫"
 }
 
 new const RiJunRule[][]={
-    "日军:刀具强化",
+    "日军:刺刀加长",
     "日军:体魄强化",
     "日军:日军动员",
     "日军:致命暴击",
     "日军:伤害减免",
     "日军:坦克狂潮",
     "日军:兴奋剂",
-    "日军:自爆"
+    "日军:自爆",
+    "日军:致命节奏",
+    "日军:殊死反击",
+    "日军:玉碎冲锋"
 }
 
 new const HUNMAN_RULE_Text[][]= {
@@ -45,12 +53,16 @@ new const HUNMAN_RULE_Text[][]= {
     "子弹概率发出爆炸伤害",
     "随机获取武器",
     "所有人成为英雄",
-    "移速提升50",
+    "大幅度提升移速",
     "跳跃时伤害提升50%",
     "最后一发子弹打出核弹轰炸",
     "血量低于150时攻击可以吸血伤害的1%",
     "投掷手雷时将投掷出燃烧瓶",
-    "武器无线弹夹无需换单"
+    "武器无限弹夹无需换单",
+    "砸枪生成枪械概率大幅度提升",
+    "伤害无视防御10%,并可穿透9层墙体",
+    "受到伤害时向周围造成伤害",
+    "受到致死伤害时强制抵挡9次"
 }
 
 new const RIJUN_RULE_Text[][]= {
@@ -61,7 +73,10 @@ new const RIJUN_RULE_Text[][]= {
     "日军受到伤害降低5%",
     "平常波次有概率生成坦克",
     "50%概率无法被武器打出控制",
-    "死亡时10%概率自爆"
+    "死亡时10%概率自爆",
+    "攻击速度变快",
+    "血量低于50时伤害提高",
+    "抵御一次致死并将血量提升为50",
 }
 
 new CurrentHunManRule = -1
@@ -76,7 +91,10 @@ new HOOK_ThrowHeGrenade
 
 new g_Explosion ,JpBoomSpr
 
+new BuyNextRule
+
 native CreateNade(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time)
+native CreateBlast(const id)
 
 public plugin_init(){
     register_plugin("抗日随机规则", "1.0", "Bing")
@@ -86,8 +104,10 @@ public plugin_init(){
     RegisterHookChain(RG_CBaseEntity_FireBullets3 , "m_FireBullets")
     RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed , "m_MaxSpeed")
     RegisterHam(Ham_TakeDamage, "hostage_entity" , "RULE_HostageTakeDamage")
+    RegisterHam(Ham_TakeDamage, "player" , "RULE_PlayerTakeDamage")
 
     register_concmd("KR_ReRoundRule" , "RoundRule")
+    register_clcmd("say /buyrule" , "CreateBuyNextRule")
 }
 
 public plugin_precache(){
@@ -165,6 +185,45 @@ public RandCrashWeapon(const id){
     RandGiveWeapon(id)
 }
 
+public CreateBuyNextRule(const id){
+    new menu = menu_create("购买下局规则" , "BuyRule")
+    new const size = sizeof HumanRule
+    new info[8] ,text[33]
+
+    for(new i = 0 ; i < size ; i++){
+        num_to_str(i , info , charsmax(info))
+        formatex(text , charsmax(text) , "\r%s [10.0大洋]" , HumanRule[i])
+        menu_additem(menu , text, info)
+    }
+    menu_display(id , menu)
+}
+
+public BuyRule(id , menu , item){
+    if(!is_user_connected(id) || item == MENU_EXIT){
+        menu_destroy(menu)
+        return
+    }
+    new Float:ammo = GetAmmoPak(id)
+    if(ammo < 10.0){
+        m_print_color(id , "!g[提示]!y您的大洋不足")
+        menu_destroy(menu)
+        return
+    }
+    if(BuyNextRule > 0){
+        m_print_color(id , "!g[提示]!y已有人购买了下一局的规则，不能重复购买。")
+        menu_destroy(menu)
+        return
+    }
+    new acc , info[8] , ruleid , name[33]
+    menu_item_getinfo(menu , item , acc , info , charsmax(info))
+    get_user_name(id , name , charsmax(name))
+    ruleid = str_to_num(info)
+    BuyNextRule  = ruleid + 1
+    SubAmmoPak(id , 10.0)
+    m_print_color(0 , "!g[冰布提示]%s购买了下一局的规则，下一局规则将为%s" , name , HumanRule[ruleid])
+    menu_destroy(menu)
+}
+
 public AllHero(){
     new maxplayer = get_maxplayers()
     for(new i = 1 ; i < maxplayer ; i++){
@@ -178,6 +237,10 @@ public RoundRule(){
     //随机每局的随机规则
     CurrentHunManRule = random_num(0,sizeof HumanRule - 1)
     CurrentRiJunRule = random_num(0,sizeof RiJunRule - 1)
+    if(BuyNextRule){
+        CurrentHunManRule = BuyNextRule - 1
+        BuyNextRule = 0
+    }
     // CurrentHunManRule = HUMAN_RULE_Random_Weapon
     //获取说明文本
     GetRuleText(RoundRuleType:RULE_HUMAN, HumManText, charsmax(HumManText))
@@ -270,15 +333,47 @@ public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Fl
             return HC_CONTINUE
         }
     }
-    // if(GetHunManRule() == HUMAN_RULE_Grenadier && is_user_connected(index) && cs_get_user_team(index) == CS_TEAM_T){
-        
-    // }
     return HC_CONTINUE
+}
+
+public RULE_PlayerTakeDamage(this, idinflictor, idattacker, Float:damage, damagebits){
+    if(idattacker > get_maxplayers())
+        return HAM_IGNORED
+    new Rule = GetHunManRule()
+    switch(Rule){
+        case HUMAN_RULE_Spiked_Armor:{
+            CreateBlast(this)
+            client_cmd(this , "spk weapons/chainsr_exp.wav")
+            new Float:fOrigin[3]
+            new ent = -1
+            new userteam = cs_get_user_team(this)
+            get_entvar(this , var_origin , fOrigin)
+            while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
+                if(!is_valid_ent(ent) || get_entvar(ent ,var_deadflag))continue
+                if(ExecuteHam(Ham_IsPlayer , ent) && is_user_alive(ent) && cs_get_user_team(ent) == userteam)continue
+                ExecuteHamB(Ham_TakeDamage , ent , 0 , this , 100.0 , DMG_BULLET)
+            }
+        }
+        case HUMAN_RULE_Nine_Lives:{
+            new Float:Health = get_entvar(this , var_health)
+            if(Health < damage && get_entvar(this , var_takedamage) != DAMAGE_NO){
+                set_entvar(this , var_health , 1.0)
+                client_print(this , print_center , "九命猫帮你抵挡了一次伤害,你将获得无敌3秒")
+                set_entvar(this , var_takedamage , DAMAGE_NO)
+                set_task(3.0 , "UnGod" , this + 1212)
+                return HAM_SUPERCEDE
+            }
+        }
+    }
+}
+public UnGod(id){
+    new player = id -1212
+    set_entvar(player , var_takedamage , DAMAGE_YES)
 }
 
 public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damagebits){
     if(idattacker > get_maxplayers() || cs_get_user_team(idattacker) != CS_TEAM_T)
-        return HC_CONTINUE
+        return HAM_IGNORED
     new Rule = GetHunManRule()
     switch(Rule){
         case HUMAN_RULE_Pain_Enhancement:{
@@ -342,34 +437,42 @@ public m_FireBullets(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:ve
     new wpn = get_member(pEntity, m_pActiveItem)
     new Rule = GetHunManRule()
     new Clip = get_member(wpn, m_Weapon_iClip)
-    if(Rule == HUMAN_RULE_Last_Shot && Clip == 0){
-        new Float:EndOrigin[3]
-        GetWatchEnd(pEntity, EndOrigin)
-        CreateGroundSprite(pEntity, EndOrigin)
-        return HC_CONTINUE
-    }else if(Rule == HUMAN_RULE_Explosive_Ammunition){
-        new bool:isCreate = UTIL_RandFloatEvents(0.5) //50%
-        if(!isCreate)
-            return HC_CONTINUE
-        new Float:EndOrigin[3]
-        GetWatchEnd(pEntity, EndOrigin)
-        new iOrigin[3]
-  	    iOrigin[0] = floatround(EndOrigin[0])
-	    iOrigin[1] = floatround(EndOrigin[1])
-	    iOrigin[2] = floatround(EndOrigin[2])
+    switch(Rule){
+        case HUMAN_RULE_Depleted_Uranium:{
+            SetHookChainArg(6 , ATYPE_INTEGER , 9)
+        }
+        case HUMAN_RULE_Last_Shot:{
+            if(Clip == 0){
+                new Float:EndOrigin[3]
+                GetWatchEnd(pEntity, EndOrigin)
+                CreateGroundSprite(pEntity, EndOrigin)
+                return HC_CONTINUE
+            }
+        }
+        case HUMAN_RULE_Explosive_Ammunition:{
+            new bool:isCreate = UTIL_RandFloatEvents(0.5) //50%
+            if(!isCreate)
+                return HC_CONTINUE
+            new Float:EndOrigin[3]
+            GetWatchEnd(pEntity, EndOrigin)
+            new iOrigin[3]
+  	        iOrigin[0] = floatround(EndOrigin[0])
+	        iOrigin[1] = floatround(EndOrigin[1])
+	        iOrigin[2] = floatround(EndOrigin[2])
 
-	    message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
-	    write_byte(TE_EXPLOSION)
-	    write_coord(iOrigin[0])
-	    write_coord(iOrigin[1])
-	    write_coord(iOrigin[2])
-	    write_short(g_Explosion)
-	    write_byte(10)
-	    write_byte(15)
-	    write_byte(0)
-	    message_end()
+	        message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
+	        write_byte(TE_EXPLOSION)
+	        write_coord(iOrigin[0])
+	        write_coord(iOrigin[1])
+	        write_coord(iOrigin[2])
+	        write_short(g_Explosion)
+	        write_byte(10)
+	        write_byte(15)
+	        write_byte(0)
+	        message_end()
 
-        rg_radius_damage(EndOrigin, pEntity, pEntity, 150.0, 100.0, DMG_BULLET)
+            rg_radius_damage(EndOrigin, pEntity, pEntity, 150.0, 210.0, DMG_BULLET)
+        }
     }
     return HC_CONTINUE
 }
@@ -381,7 +484,7 @@ public m_MaxSpeed(const this){
             new Float:speed
             ExecuteHam(Ham_CS_Item_GetMaxSpeed , wpn , speed)
             speed += 50.0
-            set_entvar(this , var_maxspeed , speed)
+            set_entvar(this , var_maxspeed , 600.0)
             return HC_SUPERCEDE
         }
     }
@@ -434,28 +537,18 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
     while ((ent = find_ent_in_sphere(ent, origin, radius)) != 0)
     {
         if (!is_valid_ent(ent)) continue
-		if(pev(ent,pev_takedamage) == DAMAGE_NO) continue
-
-		new deadflag
-		pev(ent , pev_deadflag,deadflag)
-		
-		if(deadflag != DEAD_NO) continue
+        if(ent == attacker) continue;
+		if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
+        if(get_entvar(ent , pev_deadflag) == DEAD_DEAD) continue
 
         get_entvar(ent, var_origin, target_origin)
         distance = vector_distance(origin, target_origin)
 
-        // ���Եݼ��˺���ԽԶԽ�ͣ�
         final_damage = damage * (1.0 - (distance / radius))
         if (final_damage <= 0.0) continue;
 
-		if(ent == attacker) continue;
+		if(ExecuteHam(Ham_IsPlayer , ent) && is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
 
-		if(is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
-
-		get_entvar(ent , var_health , Heal);
-
-		new kill = Heal - final_damage;
-		set_pev(ent, pev_dmg_inflictor, attacker)
 		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
     }
 }
@@ -468,7 +561,7 @@ stock JpBoom(Npc){
     new const Float:maxDamage = 30.0           // 爆炸中心的最大伤害
     new const Float:minDamage = 10.0           // 爆炸边缘的最小伤害
     get_entvar(Npc , var_origin , fOrigin)
-    while ((ent = find_ent_in_sphere(ent, fOrigin, explosionRadius)) != 0){
+    while ((ent = find_ent_in_sphere(ent, fOrigin, explosionRadius)) > 0){
         if(FClassnameIs(ent , "player") || FClassnameIs(ent , "hostage_entity")){
             if(get_entvar(ent ,var_deadflag) == DEAD_DEAD) continue
             new Float:targetOrigin[3]
@@ -478,14 +571,14 @@ stock JpBoom(Npc){
             if(damageFactor < 0.0)
                 damageFactor = 0.0
             new Float:actualDamage = minDamage + (maxDamage - minDamage) * damageFactor
-            ExecuteHamB(Ham_TakeDamage , ent , Npc, GetFakeClient() , actualDamage , DMG_BULLET)
+            ExecuteHamB(Ham_TakeDamage , ent , Npc, GetFakeClient() , actualDamage , DMG_CRUSH)
         }
     }
     new iOrigin[3]
     iOrigin[0] = floatround(fOrigin[0])
     iOrigin[1] = floatround(fOrigin[1])
     iOrigin[2] = floatround(fOrigin[2])
-    message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
 	write_byte(TE_EXPLOSION)
 	write_coord(iOrigin[0])
 	write_coord(iOrigin[1])

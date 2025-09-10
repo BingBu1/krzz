@@ -10,8 +10,8 @@ new Reg_Npcid , Moduleid
 
 public plugin_init(){
     register_plugin("测试Npc行为" , "1.0" , "Bing")
-    Reg_Npcid = NpcRegister(200.0 , Moduleid ,1000.0 , 0.1, 30.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0 , NpcMode_Ranged)
-    NpcSetNameAndLevel(Reg_Npcid , "管家" , 0)
+    Reg_Npcid = NpcRegister(200.0 , Moduleid ,1000.0 , 0.2, 45.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0 , NpcMode_Ranged)
+    NpcSetNameAndLevel(Reg_Npcid , "士兵" , 1)
 }
 
 public plugin_precache(){

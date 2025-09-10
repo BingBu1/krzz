@@ -50,7 +50,8 @@ public plugin_init()
 	RegisterHam(Ham_Item_AddToPlayer, "weapon_m3", "fw_AddToPlayer")
 	RegisterHam(Ham_Weapon_PrimaryAttack, "weapon_m3", "fw_PrimaryAttack")
 	RegisterHam(Ham_Weapon_PrimaryAttack, "weapon_m3", "fw_PrimaryAttackp", 1)
-	RegisterHam(Ham_Item_Deploy,"weapon_m3", "fw_Item_Deploy_Post", 1)
+	// RegisterHam(Ham_Item_Deploy,"weapon_m3", "fw_Item_Deploy_Post", 1)
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
 	RegisterHam(Ham_Weapon_Reload, "weapon_m3", "fw_r")
 	RegisterHam(Ham_Weapon_Reload, "weapon_m3", "fw_reload")
 	
@@ -63,6 +64,15 @@ public plugin_init()
 	register_clcmd("weapon_M32", "Hook_Select")
 	Weaponid = BulidWeaponMenu("抗日重炮", cost)
 	BulidCrashGunWeapon("抗日重炮", MODEL_W , "FreeGive", plid)
+}
+
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+    new playerid = get_member(this, m_pPlayer)
+    if(g_has_M32[playerid]){
+        SetHookChainArg(2,ATYPE_STRING, MODEL_V)
+        SetHookChainArg(3,ATYPE_STRING, MODEL_P)
+		set_zoom(playerid , 0)
+    }
 }
 
 public event_roundstart(){

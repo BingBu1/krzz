@@ -10,6 +10,8 @@
 #include <amxmodx>
 #include <fakemeta_util>
 #include <hamsandwich>
+#include <kr_core>
+#include <xp_module>
 // #include <zombieplague>
 
 /* ~ [ Extra Item ] ~ */
@@ -64,6 +66,7 @@ const Float: ENTITY_PLASMABALL_RADIUS = 55.0;
 const Float: ENTITY_PLASMABALL_DAMAGE = 300.0;
 const ENTITY_PLASMABALL_INTOLERANCE = 100;
 const ENTITY_PLASMABALL_DMGTYPE = DMG_SONIC|DMG_NEVERGIB; // (DMG_BULLET)
+new Weaponid
 
 /* ~ [ Weapon Animations ] ~ */
 #define WEAPON_ANIM_IDLE_TIME 201/30.0
@@ -75,6 +78,8 @@ const ENTITY_PLASMABALL_DMGTYPE = DMG_SONIC|DMG_NEVERGIB; // (DMG_BULLET)
 #define WEAPON_ANIM_RELOAD 1
 #define WEAPON_ANIM_DRAW 2
 #define WEAPON_ANIM_SHOOT random_num(3,5)
+
+#define Cost 21.0
 
 /* ~ [ Params ] ~ */
 new gl_iszAllocString_Weapon,
@@ -107,7 +112,7 @@ new gl_iszAllocString_Weapon,
 #define m_rgpPlayerItems_CWeaponBox 34
 
 // CBasePlayerItem
-#define m_pPlayer 41
+// #define m_pPlayer 41
 #define m_pNext 42
 #define m_iId 43
 
@@ -145,6 +150,7 @@ public plugin_init()
 	register_forward(FM_SetModel, 			"FM_Hook_SetModel_Pre", false);
 
 	// Weapon
+	
 	RegisterHam(Ham_Item_Holster,			WEAPON_REFERENCE,	"CWeapon__Holster_Post", true);
 	RegisterHam(Ham_Item_Deploy,			WEAPON_REFERENCE,	"CWeapon__Deploy_Post", true);
 	RegisterHam(Ham_Item_PostFrame,			WEAPON_REFERENCE,	"CWeapon__PostFrame_Pre", false);
@@ -152,6 +158,7 @@ public plugin_init()
 	RegisterHam(Ham_Weapon_Reload,			WEAPON_REFERENCE,	"CWeapon__Reload_Pre", false);
 	RegisterHam(Ham_Weapon_WeaponIdle,		WEAPON_REFERENCE,	"CWeapon__WeaponIdle_Pre", false);
 	RegisterHam(Ham_Weapon_PrimaryAttack,		WEAPON_REFERENCE,	"CWeapon__PrimaryAttack_Pre", false);
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy");
 
 	// Entity
 	RegisterHam(Ham_Think, 				"info_target",		"CEntity__Think_Pre", false);
@@ -168,6 +175,8 @@ public plugin_init()
 	gl_iszAllocString_ModelView = engfunc(EngFunc_AllocString, WEAPON_MODEL_VIEW);
 	gl_iszAllocString_ModelPlayer = engfunc(EngFunc_AllocString, WEAPON_MODEL_PLAYER);
 	gl_iszAllocString_PlasmaBall = engfunc(EngFunc_AllocString, ENTITY_PLASMABALL_CLASSNAME);
+
+	Weaponid = BulidWeaponMenu("破晓黎明", Cost)
 }
 
 public plugin_precache()
@@ -201,6 +210,20 @@ public plugin_precache()
 
 	// Model Index
 	gl_iszModelIndex_Explode = engfunc(EngFunc_PrecacheModel, ENTITY_PLASMABALL_EXPLODE);
+}
+
+public ItemSel_Post(id, items, Float:cost1){
+    if(items == Weaponid){
+        SubAmmoPak(id , cost1)
+		Command_GiveWeapon(id)
+    }
+}
+
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+    new playerid = get_member(this, m_pPlayer)
+    if(IsCustomItem(this)){
+        SetHookChainArg(3,ATYPE_STRING, WEAPON_MODEL_PLAYER)
+    }
 }
 
 public plugin_natives() 
@@ -304,7 +327,7 @@ public FM_Hook_TraceLine_Post(const Float: vecStart[3], const Float: vecEnd[3], 
 public CWeapon__Holster_Post(const pItem)
 {
 	if(!IsValidEntity(pItem) || !IsCustomItem(pItem)) return;
-	static pPlayer; pPlayer = get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
+	static pPlayer; pPlayer = get_member(pItem , m_pPlayer)// get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
 
 	WeaponTiming_Set(pItem, 0.0, 0.0);
 	set_pdata_float(pPlayer, m_flNextAttack, 0.0, linux_diff_player);
@@ -314,7 +337,7 @@ public CWeapon__Holster_Post(const pItem)
 public CWeapon__Deploy_Post(const pItem)
 {
 	if(!IsValidEntity(pItem) || !IsCustomItem(pItem)) return;
-	static pPlayer; pPlayer = get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
+	static pPlayer; pPlayer = get_member(pItem , m_pPlayer)//get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
 
 	set_pev_string(pPlayer, pev_viewmodel2, gl_iszAllocString_ModelView);
 	set_pev_string(pPlayer, pev_weaponmodel2, gl_iszAllocString_ModelPlayer);
@@ -330,7 +353,7 @@ public CWeapon__PostFrame_Pre(const pItem)
 {
 	if(!IsValidEntity(pItem) || !IsCustomItem(pItem)) return HAM_IGNORED;
 
-	static pPlayer; pPlayer = get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
+	static pPlayer; pPlayer = get_member(pItem , m_pPlayer)//get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
 	static iClip; iClip = get_pdata_int(pItem, m_iClip, linux_diff_weapon);
 
 	// Reload
@@ -360,7 +383,7 @@ public CWeapon__Reload_Pre(const pItem)
 	static iClip; iClip = get_pdata_int(pItem, m_iClip, linux_diff_weapon);
 	if(iClip >= WEAPON_MAX_CLIP) return HAM_SUPERCEDE;
 
-	static pPlayer; pPlayer = get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
+	static pPlayer; pPlayer = get_member(pItem , m_pPlayer)//get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
 	static iAmmoType; iAmmoType = m_rgAmmo + get_pdata_int(pItem, m_iPrimaryAmmoType, linux_diff_weapon);
 	if(get_pdata_int(pPlayer, iAmmoType, linux_diff_player) <= 0) return HAM_SUPERCEDE;
 
@@ -380,7 +403,7 @@ public CWeapon__Reload_Pre(const pItem)
 public CWeapon__WeaponIdle_Pre(const pItem)
 {
 	if(!IsValidEntity(pItem) || !IsCustomItem(pItem) || get_pdata_float(pItem, m_flTimeWeaponIdle, linux_diff_weapon) > 0.0) return HAM_IGNORED;
-	static pPlayer; pPlayer = get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
+	static pPlayer; pPlayer = get_member(pItem , m_pPlayer)//get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
 
 	UTIL_SendWeaponAnim(pPlayer, WEAPON_ANIM_IDLE);
 	set_pdata_float(pItem, m_flTimeWeaponIdle, WEAPON_ANIM_IDLE_TIME, linux_diff_weapon);
@@ -401,7 +424,7 @@ public CWeapon__PrimaryAttack_Pre(const pItem)
 		return HAM_SUPERCEDE;
 	}
 
-	static pPlayer; pPlayer = get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
+	static pPlayer; pPlayer = get_member(pItem , m_pPlayer)//get_pdata_cbase(pItem, m_pPlayer, linux_diff_weapon);
 	static Float: vecVelocity[3]; pev(pPlayer, pev_velocity, vecVelocity);
 
 	UTIL_SendWeaponAnim(pPlayer, WEAPON_ANIM_SHOOT);

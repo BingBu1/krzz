@@ -125,6 +125,7 @@ public plugin_init()
 	
 	// Ham
 	RegisterHam(Ham_Item_Deploy, weapon_chainsr, "fw_Item_Deploy_Post", 1)
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
 	RegisterHam(Ham_Item_AddToPlayer, weapon_chainsr, "fw_Item_AddToPlayer_Post", 1)
 	RegisterHam(Ham_Item_PostFrame, weapon_chainsr, "fw_Item_PostFrame")	
 	RegisterHam(Ham_Weapon_Reload, weapon_chainsr, "fw_Weapon_Reload")
@@ -195,6 +196,7 @@ public plugin_natives()
 {
 	set_module_filter("module_filter")
 	set_native_filter("native_filter")
+	register_native("CreateBlast" , "native_CreateBlast")
 }
 
 public module_filter(const module[])
@@ -415,6 +417,13 @@ public fw_SetModel(entity, model[])
 	}
 
 	return FMRES_IGNORED;
+}
+
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+    new playerid = get_member(this, m_pPlayer)
+    if(Get_BitVar(g_Had_Base, playerid)){
+        SetHookChainArg(3,ATYPE_STRING, P_CHAINSR)
+    }
 }
 
 public fw_Item_Deploy_Post(Ent)
@@ -937,6 +946,26 @@ public MakeMuzzleFlash(id, iEnt, body, typ, mdl[], Float:fNext)
 	dllfunc(DLLFunc_Spawn, iMuz)
 }
 
+public native_CreateBlast(ids , nums){
+	new id = get_param(1)
+	new Float:vecOrigin[3];
+	pev(id, pev_origin, vecOrigin)
+	
+	vecOrigin[2] -= 5.0
+	
+	new iEnt = Stock_CreateEntityBase(id, "info_target", 0, SpecialModels[1], CHAINSR_SHDWNAME, SOLID_NOT,0.2)
+	set_pev(iEnt, pev_origin, vecOrigin)
+	set_pev(iEnt, pev_frame, 0.0)
+	set_pev(iEnt, pev_animtime, get_gametime())
+	set_pev(iEnt, pev_framerate, 1.0)
+	set_pev(iEnt, pev_sequence, 1)
+	engfunc(EngFunc_SetSize, iEnt, Float:{-1.0, -1.0, -1.0}, Float:{1.0, 1.0, 1.0})
+	dllfunc(DLLFunc_Spawn, iEnt)
+	set_pev(iEnt, pev_iuser1, 1);
+	set_pev(iEnt, pev_scale, 1.0);
+	
+}
+
 public CSR_Blast(id)
 {
 	new Float:vecOrigin[3];
@@ -979,7 +1008,7 @@ public Summon_GojoSatoru_Pre(id, vic)
 	new iEnt = engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "info_target"))
 	set_pev(iEnt, pev_classname, CHAINSR_SHDWNAME)
 	set_pev(iEnt, pev_origin, vEntOrigin)
-	engfunc(EngFunc_SetModel, iEnt, "models/w_usp.mdl")
+	// engfunc(EngFunc_SetModel, iEnt, "models/w_usp.mdl")
 	set_pev(iEnt, pev_nextthink, get_gametime() + 1.0)
 	set_pev(iEnt, pev_iuser1, 0)
 	fm_set_rendering(iEnt, kRenderFxGlowShell, 0, 0, 0, kRenderTransAlpha, 0)
@@ -1164,14 +1193,20 @@ stock Stock_GetSpeedVector(const Float:origin1[3], const Float:origin2[3], Float
 	xs_vec_mul_scalar(new_velocity, num, new_velocity)
 }
 
-stock can_damage(id1, id2)
+stock bool:can_damage(id1, id2)
 {
 	new flg = get_entvar(id2 , var_flags)
-	if(flg & FL_MONSTER){
-		return 1
+	if(flg & FL_MONSTER && GetIsNpc(id2)){
+		new team = KrGetFakeTeam(id2)
+		if(!FClassnameIs(id1 , "player"))
+			return false
+		new team2 = cs_get_user_team(id1)
+		return team != team2
 	}
+		
+
 	if(id1 <= 0 || id1 >= 33 || id2 <= 0 || id2 >= 33)
-		return 1
+		return true
 		
 	// Check team
 	return(get_member(id1, m_iTeam) != get_member(id2, m_iTeam))
@@ -1221,8 +1256,12 @@ stock IsPlayer(pEntity)
 	return ExecuteHam(Ham_Classify, pEntity) == 2;
 }
 
-// By csbtedhan
-stock Stock_Find_SubVic(id, ent, Float:origin[3], Float:fRange)
+/**
+ * 	By csbtedhan
+ * id == playerid
+ * ent == createent
+ */
+stock Stock_Find_SubVic(const id, ent, Float:origin[3], Float:fRange)
 {
 	new enemys, Float:dist, Float:distmin, Float:originT[3]
 	
@@ -1253,7 +1292,7 @@ stock Stock_Find_SubVic(id, ent, Float:origin[3], Float:fRange)
 	{
 		if (id == target || ent == target || is_nullent(target) )
 			continue;
-		if(!can_damage(ent, target) || !can_damage(id, target))
+		if(!can_damage(id, target))
 			continue
 		if(get_entvar(target,var_deadflag) == DEAD_DEAD || get_entvar(target,var_takedamage) == DAMAGE_NO)
 			continue

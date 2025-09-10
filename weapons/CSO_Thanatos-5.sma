@@ -1,17 +1,18 @@
 #include <amxmodx>
 #include <engine>
+#include <reapi>
 #include <fakemeta>
 #include <fakemeta_util>
 #include <hamsandwich>
 #include <cstrike>
-#include <fun>
 #include <CrashWeapon>
+
 #define PLUGIN "[CSO] Thanatos-5"
 #define VERSION "1.0"
 #define AUTHOR "Dias no Pendragon"
 
 #define DAMAGE_A 29 // 58 for zombie
-#define DAMAGE_B 150 // 300 for zombie
+#define DAMAGE_B 1000 // 300 for zombie
 
 #define CLIP 30
 #define SCYTHE_RADIUS 120.0
@@ -103,7 +104,8 @@ public plugin_init()
 	register_forward(FM_TraceLine, "fw_TraceLine")
 	register_forward(FM_TraceHull, "fw_TraceHull")	
 	
-	RegisterHam(Ham_Item_Deploy, weapon_thanatos5, "fw_Item_Deploy_Post", 1)	
+	RegisterHam(Ham_Item_Deploy, weapon_thanatos5, "fw_Item_Deploy_Post", 1)
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")	
 	RegisterHam(Ham_Item_AddToPlayer, weapon_thanatos5, "fw_Item_AddToPlayer_Post", 1)
 	RegisterHam(Ham_Item_PostFrame, weapon_thanatos5, "fw_Item_PostFrame")	
 	RegisterHam(Ham_Weapon_Reload, weapon_thanatos5, "fw_Weapon_Reload")
@@ -118,7 +120,7 @@ public plugin_init()
 	g_MsgWeaponList = get_user_msgid("WeaponList")
 	g_MaxPlayers = get_maxplayers()
 	
-	register_clcmd("say /gett5", "Get_Thanatos5", ADMIN_KICK)
+	register_clcmd("gett5", "Get_Thanatos5", ADMIN_KICK)
 	register_clcmd("weapon_thanatos5", "Hook_Weapon")
 
 	BulidCrashGunWeapon("特殊武器 死神系列:T5", W_MODEL ,"Get_Thanatos5", plid)
@@ -167,7 +169,10 @@ public Do_Register_HamBot(id)
 	RegisterHamFromEntity(Ham_TraceAttack, id, "fw_TraceAttack_Player")
 }
 
-public Event_NewRound() remove_entity_name(SCYTHE_CLASSNAME)
+public Event_NewRound() {
+	remove_entity_name(SCYTHE_CLASSNAME)
+	g_Had_Thanatos5 = 0
+}
 public Hook_Weapon(id) 
 {
 	engclient_cmd(id, weapon_thanatos5)
@@ -180,7 +185,7 @@ public Get_Thanatos5(id)
 	
 	Set_BitVar(g_Had_Thanatos5, id)
 	UnSet_BitVar(g_GrenadeMode, id)
-	give_item(id, weapon_thanatos5)
+	rg_give_item(id , weapon_thanatos5 , GT_DROP_AND_REPLACE)
 	
 	static Ent; Ent = fm_get_user_weapon_entity(id, CSW_THANATOS5)
 	if(pev_valid(Ent)) cs_set_weapon_ammo(Ent, CLIP)
@@ -380,14 +385,16 @@ public Shoot_Scythe(id)
 	
 	UnSet_BitVar(g_GrenadeMode, id)
 	
-	// Fake Punch
-	//static Float:Origin[3]
-	//Origin[0] = random_float(-2.5, -5.0)
-	
-	//set_pev(id, pev_punchangle, Origin)
-	
 	// Scythe
-	Create_Scythe(id)
+	set_task(0.1 , "TaskCreate" , id + 114514)
+	set_task(0.6 , "TaskCreate" , id + 114514)
+	set_task(1.1 , "TaskCreate" , id + 114514)
+	// Create_Scythe(id)
+}
+
+public TaskCreate(id){
+	new const Playerid = id - 114514
+	Create_Scythe(Playerid)
 }
 
 public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags, pitch)
@@ -472,7 +479,12 @@ public Create_FakeAttackAnim(id)
 	
 	UnSet_BitVar(g_InTempingAttack, id)
 }
-
+public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
+	new playerid = get_member(this, m_pPlayer)
+    if(Get_BitVar(g_Had_Thanatos5, playerid)){
+        SetHookChainArg(3,ATYPE_STRING, P_MODEL)
+    }
+}
 public fw_Item_Deploy_Post(Ent)
 {
 	if(pev_valid(Ent) != 2)
@@ -483,8 +495,9 @@ public fw_Item_Deploy_Post(Ent)
 	if(!Get_BitVar(g_Had_Thanatos5, Id))
 		return
 	
-	set_pev(Id, pev_viewmodel2, V_MODEL)
-	set_pev(Id, pev_weaponmodel2, P_MODEL)
+	set_entvar(Id, var_viewmodel, V_MODEL)
+	set_entvar(Id, var_weaponmodel, P_MODEL)
+	
 	
 	if(Get_BitVar(g_GrenadeMode, Id)) Set_WeaponAnim(Id, ANIM_DRAW_B)
 	else Set_WeaponAnim(Id, ANIM_DRAW_A)
@@ -877,7 +890,7 @@ public Thanatos5_Damage(id, Team, Float:Origin[3])
 		ExecuteHamB(Ham_TakeDamage, i, 0, id, float(DAMAGE_B), DMG_BULLET)
 	}
 	new ent = -1
-	while(ent = find_ent_by_class(ent,"hostage_entity")){
+	while(ent = find_ent_by_class(ent, "hostage_entity")){
 		if(!is_user_alive(id))
 			continue
 		if(pev(ent, pev_deadflag) == DEAD_DEAD || pev(ent, pev_takedamage) == DAMAGE_NO)
@@ -935,7 +948,8 @@ stock Eject_Shell(id, Shell_ModelIndex, Float:Time) // By Dias
 stock Make_BulletHole(id, Float:Origin[3], Float:Damage)
 {
 	// Find target
-	static Decal; Decal = random_num(41, 45)
+	static Decals;
+	Decals = random_num(41, 45);
 	static LoopTime; 
 	
 	if(Damage > 100.0) LoopTime = 2
@@ -949,7 +963,7 @@ stock Make_BulletHole(id, Float:Origin[3], Float:Damage)
 		engfunc(EngFunc_WriteCoord, Origin[0])
 		engfunc(EngFunc_WriteCoord, Origin[1])
 		engfunc(EngFunc_WriteCoord, Origin[2])
-		write_byte(Decal)
+		write_byte(Decals)
 		message_end()
 		
 		// Show sparcles
@@ -959,7 +973,7 @@ stock Make_BulletHole(id, Float:Origin[3], Float:Damage)
 		engfunc(EngFunc_WriteCoord, Origin[1])
 		engfunc(EngFunc_WriteCoord, Origin[2])
 		write_short(id)
-		write_byte(Decal)
+		write_byte(Decals)
 		message_end()
 	}
 }

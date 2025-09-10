@@ -32,7 +32,6 @@ public AddPlayerLv(){
         new buff[20]
         GetXpNeedKey(ent , buff , 19)
         GetNextLevelXpBigInt(ent , NeedxpStr , charsmax(NeedxpStr))
-        // MapSetValueByStr(buff , NeedxpStr)
         MapGetNums("Lv" , NeedxpStr , 49)
         log_amx("计算为%s" , NeedxpStr)
     }

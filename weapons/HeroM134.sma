@@ -84,7 +84,8 @@ public plugin_init(){
 
     // register_forward(FM_EmitSound , "fw_EmitSound")
     
-    register_clcmd("GiveHeroGun", "GiveHeroGunFunc")
+    // register_clcmd("GiveHeroGun", "GiveHeroGunFunc")
+    register_concmd("GiveHeroGun", "GiveHeroGunFunc")
     //register_clcmd("say /buy_HeroGun", "BuyHeroGun")
     //Weaponid = BulidWeaponMenu("速杀阴魔", cost)
     //BulidCrashGunWeapon("速杀银魔", W_MODEL , "FreeGive", plid)
@@ -223,13 +224,19 @@ GetWpn:
     client_print(id, print_center, "购买成功！攻击力+1.5倍")
 }
 
-public GiveHeroGunFunc(id){
-    new wpn = rg_give_custom_item(id , HeroGun , GT_DROP_AND_REPLACE, WaeponIDs)
-    Set_BitVar(HasWaepon, id)
-    rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
-    rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
-    set_member(wpn, m_Weapon_iClip, CLIP)
-    rg_set_user_bpammo(id,WEAPON_M249,Max_bpammo)
+public GiveHeroGunFunc(){
+    new argc = read_argc()
+    if(argc >= 2){
+        new id = read_argv_int(1)
+        new wpn = rg_give_custom_item(id , HeroGun , GT_DROP_AND_REPLACE, WaeponIDs)
+        Set_BitVar(HasWaepon, id)
+        rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
+        rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
+        set_member(wpn, m_Weapon_iClip, CLIP)
+        rg_set_user_bpammo(id,WEAPON_M249,Max_bpammo)
+        return
+    }
+    log_amx("给予英雄武器失败，无效的参数")
 }
 
 public m_PrimaryAttack_Post(this){
