@@ -3,21 +3,35 @@
 #include <fakemeta>
 #include <hamsandwich>
 #include <cstrike>
+#include <engine>
 #include <reapi>
 #include <kr_core>
 #include <xp_module>
-new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
+
+enum LastUseModelData{
+    bool:Use_ed,
+    _:Use_Model[32]
+}
+
+enum ModelSoundData{
+    _:ModelName_Sound[32],
+    _:SoundName_Sound[64]
+}
+
 enum StartBgm{
     Hero_CrossFire,
     Lv_CrossFire,
     Vip_CrossFire,
-    LV_JINZHENGEN
+    LV_JINZHENGEN,
+    neco_Sel
 }
+
 new BgmStart[StartBgm][]= {
     "corssfire_bgm/N_Hero_CrossFire.wav",
     "corssfire_bgm/N_Lv_CrossFire.wav",
     "corssfire_bgm/N_Vip_CrossFire.wav",
-    "kr_sound/jinzhengen.wav"
+    "kr_sound/jinzhengen.wav",
+    "kr_sound/necoact-start.wav",
 }
 
 new PreModules [][]= {
@@ -25,7 +39,9 @@ new PreModules [][]= {
     "models/player/linghu_yellow/linghu_yellow.mdl",
     "models/player/FOX_BL/FOX_BL.mdl",
     "models/player/pujing/pujing.mdl",
-    "models/player/jinzhengen/jinzhengen.mdl"
+    "models/player/jinzhengen/jinzhengen.mdl",
+    "models/player/NecoArc/NecoArc.mdl",
+    "sprites/wrbot/cn.spr"
 }
 
 new modelNames[][]={
@@ -45,7 +61,8 @@ new modelNames[][]={
     "毛爷爷",
     "灵狐者",
     "普京",
-    "金正恩"
+    "金正恩",
+    "猫姬-管理模型"
 }
 
 new modelLv[] = {
@@ -65,10 +82,19 @@ new modelLv[] = {
     650,
     700,
     750,
-    1000
+    1000,
+    0,
 };
 
+new ModelSounds[][ModelSoundData]={
+    {"linghu_yellow", "corssfire_bgm/N_Lv_CrossFire.wav"},
+    {"jinzhengen", "kr_sound/jinzhengen.wav"}, // 假设的音乐路径
+    {"NecoArc", "kr_sound/necoact-start.wav"},
+}
+
 new hero[33]
+new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
+new LastUseModel[MAX_PLAYERS +1 ][LastUseModelData]
 
 public plugin_init(){
     register_plugin("设置玩家模型", "1.0", "Bing")
@@ -79,9 +105,27 @@ public plugin_init(){
 
     RegisterHam(Ham_Item_AddToPlayer, "weapon_c4", "fw_Item_AddToPlayer_Post", 1)
 
+    register_forward(FM_AddToFullPack , "Fw_AddToFullPack_Post" , true)
+
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
     register_clcmd("say /changemodle" , "CreateMoudleMenu")
+}
+
+public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
+    if(player)
+        return FMRES_IGNORED
+    if(FClassnameIs(ent , "HeroSpr") && get_entvar(ent ,var_owner) == HOST){
+        new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
+        get_entvar(HOST , var_origin , PlayerOrigin)
+        PlayerOrigin[2] += 72.0
+        engfunc(EngFunc_SetOrigin, ent, PlayerOrigin)
+        set_es( es, ES_MoveType, MOVETYPE_FOLLOW )
+	    set_es( es, ES_RenderMode, kRenderNormal )
+	    set_es( es, ES_RenderAmt, 220 )
+        set_es( es, ES_Origin, PlayerOrigin);
+    }
+    return FMRES_IGNORED
 }
 
 public fw_Item_AddToPlayer_Post(iWpn, id){
@@ -107,6 +151,7 @@ public plugin_natives(){
 
 public event_roundstart(){
     arrayset(hero , 0 , sizeof(hero))
+    remove_entity_name("HeroSpr")
 }
 
 public PlayerSpawn_Post(this){
@@ -136,9 +181,25 @@ public native_MakeHero(id, nums){
     MakeHero(ids)
 }
 
+public MakeHeroSpr(id){
+    new spr = rg_create_entity("env_sprite")
+    if(is_nullent(spr) && spr <= 0)
+        return -1
+    set_entvar(spr , var_classname , "HeroSpr")
+    set_entvar(spr, var_renderamt, 255.0)
+	set_entvar(spr, var_frame, 0.0)
+	set_entvar(spr, var_animtime, get_gametime())
+    set_entvar(spr , var_scale , 0.5)
+    set_entvar(spr , var_owner , id)
+    
+    engfunc(EngFunc_SetModel , spr , "sprites/wrbot/cn.spr")
+    return spr
+}
+
 public MakeHero(const id){
     hero[id] = true
     rg_set_user_model(id, "linghu_red")
+    MakeHeroSpr(id)
     set_task(0.5,"GiveHeroWeapon",id)
 }
 
@@ -168,14 +229,21 @@ public SetModuleByLv(this , playsound){
     new lv = GetLv(this)
     new setlv = (lv / 50) + 1
     new team = get_user_team(this)
+    new const maxDiv = sizeof modelNames
     switch(team){
         case CS_TEAM_T:{
-            if(setlv > 14){
-                SetOtherModule(this , setlv, playsound)
+            if(setlv < 14){
+                rg_set_user_model(this, "rainych_krall1")
+                set_entvar(this, var_body , setlv)
                 return
             }
-            rg_set_user_model(this, "rainych_krall1")
-            set_entvar(this, var_body , setlv)
+            if(LastUseModel[this][Use_ed]){
+                rg_set_user_model(this , LastUseModel[this][Use_Model])
+                PlayBgm(this)
+                return
+            }
+            min(setlv , maxDiv)
+            SetOtherModule(this , setlv, playsound)
         }
         case CS_TEAM_CT:{
             setlv = min(setlv, 14)
@@ -191,10 +259,11 @@ public SetModuleByLv(this , playsound){
 public PlayBgm(this){
     new modelName[32]
     get_user_info(this, "model", modelName, charsmax(modelName))
-    if(!strcmp("rainych_krall1" , modelName)){
-        UTIL_EmitSound_ByCmd2(this, BgmStart[Lv_CrossFire], 300.0)
-    }else if(!strcmp("jinzhengen" , modelName)){
-        UTIL_EmitSound_ByCmd2(this, BgmStart[LV_JINZHENGEN], 300.0)
+    for(new i = 0 ; i < sizeof ModelSounds ; i++){
+        if(!strcmp(ModelSounds[i][ModelName_Sound] , modelName)){
+            UTIL_EmitSound_ByCmd2(this, ModelSounds[i][SoundName_Sound], 600.0)
+            return
+        }
     }
 }
 
@@ -202,7 +271,7 @@ public SetOtherModule(this , divlv , PlayerSound){
     new lv = GetLv(this)
     new modellv = GetModeleLv(divlv - 1)
     if(divlv >= 15){
-        rg_set_user_model(this, "rainych_krall1")
+        rg_set_user_model(this, "linghu_yellow")
     }
     if(divlv >= 16){
         rg_set_user_model(this, "pujing")
@@ -210,6 +279,10 @@ public SetOtherModule(this , divlv , PlayerSound){
     if(modellv == 1000 && lv >= 1000){
         rg_set_user_model(this, "jinzhengen")
     }
+    if(modellv == 0 && is_user_admin(this)){
+        rg_set_user_model(this, "NecoArc")
+    }
+
     if(PlayerSound){
         PlayBgm(this)
     }   
@@ -256,20 +329,32 @@ public moduleHandle(id, menu, item){
 
 public SelMenuByid(id, selid){
     new lv = GetLv(id)
-    new modelid = GetModeleLv(selid)
-    new setlv = selid
-    new needlv = setlv * 50
-    if(modelid > lv){
+    new modelLv = GetModeleLv(selid)
+    if(modelLv > lv){
         m_print_color(id, "!g[冰布提示]!y您的等级不足以切换模型")
         return
     }
-    if(setlv + 1 < 14 && lv > needlv){
+    if(selid <= 13 && modelLv < lv){
         rg_set_user_model(id, "rainych_krall1")
         set_entvar(id, var_body , selid + 1)
     }else{
         SetOtherModule(id , selid + 1 , 1)
+        get_user_info(id, "model", LastUseModel[id][Use_Model], 31)
+        LastUseModel[id][Use_ed] = true
     }
     new username[32]
     get_user_name(id,username,31)
     m_print_color(0, "!g[冰布提示]!y%s更换了模型 !y(你可以输入指令/changemodle来打开菜单)",username)
 }
+
+
+// stock remove_entity_name(const eName[]){
+// 	new iEntity = find_ent_by_class(-1, eName);
+// 	while (iEntity > 0)
+// 	{
+// 		remove_entity(iEntity);
+// 		iEntity = find_ent_by_class(-1, eName);
+// 	}
+
+// 	return 1;
+// }

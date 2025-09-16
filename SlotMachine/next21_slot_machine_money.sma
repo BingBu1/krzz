@@ -38,7 +38,7 @@ public plugin_init()
     g_msgBlinkAcct = get_user_msgid("BlinkAcct")
 }
 
-public plugin_prechache(){
+public plugin_precache(){
     UTIL_Precache_Sound("kr_sound/dushen.wav")
 }
 

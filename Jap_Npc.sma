@@ -912,7 +912,7 @@ public RibenNormlAttack(this ,beattack){
 		if((distance - AttackDisance) < 5.0){
 			//空了
 			new soundnum = Npc_Isgirl(this) ? 1 : 0
-			UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 300.0)
+			UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 600.0)
 			play_anim(this, jp_Attack_anim[random_num(0,4)], 1.0)
 		}
 		return;
@@ -952,14 +952,14 @@ public RibenNormlAttack(this ,beattack){
 		if(Npc_Isgirl(this)){
 			soundnum = AttackToDieGl
 		}
-		UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 300.0)
+		UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 600.0)
 		ExecuteForward(Jpnpc_forwards[Jp_NpcKillPlayer] , _ , beattack , this)
 	}
 	new sound = 0
 	if(Npc_Isgirl(this)){
 		sound = 1
 	}
-	UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[sound], 300.0)
+	UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[sound], 600.0)
 }
 
 public Npc_Isgirl(id){

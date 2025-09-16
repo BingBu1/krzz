@@ -21,6 +21,7 @@ public plugin_precache(){
         precache_model(JinZhengEnSkillSpr[i])
     }
     UTIL_Precache_Sound("kr_sound/gatlingex-2_exp.wav")
+    UTIL_Precache_Sound("kr_sound/skill_jinzhengen.wav")
 }
 
 // 金正恩太阳技能
@@ -44,6 +45,7 @@ public SunCall(id){
     set_entvar(ent , var_nextthink , get_gametime() + 0.1)
     engfunc(EngFunc_SetModel , ent , JinZhengEnSkillSpr[0])
     m_print_color(0 , "!g[冰布提示]!t%s释放了金正恩技能：太阳！" , username)
+    UTIL_EmitSound_ByCmd(0 , "kr_sound/skill_jinzhengen.wav")
 }
 
 public SunThink(ent){
