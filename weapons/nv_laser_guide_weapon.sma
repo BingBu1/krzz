@@ -304,7 +304,8 @@ public logevent_round_end()
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
     new playerid = get_member(this, m_pPlayer)
-    if(Get_BitVar(g_has_laser, playerid)){
+	new iWpn = get_member(playerid , m_pActiveItem)
+    if(Get_BitVar(g_has_laser, playerid) && this == iWpn){
         SetHookChainArg(2,ATYPE_STRING, V_MODEL)
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
     }

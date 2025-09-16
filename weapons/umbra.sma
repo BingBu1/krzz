@@ -230,6 +230,8 @@ public message_DeathMsg(msg_id, msg_dest, msg_ent)
 	id = get_msg_arg_int(1)
 	iVic = get_msg_arg_int(2)
 	get_msg_arg_string(4, szWeapon, charsmax(szWeapon))
+	if(!is_valid_ent(id) || !ExecuteHam(Ham_IsPlayer , id))
+		return PLUGIN_CONTINUE
 	iEntity = get_member(id, m_pActiveItem)
 	
 	if (strcmp(szWeapon, "ak47"))
@@ -421,8 +423,9 @@ public fw_SetModel(entity, model[])
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
     new playerid = get_member(this, m_pPlayer)
-    if(Get_BitVar(g_Had_Base, playerid)){
-        SetHookChainArg(3,ATYPE_STRING, P_CHAINSR)
+	new iWpn = get_member(playerid , m_pActiveItem)
+    if(Get_BitVar(g_Had_Base, playerid) && iWpn == this){
+        SetHookChainArg(3, ATYPE_STRING, P_CHAINSR)
     }
 }
 

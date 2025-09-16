@@ -481,7 +481,8 @@ public Create_FakeAttackAnim(id)
 }
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
 	new playerid = get_member(this, m_pPlayer)
-    if(Get_BitVar(g_Had_Thanatos5, playerid)){
+	new iWpn = get_member(playerid , m_pActiveItem)
+    if(Get_BitVar(g_Had_Thanatos5, playerid) && iWpn == this){
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
     }
 }

@@ -212,7 +212,8 @@ public fw_PlaybackEvent(flags, invoker, eventid, Float:delay, Float:origin[3], F
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
     new playerid = get_member(this, m_pPlayer)
-    if(g_had_thunderbolt[playerid]){
+	new iWpn = get_member(playerid , m_pActiveItem)
+    if(g_had_thunderbolt[playerid] && iWpn == this){
         SetHookChainArg(3,ATYPE_STRING, p_model)
     }
 }

@@ -136,7 +136,7 @@ new gl_iszAllocString_Weapon,
 #define m_flPainShock 108
 #define m_iPlayerTeam 114
 #define m_rpgPlayerItems 367
-#define m_pActiveItem 373
+// #define m_pActiveItem 373
 #define m_rgAmmo 376
 #define m_szAnimExtention 492
 
@@ -221,8 +221,9 @@ public ItemSel_Post(id, items, Float:cost1){
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
     new playerid = get_member(this, m_pPlayer)
-    if(IsCustomItem(this)){
-        SetHookChainArg(3,ATYPE_STRING, WEAPON_MODEL_PLAYER)
+	new iWpn = get_member(playerid , m_pActiveItem)
+    if(IsCustomItem(this) && this == iWpn){
+        SetHookChainArg(3, ATYPE_STRING, WEAPON_MODEL_PLAYER)
     }
 }
 
@@ -273,7 +274,7 @@ public FM_Hook_UpdateClientData_Post(const pPlayer, const iSendWeapons, const CD
 {
 	if(!is_user_alive(pPlayer)) return;
 
-	static pActiveItem; pActiveItem = get_pdata_cbase(pPlayer, m_pActiveItem, linux_diff_player);
+	static pActiveItem; pActiveItem = get_member(pPlayer , m_pActiveItem)//get_pdata_cbase(pPlayer, m_pActiveItem, linux_diff_player);
 	if(!IsValidEntity(pActiveItem) || !IsCustomItem(pActiveItem)) return;
 
 	set_cd(CD_Handle, CD_flNextAttack, get_gametime() + 0.001);

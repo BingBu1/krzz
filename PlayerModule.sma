@@ -10,19 +10,22 @@ new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
 enum StartBgm{
     Hero_CrossFire,
     Lv_CrossFire,
-    Vip_CrossFire
+    Vip_CrossFire,
+    LV_JINZHENGEN
 }
 new BgmStart[StartBgm][]= {
     "corssfire_bgm/N_Hero_CrossFire.wav",
     "corssfire_bgm/N_Lv_CrossFire.wav",
-    "corssfire_bgm/N_Vip_CrossFire.wav"
+    "corssfire_bgm/N_Vip_CrossFire.wav",
+    "kr_sound/jinzhengen.wav"
 }
 
 new PreModules [][]= {
     "models/player/linghu_red/linghu_red.mdl",
     "models/player/linghu_yellow/linghu_yellow.mdl",
     "models/player/FOX_BL/FOX_BL.mdl",
-    "models/player/pujing/pujing.mdl"
+    "models/player/pujing/pujing.mdl",
+    "models/player/jinzhengen/jinzhengen.mdl"
 }
 
 new modelNames[][]={
@@ -41,8 +44,29 @@ new modelNames[][]={
     "老蒋",
     "毛爷爷",
     "灵狐者",
-    "普京"
+    "普京",
+    "金正恩"
 }
+
+new modelLv[] = {
+    0,
+    50,
+    100,
+    150,
+    200,
+    250,
+    300,
+    350,
+    400,
+    450,
+    500,
+    550,
+    600,
+    650,
+    700,
+    750,
+    1000
+};
 
 new hero[33]
 
@@ -63,7 +87,7 @@ public plugin_init(){
 public fw_Item_AddToPlayer_Post(iWpn, id){
     set_member(id , m_bHasC4 , 0) //防止压缩器闪退
     if(get_entvar(id ,var_body) == 1 && !hero[id]){
-        SetModuleByLv(id)
+        SetModuleByLv(id , false)
     }
 }
 
@@ -90,7 +114,7 @@ public PlayerSpawn_Post(this){
         return HC_CONTINUE
     }
     if(!is_user_bot(this) && !hero[this]){
-        SetModuleByLv(this)
+        SetModuleByLv(this , true)
     }else if(hero[this]){
         rg_set_user_model(this, "linghu_red")
         return HC_CONTINUE
@@ -135,11 +159,11 @@ public DropItems(const this, const pszItemName[]){
         return
     new body = get_entvar(this, var_body)
     if(body == 0 && !hero[this]){
-        SetModuleByLv(this)
+        SetModuleByLv(this , false)
     }
 }
 
-public SetModuleByLv(this){
+public SetModuleByLv(this , playsound){
     client_cmd(this , "cl_minmodels 0")
     new lv = GetLv(this)
     new setlv = (lv / 50) + 1
@@ -147,7 +171,7 @@ public SetModuleByLv(this){
     switch(team){
         case CS_TEAM_T:{
             if(setlv > 14){
-                SetOtherModule(this,setlv)
+                SetOtherModule(this , setlv, playsound)
                 return
             }
             rg_set_user_model(this, "rainych_krall1")
@@ -164,29 +188,55 @@ public SetModuleByLv(this){
     }
 }
 
-public SetOtherModule(this , divlv){
+public PlayBgm(this){
+    new modelName[32]
+    get_user_info(this, "model", modelName, charsmax(modelName))
+    if(!strcmp("rainych_krall1" , modelName)){
+        UTIL_EmitSound_ByCmd2(this, BgmStart[Lv_CrossFire], 300.0)
+    }else if(!strcmp("jinzhengen" , modelName)){
+        UTIL_EmitSound_ByCmd2(this, BgmStart[LV_JINZHENGEN], 300.0)
+    }
+}
+
+public SetOtherModule(this , divlv , PlayerSound){
+    new lv = GetLv(this)
+    new modellv = GetModeleLv(divlv - 1)
     if(divlv >= 15){
         rg_set_user_model(this, "rainych_krall1")
-        UTIL_EmitSound_ByCmd2(this, BgmStart[Lv_CrossFire], 300.0 )
     }
     if(divlv >= 16){
         rg_set_user_model(this, "pujing")
+    }
+    if(modellv == 1000 && lv >= 1000){
+        rg_set_user_model(this, "jinzhengen")
+    }
+    if(PlayerSound){
+        PlayBgm(this)
+    }   
+}
+
+public GetModeleLv(modinx){
+    if(modinx > sizeof modelLv){
+        return modelLv[sizeof modelLv - 1 ]
+    }
+    if(modinx){
+        return modelLv[modinx]
     }
 }
 
 public CreateMoudleMenu(id){
     new menu = menu_create("更改模型", "moduleHandle")
     new player_lv = GetLv(id)
-    for(new i = 0 ; i < sizeof modelNames;i++){
+    for(new i = 0 ; i < sizeof modelNames; i++){
         new buff[50],info[10]
-        new module_lv = i * 50
+        new module_lv = GetModeleLv(i)
         if(player_lv < module_lv){
-            format(buff, charsmax(buff), "\d%s\r(%d级)", modelNames[i], module_lv)
+            formatex(buff, charsmax(buff), "\d%s\r(%d级)", modelNames[i], module_lv)
         }else{
-            format(buff, charsmax(buff), "\y%s\r(%d级)", modelNames[i], module_lv)
+            formatex(buff, charsmax(buff), "\y%s\r(%d级)", modelNames[i], module_lv)
         }
         
-        num_to_str(i,info,9)
+        num_to_str(i, info , charsmax(info))
         menu_additem(menu, buff,info)
     }
     menu_display(id,menu)
@@ -206,13 +256,19 @@ public moduleHandle(id, menu, item){
 
 public SelMenuByid(id, selid){
     new lv = GetLv(id)
-    new setlv = lv / 50
-    if(selid > setlv){
+    new modelid = GetModeleLv(selid)
+    new setlv = selid
+    new needlv = setlv * 50
+    if(modelid > lv){
         m_print_color(id, "!g[冰布提示]!y您的等级不足以切换模型")
         return
     }
-    rg_set_user_model(id, "rainych_krall1")
-    set_entvar(id, var_body , selid + 1)
+    if(setlv + 1 < 14 && lv > needlv){
+        rg_set_user_model(id, "rainych_krall1")
+        set_entvar(id, var_body , selid + 1)
+    }else{
+        SetOtherModule(id , selid + 1 , 1)
+    }
     new username[32]
     get_user_name(id,username,31)
     m_print_color(0, "!g[冰布提示]!y%s更换了模型 !y(你可以输入指令/changemodle来打开菜单)",username)

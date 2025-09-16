@@ -3,7 +3,7 @@
 #include <fakemeta>
 #include <engine>
 #include <props>
-#include <fun>
+// #include <fun>
 #include <fakemeta_util>
 #include <xs>
 #include <reapi>
@@ -22,6 +22,9 @@
 #define Max_heal 200.0 //最大血量随难度增长50级见顶
 #define Max_DamageReduction 0.65 //最大减伤50% 50级见顶一难度增加0.01
 #define Max_Damage 45.0
+
+#define HULL_MIN Float:{-10.0,-10.0,0.0}
+#define HULL_MAX Float:{10.0,10.0,62.0}
 
 new Jp_Name[][]={
 	Jp_defname,
@@ -102,6 +105,7 @@ public InitFowrad(){
 	Jpnpc_forwards[JP_NpcThinkPre] = CreateMultiForward("NPC_ThinkPre",ET_STOP,FP_CELL)
 	Jpnpc_forwards[Jp_NpcThinkPost] = CreateMultiForward("NPC_ThinkPost",ET_STOP,FP_CELL)
 	Jpnpc_forwards[Jp_NpcKilled] = CreateMultiForward("NPC_Killed",ET_STOP,FP_CELL,FP_CELL)
+	Jpnpc_forwards[Jp_NpcKillPlayer] = CreateMultiForward("NPC_KillPlayer",ET_STOP,FP_CELL,FP_CELL)
 
 	Jpnpc_forwards[Jp_NpcOnDamagePre] = CreateMultiForward("Npc_OnDamagePre",ET_STOP,FP_CELL,FP_CELL,FP_FLOAT)
 	Jpnpc_forwards[Jp_NpcOnDamagePost] = CreateMultiForward("Npc_OnDamagePost",ET_STOP,FP_CELL,FP_CELL,FP_FLOAT)
@@ -137,6 +141,7 @@ public plugin_precache()
 
 public plugin_natives(){
 	register_native("CreateJpNpc", "native_CreateJpNpc")
+	register_native("ReSpawnJpNpc", "native_ReSpawn")
 	register_native("ChangeFakeName", "native_ChangeFakeClientName")
 	register_native("GetIsNpc", "native_GetIsNpc")
 	register_native("Npc_GetName","native_Npc_GetName")
@@ -348,7 +353,8 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 			set_entvar(head_gib, var_nextthink , get_gametime() + 2.0)
 		}
 		set_entvar(this , var_iuser4 , 0)
-		ExecuteHam(Ham_TakeDamage, this , 0,  0 , 0, damagebits)
+		OnKill(this)
+		// ExecuteHam(Ham_TakeDamage, this , 0,  0 , 0, damagebits)
 		set_entvar(this , var_deadflag, DEAD_DEAD)
 		return HAM_SUPERCEDE;
 	}
@@ -408,11 +414,12 @@ public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, dama
 			ArrayDeleteItem(NpcList , finder)
 		}
 		cs_set_user_money(idattacker, cs_get_user_money(idattacker)+50)
-		new frag = get_user_frags(idattacker) + 5
-		set_user_frags(idattacker , frag)
+		new frag = get_entvar(idattacker , var_frags)
+		frag += 5
+		set_entvar(idattacker , var_frags , frag)
 		SendScoreInfo(idattacker, frag)
 		SendDeathMessage(FakeClient,idattacker)
-		DelSelf(this)
+		// DelSelf(this)
 	}
 }
 
@@ -507,6 +514,36 @@ public DelSelf(id){
 	rg_remove_entity(id)
 }
 
+public OnKill(id){
+	new hit = get_member(id , m_LastHitGroup)
+	SetDeadAct(id , hit)
+	set_entvar(id ,var_deadflag , DEAD_DEAD)
+	set_entvar(id , var_nextthink , -1)
+	set_entvar(id , var_movetype , MOVETYPE_NONE)
+	set_entvar(id , var_solid , SOLID_NOT)
+	set_entvar(id , var_takedamage , DAMAGE_NO)
+	set_entvar(id , var_health , 0.0)
+	set_entvar(id , var_max_health , 0.0)
+	engfunc(EngFunc_SetSize , Float:{0.0,0.0,0.0} , Float:{0.0,0.0,0.0})
+}
+
+public SetDeadAct(id , hitGroup){
+	switch(hitGroup){
+		case HITGROUP_GENERIC,HITGROUP_LEFTARM,HITGROUP_RIGHTARM,HITGROUP_LEFTLEG,HITGROUP_RIGHTLEG :{
+			SetActivity(  id , ACT_DIESIMPLE)
+		}
+		case HITGROUP_HEAD:{
+			SetActivity(  id , ACT_DIE_HEADSHOT)
+		}
+		case HITGROUP_CHEST:{
+			SetActivity(  id , ACT_DIE_CHESTSHOT)
+		}
+		case HITGROUP_STOMACH:{
+			SetActivity(  id , ACT_DIE_GUTSHOT)
+		}
+	}
+}
+
 public native_CreateJpNpc(plugin_id, num_params){
 	new id = get_param(1)
 	new FakeTeam = get_param(2)
@@ -529,7 +566,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 			return ent
 	}
 	
-	format(origin_str,31,"%i %i %i",floatround(origin[0]),floatround(origin[1]),floatround(origin[2]))
+	formatex(origin_str,31,"%i %i %i",floatround(origin[0]),floatround(origin[1]),floatround(origin[2]))
 	DispatchKeyValue(ent,"model",Jp_Model[0])
 	DispatchKeyValue(ent,"origin",origin_str)
 	dllfunc(DLLFunc_Spawn, ent)
@@ -551,6 +588,35 @@ public native_CreateJpNpc(plugin_id, num_params){
 	}
 	ArrayPushCell(NpcList , ent)
 	return ent
+}
+
+public native_ReSpawn(id , nums){
+	new Jpid = get_param(1)
+	new Float:fOrigin[3]
+	get_array_f(2 , fOrigin , sizeof fOrigin)
+	new Float:val[3] = {0.0, 0.0, -200.0}
+	set_entvar(Jpid, var_velocity, val)
+	set_entvar(Jpid, var_origin, fOrigin)
+	set_entvar(Jpid, var_max_health, CurrentLeavelHeal)
+	set_entvar(Jpid, var_health, CurrentLeavelHeal)
+	set_entvar(Jpid , var_movetype , MOVETYPE_STEP)
+	set_entvar(Jpid , var_solid , SOLID_SLIDEBOX)
+	set_entvar(Jpid , var_takedamage , DAMAGE_YES)
+	set_entvar(Jpid , var_deadflag , DEAD_NO)
+	set_entvar(Jpid , var_effects , get_entvar(Jpid , var_effects) & ~EF_NODRAW)
+	set_entvar(Jpid , var_nextthink , get_gametime() + 0.1)
+
+	SetActivity(Jpid , ACT_IDLE)
+
+	engfunc(EngFunc_SetSize , Jpid , HULL_MIN , HULL_MAX)
+	engfunc(EngFunc_SetOrigin , Jpid , fOrigin)
+	ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , Jpid)
+}
+
+FVectorToiVecotr(Float:fOrigin[3] , out[3]){
+	out[0] = floatround(fOrigin[0])
+	out[1] = floatround(fOrigin[1])
+	out[2] = floatround(fOrigin[2])
 }
 
 public native_GetIsNpc(P_id,nums){
@@ -709,7 +775,7 @@ public fw_HostageTouch(this , other){
 	if(GetIsNpc(this) && GetIsNpc(other)){
 		if(thisteam != KrGetFakeTeam(other) &&  thisteam == CS_TEAM_CT){
 			RibenNormlAttack(this , other)
-			return HAM_SUPERCEDE
+			return HAM_IGNORED
 		}
 	}
     if(is_user_connected(other) && is_user_alive(other) && is_valid_ent(other)){
@@ -887,6 +953,7 @@ public RibenNormlAttack(this ,beattack){
 			soundnum = AttackToDieGl
 		}
 		UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 300.0)
+		ExecuteForward(Jpnpc_forwards[Jp_NpcKillPlayer] , _ , beattack , this)
 	}
 	new sound = 0
 	if(Npc_Isgirl(this)){
@@ -1048,4 +1115,20 @@ stock UpdateHealBar(ent){
     new Float:ratio = (Health / MaxHealth) * 99.0
     if(ratio < 0.0) ratio = 0.0
     set_entvar(spr , var_frame , ratio)
+}
+
+
+stock SetActivity(this, Activity: act){
+	new m_act = get_member(this , m_Activity)
+	if(m_act != act){
+		new sequence = LookupActivity(this ,act)
+		if(get_entvar(this , var_sequence) != sequence){
+			if((m_act != ACT_WALK && m_act != ACT_RUN) || (act != ACT_WALK &&act != ACT_RUN)){
+				set_entvar(this , var_frame , 0.0)
+			}
+			set_entvar(this , var_sequence , sequence)
+		}
+		set_member(this , m_Activity , act)
+		ResetSequenceInfo(this)
+	}
 }

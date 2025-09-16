@@ -102,7 +102,7 @@ public Fw_AddToFullPack(const es, e, ent, HOST, hostflags, player, set){
 
 public CreateHealBar(Npc){
     new spr = rg_create_entity("env_sprite")
-    if(is_nullent(spr))
+    if(is_nullent(spr) && spr <= 0)
         return 0
     set_entvar(spr , var_classname , "HBar")
     set_entvar(spr, var_renderamt, 255.0)
@@ -345,6 +345,7 @@ public NPC_Killed(this , killer){
         }
         new spr = get_entvar(this , var_impulse)
         if(spr > 0){
+            set_entvar(this , var_impulse , 0)
             rg_remove_entity(spr)
         }
         cs_set_user_money(killer , money)
@@ -352,6 +353,9 @@ public NPC_Killed(this , killer){
         AddXp(killer, baseaddxp)
         m_print_color(killer , "!g[击杀]击杀精英额外获得%d积分", baseaddxp)
         set_entvar(this, var_iuser1, 0)
+        set_entvar(this, var_renderfx, kRenderFxNone)
+        set_entvar(this, var_rendercolor, Float:{0.0,0.0,0.0})
+        set_entvar(this ,var_renderamt , 1.0)
         BossNpc--
     }
     if(has_tank && this == CurrentTankEnt){
@@ -506,6 +510,7 @@ stock CreateTankBoom(ent , target){
     set_entvar(tk_ent, var_classname,"tk_boom")
     set_entvar(tk_ent, var_rendermode,kRenderTransAdd)
     set_entvar(tk_ent, var_renderamt,255.0)
+    set_entvar(tk_ent , var_owner , ent)
 
     
 
@@ -536,8 +541,12 @@ public tk_Touch(const this, const other) {
 
     // 标记删除
     set_entvar(this, var_flags, FL_KILLME)
-
-    rg_radius_damage(org , this, this , 200.0 , 200.0, DMG_GRENADE)
+    new master = get_entvar(this , var_owner)
+    if(get_entvar(master , var_deadflag) == DEAD_DEAD){
+        rg_remove_entity(this)
+        return
+    }
+    rg_radius_damage(org , master, master , 200.0 , 200.0, DMG_GRENADE)
 
     new maxPlayers = get_maxplayers()
     for (new i = 1; i <= maxPlayers; i++) {

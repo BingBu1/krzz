@@ -23,9 +23,10 @@ public HandleAnimEvent(const id, event, const event_option[], len_option){
     server_print("npcTest : id %d event %d" , id , event)
 }
 
-public NpcOnCreate(Npcid){
-    SetBodyGroup(Npcid , 2  , 5)
-    SetAnimEventHandle(Npcid, "HandleAnimEvent")
+public NpcOnCreate(Npcid ,Regid){
+    if(Regid == Reg_Npcid){
+        SetBodyGroup(Npcid , 2  , 5)
+    }
 }
 
 public NpcDoAttack(Npcid , Target){

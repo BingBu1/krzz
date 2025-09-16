@@ -46,7 +46,7 @@ public plugin_init(){
 }
 
 public plugin_forward(){
-    Kr_NpcOnCreate = CreateMultiForward("NpcOnCreate" , ET_IGNORE , FP_CELL)
+    Kr_ = CreateMultiForward("NpcOnCreate" , ET_IGNORE , FP_CELL ,FP_CELL)
     Kr_NpcDoAttack = CreateMultiForward("NpcDoAttack" , ET_IGNORE , FP_CELL , FP_CELL)
     Kr_NpcDoSkill = CreateMultiForward("NpcOnSkill" , ET_IGNORE , FP_CELL , FP_CELL)
 }
@@ -80,6 +80,8 @@ public RemoveMasterNpc(id){
 public plugin_natives(){
     register_native("NpcRegister" , "native_NpcRegister")
     register_native("NpcSetNameAndLevel" , "native_NpcSetNameAndLevel")
+    register_native("SetNpcHasSkill" , "native_SetNpcHasSkill")
+    register_native("GetNpcHasSkill" , "native_GetNpcHasSkill")
     register_native("NpcSetTinkRate" , "native_NpcSetTinkRate")
     register_native("NpcSendAnim" , "SendAnim" , 1)
     register_native("NpcTakeDamge" , "native_NpcTakeDamge" , 1)
@@ -204,7 +206,9 @@ public NPC_Killed(this , killer){
     if(Team == CS_TEAM_CT)
         return
     new Npcid = get_prop_int(this , var_npcid)
-    SendAnim(this , Kr_Npc[Npcid][Npc_Death_seqid] , 68)
+    set_entvar(this, var_sequence ,  Kr_Npc[Npcid][Npc_Death_seqid])
+    set_entvar(this, var_frame, 0.0)
+    // SendAnim(this , , ACT_DIE_CHESTSHOT)
     return
 }
 
@@ -276,7 +280,7 @@ public CreateNpc(other , SelNpcid){
         return -1
     }
     SetUse(npc , "OnUse")
-    ExecuteForward(Kr_NpcOnCreate , _ , npc)
+    ExecuteForward(Kr_NpcOnCreate , _ , npc , SelNpcid)
     Kr_CreateNpcNums++
     return npc
 }
@@ -315,6 +319,17 @@ public native_NpcSetNameAndLevel(id , nums){
     get_string(2 ,Kr_NpcName[id] , charsmax(Kr_NpcName[]))
     new level = get_param(3)
     Kr_NpcLevel[id] = level
+}
+
+public native_SetNpcHasSkill(id , nums){
+    new Npcid = get_param(1)
+    new bool:HasSkill = get_param(2)
+    Kr_Npc[Npcid][Npc_HasSkill] = HasSkill
+}
+
+public native_GetNpcHasSkill(id , nums){
+    new Npcid = get_param(1)
+    return Kr_Npc[Npcid][Npc_HasSkill]
 }
 
 public native_NpcSetTinkRate(id , nums){
@@ -380,8 +395,11 @@ public Ai_Think(npc_id){
     if(disance <= Kr_Npc[npc_regid][Npc_AttackDistance] && is_entity(m_AttackEnt)){
         new Float:last = get_prop_float(npc_id , var_lastattack)
         new Float:skilltime = get_prop_float(npc_id , var_skillcd)
-
-        if(GameTime > last){
+        new bool:HasSKill = GetNpcHasSkill(npc_regid)
+        if(HasSKill && GameTime > skilltime){
+            ExecuteForward(Kr_NpcDoSkill , _ , npc_id , m_AttackEnt) // 需要自己在回调设置skillcd
+        }
+        else if(GameTime > last){
             new Float:vDir[3] ,  Float:AttackOrig[3] , Float:vecVelocity[3] , Float:NewAngle[3]
             new Float:NextAttackTime = GameTime + Kr_Npc[npc_regid][Npc_AttackRate]
             xs_vec_sub(TargetOrigin, fOrigin, vDir)
@@ -393,13 +411,10 @@ public Ai_Think(npc_id){
             NewAngle[0] = 0.0
             set_entvar(npc_id , var_angles , NewAngle)
             ExecuteForward(Kr_NpcDoAttack , _ , npc_id , m_AttackEnt)
-            SendAnim(npc_id , Kr_Npc[npc_regid][Npc_Attack_seqid] , 0)
+            SendAnim(npc_id , Kr_Npc[npc_regid][Npc_Attack_seqid] , ACT_RANGE_ATTACK1)
             set_member(npc_id , m_fSequenceFinished , 0)
             set_prop_int(npc_id , var_seqanim , Npc_Attack)
             set_prop_float(npc_id , var_lastattack ,NextAttackTime)
-        }
-        if(GameTime > skilltime){
-            ExecuteForward(Kr_NpcDoSkill , _ , npc_id , m_AttackEnt) // 需要自己在回调设置skillcd
         }
         if(NpcLoadMode == NpcMode_Ranged){
             return HAM_SUPERCEDE
@@ -596,7 +611,7 @@ stock bool:Stock_CanSee(entindex1, entindex2 , &TrHit){
     if(TrieKeyExists(CaCheSee , buff)){
         TrieGetArray(CaCheSee , buff , data ,sizeof data)
         if(GameTime < data[NpcCache_NextSeeTime]){
-            return data[NpcCache_CanSee]
+            return data[NpcCache_CanSee] //缓存
         }
     }
     new bool:IsSee = TraceCanSee(entindex1 , entindex2 , TrHit)
@@ -700,10 +715,10 @@ public SendAnim(iEntity, iAnim , ACT)
 {
 	if(get_member(iEntity , m_Activity) == ACT)
 		return
-    if(get_prop_int(iEntity , var_seqanim) == Npc_FLINCH && get_gametime() < get_prop_float(iEntity , var_flFlinchTime)){
-        set_prop_int(iEntity, var_seqanim , Npc_FLINCH)
-        return //播放受击
-    }
+    // if(get_prop_int(iEntity , var_seqanim) == Npc_FLINCH && get_gametime() < get_prop_float(iEntity , var_flFlinchTime)){
+    //     set_prop_int(iEntity, var_seqanim , Npc_FLINCH)
+    //     return //播放受击
+    // }
     new seq = get_entvar(iEntity , var_sequence)
     if(seq != iAnim){
         new is_loop = GetSeqFlags(iEntity) & STUDIO_LOOPING

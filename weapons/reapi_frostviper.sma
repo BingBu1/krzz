@@ -11,6 +11,7 @@
 #include <hamsandwich>
 #include <reapi>
 #include <ini_file> // https://forums.alliedmods.net/showthread.php?t=315031
+#include <props>
 
 // Choose one
 #define LIBRARY_ZP "zp50_core"
@@ -60,7 +61,7 @@ new Array:g_config_accuracy, Array:g_config_accuracy_range, Array:g_config_sprea
 #define Set_BitVar(%1,%2) %1 |= (1 << (%2 & 31))
 #define UnSet_BitVar(%1,%2) %1 &= ~(1 << (%2 & 31))
 
-new g_cachde_mf[2], Float:g_cache_frame_mf[2], spr_blood_spray, spr_blood_drop
+new g_cachde_mf[2], Float:g_cache_frame_mf[2], spr_blood_spray, spr_blood_drop , laserbeam
 //new g_cache_reload, Float:g_cache_frame_reload
 
 #if defined _zombieplague_included
@@ -160,6 +161,7 @@ public plugin_precache()
 	
 	spr_blood_spray = engfunc(EngFunc_PrecacheModel, "sprites/bloodspray.spr")
 	spr_blood_drop = engfunc(EngFunc_PrecacheModel, "sprites/blood.spr")
+	laserbeam = precache_model("sprites/laserbeam.spr")
 
 	Read_WeaponConfig()
 }
@@ -587,7 +589,7 @@ public SecFire(ent , iWpn){
 
 	CreateModeBEnt(ent , iWpn)
 	
-	Stock_SendWeaponAnim(ent, iWpn, 1)
+	Stock_SendWeaponAnim(ent, iWpn, 8)
 	emit_sound(ent, CHAN_WEAPON, SOUND_FIRE[1], VOL_NORM, ATTN_NORM, 0, random_num(95,120))
 	set_member(ent, m_flNextAttack, 0.5)
 }
@@ -598,13 +600,11 @@ public CreateModeBEnt(const iPlayer , const iWpn){
 	get_entvar(iPlayer, var_v_angle, fAngles)
     fAngles[0] *= -1.0
 	get_entvar(iPlayer , var_origin , fOrigin)
-	get_position(iPlayer , 5.0, 0.0, 20.0, Start)
+	get_position(iPlayer , 55.0, 0.0, 20.0, Start)
 	set_entvar(iPlayer , var_fuser1 , get_gametime() + 1.0)
 
-
-
 	set_entvar(iEnt ,var_origin , Start)
-	set_entvar(iEnt ,var_solid , SOLID_TRIGGER)
+	set_entvar(iEnt ,var_solid , 5) //自定义的solid
 	set_entvar(iEnt ,var_movetype , MOVETYPE_FLY)
 	new Float:fVel[3]
 	velocity_by_aim(iPlayer, 800, fVel)
@@ -618,7 +618,7 @@ public CreateModeBEnt(const iPlayer , const iWpn){
 	SetTouch(iEnt , "projectile_touch")
 	SetThink(iEnt , "projectile_Thick")
 	set_entvar(iEnt , var_nextthink , get_gametime() + 0.1)
-	set_size(iEnt , Float:{-1.0 , -50.0, -50.0} , Float:{1.0, 50.0, 50.0})
+	set_size(iEnt , Float:{-50.0 , -50.0, -10.0} , Float:{50.0, 50.0, 10.0})
 	return iEnt
 }
 
@@ -631,11 +631,10 @@ public projectile_touch(const this , const pToucher){
 		rg_remove_entity(this)
 		emit_sound(this, CHAN_WEAPON, SOUND_FIRE[4], VOL_NORM, ATTN_NORM, 0, random_num(95,120))
 	}
-	// if(get_entvar(pToucher , var_iuser2) == this && get_entvar(this , var_iuser2) == true)
-	// 	return
-	// set_entvar(pToucher , var_iuser2 , this)
-	// set_entvar(this , var_iuser2 , true)
-	// ExecuteHamB(Ham_TakeDamage , pToucher , this , owner , 1000.0 , DMG_BULLET)
+	if(prop_exists(pToucher , "t_m") && get_prop_int(pToucher , "t_m") == this)
+		return
+	set_prop_int(pToucher,"t_m" , this)
+	ExecuteHamB(Ham_TakeDamage , pToucher , this , owner , 1000.0 , DMG_BULLET)
 }
 
 public projectile_Thick(const this){
@@ -643,6 +642,10 @@ public projectile_Thick(const this){
 	new Float:fOrigin[3] , ent = -1
 	get_entvar(this , var_origin , fOrigin)
 	new owner = get_entvar(this , var_owner)
+	if(is_valid_ent(ent)){
+		rg_remove_entity(this)
+		return
+	}
 	new owner_team = cs_get_user_team(owner)
 	while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
 		if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
@@ -650,8 +653,8 @@ public projectile_Thick(const this){
 		if(ent == owner)continue
 		if(ExecuteHam(Ham_IsPlayer , ent) && cs_get_user_team(ent) == owner_team)continue
 		if(is_valid_ent(ent)){
-			ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
-			set_entvar(ent , var_iuser2 , this)
+			// ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
+			// set_entvar(ent , var_iuser2 , this)
 		}
 	}
 	set_entvar(this , var_nextthink , get_gametime() + 0.1)
@@ -1317,6 +1320,61 @@ public get_player_weapon(id)
 		return 0
 	
 	return g_PlayerWeapon[id]
+}
+
+stock draw_bbox_lines(ent, color[3] , Float:duration) {
+    if(!pev_valid(ent)) return;
+
+    new Float:absmin[3], Float:absmax[3];
+    pev(ent, pev_absmin, absmin);
+    pev(ent, pev_absmax, absmax);
+    
+    // 计算8个顶点
+    new Float:points[8][3];
+    for(new i = 0; i < 8; i++) {
+        points[i][0] = (i & 1) ? absmax[0] : absmin[0];
+        points[i][1] = (i & 2) ? absmax[1] : absmin[1];
+        points[i][2] = (i & 4) ? absmax[2] : absmin[2];
+    }
+    
+    // 绘制12条边
+    draw_line(laserbeam,points[0], points[1], color, duration); // 底边1
+    draw_line(laserbeam,points[0], points[2], color, duration); // 底边2
+    draw_line(laserbeam,points[3], points[1], color, duration); // 底边3
+    draw_line(laserbeam,points[3], points[2], color, duration); // 底边4
+    
+    draw_line(laserbeam,points[4], points[5], color, duration); // 顶边1
+    draw_line(laserbeam,points[4], points[6], color, duration); // 顶边2
+    draw_line(laserbeam,points[7], points[5], color, duration); // 顶边3
+    draw_line(laserbeam,points[7], points[6], color, duration); // 顶边4
+    
+    draw_line(laserbeam,points[0], points[4], color, duration); // 竖边1
+    draw_line(laserbeam,points[1], points[5], color, duration); // 竖边2
+    draw_line(laserbeam,points[2], points[6], color, duration); // 竖边3
+    draw_line(laserbeam,points[3], points[7], color, duration); // 竖边4
+}
+
+stock draw_line(spr,Float:start[3], Float:end[3], color[3], Float:life) {
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY);
+    write_byte(TE_BEAMPOINTS);
+    write_coord_f(start[0]);
+    write_coord_f(start[1]);
+    write_coord_f(start[2]);
+    write_coord_f(end[0]);
+    write_coord_f(end[1]);
+    write_coord_f(end[2]);
+    write_short(spr); // 光束精灵
+    write_byte(0); // 起始帧
+    write_byte(0); // 帧率
+    write_byte(floatround(life * 10.0)); // 持续时间 (帧)
+    write_byte(5); // 线宽
+    write_byte(0); // 噪声
+    write_byte(color[0]); // R
+    write_byte(color[1]); // G
+    write_byte(color[2]); // B
+    write_byte(200); // 亮度
+    write_byte(0); // 滚动速度
+    message_end();
 }
 /* ===============================
 --------- END OF SAFETY  ---------

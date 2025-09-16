@@ -15,7 +15,7 @@ new IsReSpawn[33]
 
 new WpnForwad , OnCreateIteam_
 
-new BuyAmmo,GiveHeal,NpcMenu
+new BuyAmmo,GiveHeal,NpcMenu,KillMarkMenu
 
 new menuname[64]
 public plugin_init(){
@@ -32,6 +32,7 @@ public plugin_init(){
 
 public plugin_precache(){
     NpcMenu = BulidWeaponMenu("抗日伙伴", 0.0)
+    KillMarkMenu = BulidWeaponMenu("击杀图标", 0.0)
     BuyAmmo = BulidWeaponMenu("购买弹药", 0.04)
     GiveHeal = BulidWeaponMenu("军医治疗", 0.04)
 }
@@ -70,6 +71,8 @@ public CreateMenu(id){
     menu_additem(menuid, "剩余时间", "5")
     menu_additem(menuid, "难度调整", "6")
     menu_additem(menuid, "当前时间", "7")
+    menu_additem(menuid, "我卡关了", "10")
+    menu_additem(menuid, "老虎机设置", "11")
     menu_display(id, menuid)
 }
 
@@ -125,7 +128,7 @@ public menuHandle(id,menu,item){
         }
         case 2:{
             //重返战场
-            ReSpawn(id)
+            ReSpawnPlayer(id)
         }
         case 3:{
             //更改模型
@@ -154,6 +157,13 @@ public menuHandle(id,menu,item){
         case 9:{
             //购买下局规则
             client_cmd(id, "say /buyrule")
+        }
+        case 10:{
+            LvCheck(id)
+        }
+        case 11:{
+            //老虎机
+            client_cmd(id, "say /machine")
         }
     }
     menu_destroy(menu)
@@ -194,7 +204,7 @@ public WpnMenuHandle(id,menu,item){
     menu_destroy(menu)
 }
 
-public ReSpawn(id){
+public ReSpawnPlayer(id){
     if(is_user_alive(id)){
         m_print_color(id, "!g[冰布提示]!t你还活着不需要复活！！")
         return;
@@ -254,6 +264,10 @@ public ItemSel_Post(id,item,Float:cost){
         client_cmd(id , "say npc")
         return
     }
+    if(item == KillMarkMenu){
+        client_cmd(id , "say /killmark")
+        return
+    }
 }
 
 public GiveHeal_f(id){
@@ -285,4 +299,20 @@ public Buy_Ammo(id){
     }else{
         m_print_color(id, "!g[冰布提醒]!y你的大洋不够。")
     }
+}
+
+LvCheck(id){
+    new ent = -1
+    new JpNums = 0
+    while((ent = rg_find_ent_by_class(ent , "hostage_entity",true)) > 0){
+        if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
+        if(KrGetFakeTeam(ent) == CS_TEAM_T) continue
+        JpNums++
+    }
+    if(JpNums == 0 && GetCurrentNpcs() > 0){
+        server_cmd("Kr_EndRound")
+        m_print_color(id , "检测到卡关，以强制进入下一关卡")
+        return
+    }
+    m_print_color(id , "经过检测并未发现卡关")
 }

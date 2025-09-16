@@ -68,8 +68,8 @@ public plugin_init()
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
     new playerid = get_member(this, m_pPlayer)
-    if(g_has_M32[playerid]){
-        SetHookChainArg(2,ATYPE_STRING, MODEL_V)
+	new iWpn = get_member(playerid , m_pActiveItem)
+    if(g_has_M32[playerid] && iWpn == this){
         SetHookChainArg(3,ATYPE_STRING, MODEL_P)
 		set_zoom(playerid , 0)
     }

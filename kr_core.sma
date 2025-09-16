@@ -28,7 +28,11 @@ enum EndSoundEnum{
     JudianGo,
     JudianGo2,
     EndJudian,
-    Type
+    Type,
+    cnDie1,
+    cnDie2,
+    cnGoTr,
+    cnGoTr2,
 }
 
 new Jp_EndRoundSound[][] = {
@@ -38,7 +42,11 @@ new Jp_EndRoundSound[][] = {
     "rainych/krzz/hit_jp.wav",
     "rainych/krzz/hit_jp2.wav",
     "rainych/krzz/last_duty.wav",
-    "rainych/krzz/Type.wav"
+    "rainych/krzz/Type.wav",
+    "rainych/krzz/cn_die.wav",
+    "rainych/krzz/cn_die2.wav",
+    "rainych/krzz/traitor_go.wav",
+    "rainych/krzz/traitor_go2.wav",
 }
 
 new LvName[][]={
@@ -237,6 +245,7 @@ public ChangeFlood(PointerCvar, const OldValue[], const NewValue[])
 
 public plugin_natives(){
     register_native("GetJuDianNum","native_GetJuDianNum")
+    register_native("GetCurrentNpcs","native_GetCurrentNpcs")
     register_native("Getleavel","native_Getleavel")
     register_native("Setleavel","native_Setleavel")
 }
@@ -251,6 +260,51 @@ public plugin_precache(){
 public reg_forward(){
     call_forwards[kr_On_judian_Change_Post] = CreateMultiForward("On_judian_Change_Post",ET_STOP,FP_CELL)
     call_forwards[kr_OnLevelChange_Post] = CreateMultiForward("OnLevelChange_Post", ET_STOP,FP_CELL)
+}
+
+public NPC_KillPlayer(this , killer){
+	CreateHanJianMenu(this)
+}
+
+CreateHanJianMenu(id){
+	new players[32],cont
+	get_players(players , cont , "ci")
+	if(cont == 1 || get_user_team(id) == CS_TEAM_CT ){
+		return
+	}
+	new menu = menu_create("大日本黄军俘虏了你" , "HanjianHandle")
+	menu_additem(menu , "成为汉奸")
+	menu_additem(menu , "誓死不从")
+	menu_additem(menu , "出卖机密")
+	menu_setprop(menu , MPROP_EXIT , MEXIT_NEVER)
+	menu_display(id , menu)
+}
+
+public HanjianHandle(id, menu ,item){
+	if(item == MENU_EXIT){
+		menu_destroy(menu)
+		return
+	}
+    switch(item){
+        case 0: server_cmd("KR_GoToCt %d" , id)
+        case 1 : CnDie(id)
+        case 2 : SellBoss(id)
+    }
+}
+
+CnDie(id){
+    new username[32]
+    get_user_name(id , username , 31)
+    UTIL_EmitSound_ByCmd(0 , Jp_EndRoundSound[random_num(cnDie1 , cnDie2)])
+    m_print_color(id , "!g[冰布提示]%s誓死不从，奖励1大洋" , username)
+    AddAmmoPak(id , 1.0) 
+}
+
+SellBoss(id){
+    new username[32]
+    get_user_name(id , username , 31)
+    m_print_color(id , "!g[冰布提示]该死的%s向日军出卖我军机密(本局可能出现BOSS)" , username)
+    AddAmmoPak(id , 2.0)
 }
 
 public SavePlayer_Buy(id){
@@ -346,12 +400,13 @@ public ChangTeamToCt(){
     }
     read_args(buff , charsmax(buff))
     id = str_to_num(buff)
-    if(is_user_alive(id) && is_user_connected(id)){
+    if(is_user_connected(id) && is_entity(id)){
         static name [32]
         cs_set_user_team(id , CS_TEAM_CT)
         get_user_name(id , name , charsmax(name))
         IsHanJian[id] = true
         m_print_color(0 , "!g【提醒】!t%s!y没顶住日军的折磨，成为了汉奸" , name)
+        UTIL_EmitSound_ByCmd(0 , Jp_EndRoundSound[random_num(cnGoTr , cnGoTr2)])
     }
 }
 
@@ -437,8 +492,9 @@ public ShowHud(){
     ShowSyncHudMsg(0,Hud_sync,"当前难度 %d级 | 当前据点攻占%d/8 | 剩余日本鬼子 %d^n\
     当前难度积分加成%d^n\
     八路规则:%s ^n日军规则: %s" ,
-    judian_leavel, Current_judian + 1 , CurrentNpcs, lvadd,
-    HuManRuleText,RiJunRuleText
+    judian_leavel, Current_judian + 1 , CurrentNpcs, 
+    lvadd,
+    HuManRuleText, RiJunRuleText
     )
 
     new playernums = get_maxplayers()
@@ -789,6 +845,7 @@ public CanSpawn(){
 public NPC_Killed(this , killer){
     if(GetIsNpc(this) && get_entvar(this,var_deadflag) == DEAD_DEAD && KrGetFakeTeam(this) == CS_TEAM_CT){
         CurrentNpcs--
+        ReSpawnEnt(this)
         if(CurrentNpcs == 0 && GetJuDianNum() <= 7){
             set_task(3.0 , "ChangeJudian")
         }else if(CurrentNpcs <= 0 && GetJuDianNum() == 8){
@@ -907,7 +964,7 @@ public Npc_SpawnThink(ent){
     new bool:isOccupied = IsSpawnPointOccupied(Origin, ent)
     if(isOccupied){
         //尝试往高处生产
-        Origin[2] += 100.0
+        Origin[2] += 75.0
         isOccupied = IsSpawnPointOccupied(Origin, ent)
     }
     if(body == CurrentSpawnbody && !isOccupied){
@@ -918,21 +975,43 @@ public Npc_SpawnThink(ent){
         spawnent = CreateJpNpc(0,CS_TEAM_CT, Origin ,Angles, CurrentSpawnbody)
     }
     if(spawnent > 0){
-        set_entvar(ent, var_Spawnid, spawnent)
+        set_entvar(spawnent , var_iuser2 , ent)
         if(GetRiJunRule() == JAP_RULE_Physical_Enhancement){
             new Float:Heal = get_entvar(spawnent , var_health)//体魄强化
             Heal +=  30.0
             set_entvar(spawnent , var_health , Heal)
             set_entvar(spawnent , var_max_health , Heal)
         }
-        CanSpawnNum--
+        set_entvar(ent, var_Spawnid, spawnent)
         set_entvar(ent , var_nextthink, get_gametime() + 0.05)
+        CanSpawnNum--
         return
     }
     set_entvar(ent , var_nextthink, get_gametime() + 0.2)
     return
 }
 
+ReSpawnEnt(jpid){
+    new Float:Origin[3]
+    new owner = get_entvar(jpid , var_iuser2)
+    if(owner < 0 || !CanSpawn()){
+        rg_remove_entity(jpid)
+        return
+    }
+    get_entvar(owner , var_origin , Origin)
+    new bool:isOccupied = IsSpawnPointOccupied(Origin, owner)
+    if(isOccupied){
+        //尝试往高处生产
+        Origin[2] += 75.0
+        isOccupied = IsSpawnPointOccupied(Origin, owner)
+    }
+    if(isOccupied){
+        rg_remove_entity(jpid)
+        return
+    }
+    ReSpawnJpNpc(jpid , Origin)
+    CanSpawnNum--
+}
 
 public NPC_ThinkPre(id){
     if(get_gametime() < ProectPlayerTime){
@@ -992,6 +1071,11 @@ public Npc_OnDamagePost(this,attacker,Float:Damage){
 public native_GetJuDianNum(){
     return Current_judian + 1
 }
+
+public native_GetCurrentNpcs(){
+    return CurrentNpcs
+}
+
 public native_Getleavel(){
     return judian_leavel
 }
@@ -1050,10 +1134,7 @@ public ShowPlayerInfo(id){
 
 /**
  * 使用 TraceHull 判断一个位置是否被碰撞盒占据。
- * 这是一个更鲁棒的检查方法。
  * @param origin 要检查的位置（通常是实体的脚部中心）。
- * @param hull_min 碰撞盒的相对最小坐标 (例如: {-16.0, -16.0, -36.0})。
- * @param hull_max 碰撞盒的相对最大坐标 (例如: {16.0, 16.0, 36.0})。
  * @return 如果位置被任何固体（地图或实体）占用，返回 true；否则返回 false。
  */
 stock bool:IsSpawnPointOccupied(const Float:origin[3] , pentToSkip)
@@ -1063,27 +1144,35 @@ stock bool:IsSpawnPointOccupied(const Float:origin[3] , pentToSkip)
     static Float:CheckPoint2[3]
     xs_vec_copy(origin, CheckPoint)
     xs_vec_copy(origin, CheckPoint2)
-    CheckPoint2[2] -= 35.0
-    CheckPoint[2] += 30.0
-    //// void )			(const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr);
+    CheckPoint2[2] -= 50.0
+    CheckPoint[2] += 60.0
     engfunc(EngFunc_TraceHull, CheckPoint, CheckPoint2, DONT_IGNORE_MONSTERS, HULL_HUMAN, pentToSkip, tr)
     new Float:TR_flFractions
     new touchent
+    if(get_tr2(tr , TR_AllSolid) || get_tr2(tr, TR_StartSolid) || !get_tr2(tr, TR_InOpen)){
+        free_tr2(tr)
+        return true
+    }
     get_tr2(tr,TR_flFraction, TR_flFractions)
     touchent = get_tr2(tr , TR_pHit)
-    free_tr2(tr)
     if(TR_flFractions < 1.0){
-        if(touchent < 0)
+        if(touchent < 0){
+            free_tr2(tr)
             return false
+        }
         new flags = get_entvar(touchent, var_flags)
         if(flags & FL_MONSTER || flags & FL_CLIENT){
+            free_tr2(tr)
             return true
         }
         if(GetIsNpc(touchent) == true){
+            free_tr2(tr)
             return true
         }
+        free_tr2(tr)
         return false
     }
+    free_tr2(tr)
     return false
 }
 

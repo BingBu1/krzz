@@ -358,10 +358,15 @@ public RULE_PlayerTakeDamage(this, idinflictor, idattacker, Float:damage, damage
             new Float:Health = get_entvar(this , var_health)
             if(Health < damage && get_entvar(this , var_takedamage) != DAMAGE_NO){
                 set_entvar(this , var_health , 1.0)
-                client_print(this , print_center , "九命猫帮你抵挡了一次伤害,你将获得无敌3秒")
+                client_print(this , print_center , "九命猫断掉了一支尾巴保护了你,你将获得无敌3秒")
                 set_entvar(this , var_takedamage , DAMAGE_NO)
                 set_task(3.0 , "UnGod" , this + 1212)
                 return HAM_SUPERCEDE
+            }
+        }
+        case HUMAN_RULE_Grenadier:{
+            if(idattacker == this && damagebits == DMG_GRENADE){
+                return HAM_SUPERCEDE;
             }
         }
     }
@@ -372,7 +377,9 @@ public UnGod(id){
 }
 
 public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damagebits){
-    if(idattacker > get_maxplayers() || cs_get_user_team(idattacker) != CS_TEAM_T)
+    if(ExecuteHam(Ham_IsPlayer , idattacker) == false)
+        return HAM_IGNORED
+    if(!is_valid_ent(idattacker) || cs_get_user_team(idattacker) != CS_TEAM_T)
         return HAM_IGNORED
     new Rule = GetHunManRule()
     switch(Rule){
