@@ -214,6 +214,8 @@ public native_filter(const name[], index, trap)
 }
 
 public NPC_Killed(this , killer){
+	if(!ExecuteHam(Ham_IsPlayer , killer))
+		return
 	new iEntity = get_member(killer, m_pActiveItem)
 	if (!pev_valid(iEntity) || get_member(iEntity,m_iId) != CSW_CHAINSR || !Get_BitVar(g_Had_Base, killer))
 		return

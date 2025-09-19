@@ -115,8 +115,14 @@ public plugin_init(){
 public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
     if(player)
         return FMRES_IGNORED
-    if(FClassnameIs(ent , "HeroSpr") && get_entvar(ent ,var_owner) == HOST){
+    if(FClassnameIs(ent , "HeroSpr")){
         new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
+        new master = get_entvar(ent ,var_owner)
+        if(cs_get_user_team(master) == CS_TEAM_CT || !is_user_connected(master)){
+            rg_remove_entity(ent)
+            hero[master] = false
+            return FMRES_IGNORED
+        }
         get_entvar(HOST , var_origin , PlayerOrigin)
         PlayerOrigin[2] += 72.0
         engfunc(EngFunc_SetOrigin, ent, PlayerOrigin)
@@ -283,7 +289,7 @@ public SetOtherModule(this , divlv , PlayerSound){
         rg_set_user_model(this, "NecoArc")
     }
 
-    if(PlayerSound){
+    if(PlayerSound == true){
         PlayBgm(this)
     }   
 }

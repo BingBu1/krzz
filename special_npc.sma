@@ -19,7 +19,7 @@ new has_tank
 
 new CurrentTankEnt 
 
-new TankModle[][]={
+new TankModle[TankModle_e][]={
 "models/rainych/krzz/tank.mdl",
 "models/rainych/krzz/tank_died.mdl"
 }
@@ -29,7 +29,7 @@ new firesound[][]={
     "weapons/357_shot2.wav"
 }
 
-new g_Explosion,sTrail,HealSpr
+new g_Explosion, sTrail
 
 new BossNpc
 
@@ -56,7 +56,7 @@ public plugin_precache(){
     }
     g_Explosion = precache_model("sprites/zerogxplode.spr")
     sTrail = precache_model(GRENADE_TRAIL)
-    HealSpr = precache_model("sprites/zb_healthbar.spr")
+    precache_model("sprites/zb_healthbar.spr")
     precache_model(TankBoom)
 }
 
@@ -71,31 +71,29 @@ public native_GetTankNpcEnt(){
 
 public Fw_AddToFullPack(const es, e, ent, HOST, hostflags, player, set){
     if(player)
-        return FMRES_IGNORED
-    if(is_nullent(ent) || !FClassnameIs(ent , "hostage_entity"))
-        return FMRES_IGNORED
+        return FMRES_IGNORED    
     new spr = get_entvar(ent , var_impulse)
 
     if(!spr || !is_valid_ent(spr))
         return FMRES_IGNORED 
 
+    if(get_entvar(ent , var_deadflag) == DEAD_DEAD){
+        rg_remove_entity(spr)
+        return FMRES_IGNORED
+    }
+
     new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
     get_entvar(ent , var_origin , PlayerOrigin)
-    
     Health = get_entvar(ent , var_health)
-    MaxHealth = get_entvar(ent , var_max_health)
-
+    MaxHealth = get_entvar(ent , var_max_health)    
     PlayerOrigin[2] += 72.0
-	engfunc(EngFunc_SetOrigin, spr, PlayerOrigin)
-    // set_entvar(spr , var_origin , PlayerOrigin)
+    engfunc(EngFunc_SetOrigin, spr, PlayerOrigin)
     new Float:ratio = (Health / MaxHealth) * 99.0
     if(ratio < 0.0) ratio = 0.0
-    set_entvar(spr , var_frame , ratio)
-
+    set_entvar(spr , var_frame , ratio) 
     set_es( es, ES_MoveType, MOVETYPE_FOLLOW )
-	set_es( es, ES_RenderMode, kRenderNormal )
-	set_es( es, ES_RenderAmt, 220 )
-    
+    set_es( es, ES_RenderMode, kRenderNormal )
+    set_es( es, ES_RenderAmt, 220 )
 
     return FMRES_IGNORED
 }
@@ -106,8 +104,8 @@ public CreateHealBar(Npc){
         return 0
     set_entvar(spr , var_classname , "HBar")
     set_entvar(spr, var_renderamt, 255.0)
-	set_entvar(spr, var_frame, 0.0)
-	set_entvar(spr, var_animtime, get_gametime())
+    set_entvar(spr, var_frame, 0.0)
+    set_entvar(spr, var_animtime, get_gametime())
     set_entvar(spr , var_scale , 0.5)
     set_entvar(spr , var_owner , Npc)
     set_entvar(spr, var_spawnflags, SF_SPRITE_STARTON)
@@ -187,10 +185,9 @@ public NPC_CreatePost(ent){
     new Judian_num = GetJuDianNum()
     new level = Getleavel()
     if(level > 30 && Judian_num <= 7 && BossNpc < MaxBossNpc){
-        new bool:IsCreate = CreateEliteNpc(ent , level , Judian_num)
-        new spr
+        new bool:IsCreate = bool:CreateEliteNpc(ent , level , Judian_num)
         if(IsCreate){
-            spr = CreateHealBar(ent)
+            new spr = CreateHealBar(ent)
             if(!spr){
                 log_error(AMX_ERR_NONE , "创建血条实体失败。")
             }
@@ -212,6 +209,10 @@ public NPC_CreatePost(ent){
 
         CurrentTankEnt = ent
         has_tank = true
+        new spr = CreateHealBar(ent)
+        if(!spr){
+            log_error(AMX_ERR_NONE , "创建血条实体失败。")
+        }
         return
     }
     if(GetJuDianNum() == 8){
@@ -219,6 +220,10 @@ public NPC_CreatePost(ent){
         maxHeal = maxHeal + (150.0 * float(level))
         set_entvar(ent , var_max_health, maxHeal)
         set_entvar(ent , var_health, maxHeal)
+        new spr = CreateHealBar(ent)
+        if(!spr){
+            log_error(AMX_ERR_NONE , "创建血条实体失败。")
+        }
     }
     if(GetRiJunRule() == JAP_RULE_Tank_Rampage && UTIL_RandFloatEvents(0.01)){
         engfunc(EngFunc_SetModel , ent , TankModle[Tk_alive])
@@ -236,67 +241,43 @@ public NPC_ThinkPost(ent){
     new follent
     new Float:origin[3], Float:targetorigin[3],Float:hitorigin[3]
     //小于7不存在开枪的特殊兵种
-    if(GetRiJunRule() == JAP_RULE_Tank_Rampage && is_tank(ent)){
-        follent = cs_get_hostage_foll(ent)
-        if(!follent )
-            return 0
-        get_entvar(ent,var_origin,origin)
-        get_entvar(follent,var_origin,targetorigin)
-        hitent = fm_trace_line(ent,origin,targetorigin,hitorigin)
-        goto TankAi;
-    }
-    if(Judian_num < 7)
+    if(Judian_num < 7 && GetRiJunRule() != JAP_RULE_Tank_Rampage)
         return 0
     new body = get_entvar(ent , var_body)
     new istank = is_tank(ent)
     
     follent = cs_get_hostage_foll(ent)
-    if(!follent )
+    if(!follent)
         return 0
     get_entvar(ent,var_origin,origin)
     get_entvar(follent,var_origin,targetorigin)
     hitent = fm_trace_line(ent,origin,targetorigin,hitorigin)
-    if(body == 7){
-        //处理开枪
-        if(hitent != follent)
-            return 0
-        InitAttack2Timer(ent,3.0,8.0)
-        new Float:attacktimer = get_prop_float(ent,"attackfire")
-        if(get_gametime() > attacktimer){
-            set_msg_block(get_user_msgid("DeathMsg"), BLOCK_ONCE)
-            FireBullets(ent,follent)
-            set_msg_block(get_user_msgid("DeathMsg"), BLOCK_NOT)
-            ResetAttack2(ent,3.0,8.0)
+    InitAttack2Timer(ent, 3.0, 8.0)
+    if(hitent != follent)
+        return 0
+    new Float:attacktimer = get_prop_float(ent,"attackfire")
+    if(get_gametime() < attacktimer)
+        return 0
+    set_msg_block(get_user_msgid("DeathMsg"), BLOCK_ONCE)
+    switch(body){
+        case 7:{
+            FireBullets(ent, follent)
+            ResetAttack2(ent, 3.0, 8.0)
         }
-    }else if (Judian_num == 8 && !istank){
-        //军官 开枪 手榴弹逻辑
-        if(hitent != follent)
-            return 0
-        InitAttack2Timer(ent,3.0,8.0)
-        new Float:attacktimer = get_prop_float(ent,"attackfire")
-        if(get_gametime() > attacktimer){
+        case 8:{
             new randattack = random_num(0,1)
-            set_msg_block(get_user_msgid("DeathMsg"), BLOCK_ONCE)
-            if(randattack == 1){
-                FireBullets(ent,follent,5.0)
-            }else{
+            if(randattack)
+                FireBullets(ent, follent, 5.0)
+            else
                 ThrowHeGrenade(ent)
-            }
-            set_msg_block(get_user_msgid("DeathMsg"), BLOCK_NOT)
-            ResetAttack2(ent,3.0,10.0)
+            ResetAttack2(ent, 1.0 , 5.0)
         }
-    }else if(Judian_num == 8 && istank){
-        TankAi:
+    }
+    set_msg_block(get_user_msgid("DeathMsg"), BLOCK_NOT)
+    if(Judian_num == 8 && istank){
         //坦克 开炮 机枪逻辑
-        if(hitent != follent)
-            return 0
-        InitAttack2Timer(ent,3.0,8.0)
-        new Float:attacktimer = get_prop_float(ent,"attackfire")
-        if(get_gametime() > attacktimer){
-            new randattack = random_num(0,1)
-            CreateTankBoom(ent,follent)
-            ResetAttack2(ent,3.0,10.0)
-        }
+        CreateTankBoom(ent,follent)
+        ResetAttack2(ent,1.0 , 5.0)
     }
 }
 
@@ -319,6 +300,11 @@ public native_is_tank(){
 }
 
 public NPC_Killed(this , killer){
+    new spr = get_entvar(this , var_impulse)
+    if(spr > 0){
+        set_entvar(this , var_impulse , 0)
+        rg_remove_entity(spr)
+    }
     if(get_entvar(this,var_iuser1) >= 1){
         new MonsterLv = get_entvar(this,var_iuser1)
         new lv = Getleavel()
@@ -343,11 +329,6 @@ public NPC_Killed(this , killer){
                 MonsterLv = 2
             }
         }
-        new spr = get_entvar(this , var_impulse)
-        if(spr > 0){
-            set_entvar(this , var_impulse , 0)
-            rg_remove_entity(spr)
-        }
         cs_set_user_money(killer , money)
         baseaddxp *= MonsterLv 
         AddXp(killer, baseaddxp)
@@ -360,7 +341,7 @@ public NPC_Killed(this , killer){
     }
     if(has_tank && this == CurrentTankEnt){
         new origin[3]
-        get_entvar(this,var_origin,origin)
+        get_entvar(this, var_origin,origin)
         engfunc(EngFunc_SetModel , this , TankModle[Tk_die])
         MakeBoom(origin)
         AddKillTank(killer)
@@ -392,6 +373,7 @@ public KillTank_reward(id){
         AddXp(id, Rand)
         m_print_color(0, "!g[冰布提示] %s 击败了坦克获取到了奖励%d额外积分" ,name , Rand)
     }
+    set_prop_int(id , "istank" , 0)
 }
 
 public MakeBoom(Float:iOrigin[3]){

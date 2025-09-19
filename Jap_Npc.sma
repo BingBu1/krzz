@@ -26,6 +26,8 @@
 #define HULL_MIN Float:{-10.0,-10.0,0.0}
 #define HULL_MAX Float:{10.0,10.0,62.0}
 
+#define var_BeAttackStopTime "s_timer"
+
 new Jp_Name[][]={
 	Jp_defname,
 	"日本人妻",
@@ -43,7 +45,7 @@ new const Jp_Model [][]={
 	"models/rainych/krzz/tank_died.mdl",
 }
 
-new Jp_Attacksound [][]={
+new Jp_Attacksound [Jp_RiBenSound][]={
 	"rainych/krzz/kill_player2.wav",
 	"rainych/krzz/kill_player2_gl.wav",
 	"rainych/krzz/kill_player1.wav",
@@ -67,7 +69,7 @@ new Jpnpc_forwards[Jp_FOWARD]
 
 new Float:CurrentLeavelHeal,Float:CurrentLeavelDamageReduction
 
-new CloseAi
+new CloseAi , KillMoney
 
 new Array:NpcList
 
@@ -81,17 +83,19 @@ public plugin_init()
 	register_logevent("EventRoundEnd", 2, "1=Round_End")
 	
 	RegisterHam(Ham_TakeDamage, "hostage_entity", "HOSTAGE_TakeDamage")
-	RegisterHam(Ham_TakeDamage, "hostage_entity", "HOSTAGE_TakeDamage_Post", 1)
+	RegisterHam(Ham_TakeDamage, "hostage_entity", "HOSTAGE_TakeDamage_Post", true)
 	RegisterHam(Ham_Think, "hostage_entity", "fw_HostageThink")
-	RegisterHam(Ham_Think, "hostage_entity", "fw_HostageThink_Post" , 1)
+	RegisterHam(Ham_Think, "hostage_entity", "fw_HostageThink_Post" , true)
 	RegisterHam(Ham_Use, "hostage_entity", "HOSTAGE_Use")
     RegisterHam(Ham_Touch , "hostage_entity", "fw_HostageTouch")
 	
 	register_message(get_user_msgid("StatusValue"), "message_statusvalue")
 
-	bind_pcvar_num(register_cvar("Close_JpNpc_Ai" , "0") , CloseAi) 
+	bind_pcvar_num(register_cvar("Kr_Close_JpNpc_Ai" , "0") , CloseAi) 
+	bind_pcvar_num(register_cvar("Kr_KillMoney" , "50") , KillMoney) 
 
 	CreateFakeClient()
+	FakeClientTask() //执行一次
 	NpcList = ArrayCreate()
 	DeadMsg = get_user_msgid("DeathMsg")
 	// set_task(1.0, "CreateFakeClient", 0)
@@ -113,29 +117,29 @@ public InitFowrad(){
 
 public plugin_end(){
 	for(new i = 0 ; i < sizeof Jpnpc_forwards ; i++){
-		DestroyForward(Jpnpc_forwards[i])
+		DestroyForward(Jpnpc_forwards[Jp_FOWARD:i])
 	}
 	new iEntity = -1
-    while ((iEntity = find_ent_by_class(iEntity, "hostage_entity")) > 0) {
+	while ((iEntity = find_ent_by_class(iEntity, "hostage_entity")) > 0) {
 		rg_remove_entity(iEntity)
-    }
+	}
 	ArrayDestroy(NpcList)
 }
 
 public plugin_precache()
 {
-	for(new i = 0; i < sizeof(Jp_Model); i++){
-		 precache_model(Jp_Model[i])
-	}
-	for (new i = 0; i < sizeof Jp_Attacksound; i++){
+	for(new i = 0; i < sizeof(Jp_Model); i++)
+		precache_model(Jp_Model[i])
+	
+	for (new i = 0; i < sizeof Jp_Attacksound; i++)
 		UTIL_Precache_Sound(Jp_Attacksound[i])
-	}
-    precache_sound("hostage/hos1.wav")
+
+	precache_sound("hostage/hos1.wav")
 	precache_sound("hostage/hos2.wav")
 	precache_sound("hostage/hos3.wav")
 	precache_sound("hostage/hos4.wav")
 	precache_sound("hostage/hos5.wav")
-    precache_model("sprites/smoke.spr")
+	precache_model("sprites/smoke.spr")
 	precache_model("models/hostage.mdl")
 }
 
@@ -162,8 +166,6 @@ public OnLevelChange_Post(Lv){
 }
 
 public message_statusvalue(msg_id, msg_dest, id){
-	if(!is_user_connected(id))
-		return 0
 	new flag = get_msg_arg_int(1)
     new value = get_msg_arg_int(2)
 	new msgid = get_user_msgid("StatusText")
@@ -189,29 +191,20 @@ public message_statusvalue(msg_id, msg_dest, id){
     		get_user_aiming(id, target, _pitch, 9999)
     		if (is_nullent(target))
 				return 0
-			new classname[33]
-			new newname[33]
-
-			get_entvar(target,var_classname, classname,charsmax(classname))
-			if(equal(classname , "hostage_entity")){
-				new team = getnpc_FakeTeam(target)
+			if(GetIsNpc(target)){
+				new team = KrGetFakeTeam(target)
 				new player_team = cs_get_user_team(id)
-				message_begin(MSG_ONE, msgid,.player=id)
+				new bool:isSameTeam = player_team == team
+				message_begin(MSG_ONE, msgid, .player = id)
     		    write_byte(0) // 一般第一个参数是 style/color
-				if(player_team == CS_TEAM_T){
-					if(team != player_team){
-						write_string("1 [鬼子] %h: %i3")
-					}else{
-						write_string("1 [同志] %h: %i3")
+				switch(player_team){
+					case CS_TEAM_T:{
+						write_string( isSameTeam ? "1 [同志] %h: %i3" : "1 [鬼子] %h: %i3")
 					}
-				}else if (player_team == CS_TEAM_CT){
-					if(team != player_team){
-						write_string("1 [敌人] %h: %i3")
-					}else{
-						write_string("1 [太君] %h: %i3")
+					case CS_TEAM_CT:{
+						write_string( isSameTeam ? "1 [太君] %h: %i3" : "1 [敌人] %h: %i3")
 					}
 				}
-				
     			message_end()
 				return PLUGIN_CONTINUE
 			}
@@ -222,28 +215,23 @@ public message_statusvalue(msg_id, msg_dest, id){
     		message_end()
 		}
 	}
-	
 	return 0
 }	
 
 public event_roundstart(){
 	// remove_entity_name("hostage_entity")
 	new iEntity = -1
-    while ((iEntity = find_ent_by_class(iEntity, "hostage_entity")) > 0)
-    {
-        if (pev_valid(iEntity))
-        {
-            set_pev(iEntity, pev_flags, pev(iEntity, pev_flags) | FL_KILLME)
-        }
+    while ((iEntity = find_ent_by_class(iEntity, "hostage_entity")) > 0) {
+		rg_remove_entity(iEntity)
     }
-	CurrentLeavelHeal = floatmin(100.0 + float(Getleavel()) + 1.0, Max_heal)
+	CurrentLeavelHeal = floatmin(100.0 + float(Getleavel()), Max_heal)
 	CurrentLeavelDamageReduction = ClacLvDamageReduction()
 	ChangeFakeClientName(0)
     FakeClientTask()
-    set_task(1.0,"FakeClientTask",UpdateFakeClientTaskId,"",0,"b")
-	set_task(3.0 , "CheckNpcList" , CheckList , .flags = "b")
-	ArrayDestroy(NpcList)
-	NpcList = ArrayCreate()
+    set_task(1.0,"FakeClientTask", UpdateFakeClientTaskId, "", 0, "b")
+	// set_task(3.0 , "CheckNpcList" , CheckList , .flags = "b")
+	// ArrayDestroy(NpcList)
+	// NpcList = ArrayCreate()
 }
 
 public CheckNpcList() {
@@ -262,7 +250,7 @@ public CheckNpcList() {
 
 public EventRoundEnd(){
     remove_task(UpdateFakeClientTaskId)
-    remove_task(CheckList)
+    // remove_task(CheckList)
 }
 
 public native_ChangeFakeClientName(plugin_id, num_params){
@@ -316,18 +304,19 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 	}
 
 	new Float:newdamage = damage
+	new HumanRule = GetHunManRule()
+	new RiJunRule = GetRiJunRule()
 	if(CurTeam == CS_TEAM_CT){
 		new Float:vel[3]
-		get_entvar(this, var_velocity,vel)
-		if(GetHunManRule() == HUMAN_RULE_Depleted_Uranium && CurrentLeavelDamageReduction > 0.1){
+		get_entvar(this, var_velocity, vel)
+		newdamage = damage * (1.0 - CurrentLeavelDamageReduction)
+		if(HumanRule == HUMAN_RULE_Depleted_Uranium && CurrentLeavelDamageReduction > 0.1){
 			newdamage = damage * (1.0 - (CurrentLeavelDamageReduction - 0.1))
-		}else{
-			newdamage = damage * (1.0 - CurrentLeavelDamageReduction)
 		}
-		if(vel[0] == 0.0 && vel[1] == 0.0 && vel[2] == 0.0 && cs_get_hostage_foll(this) == 0){
+		if((vel[0] == 0.0 && vel[1] == 0.0 && vel[2] == 0.0) || !cs_get_hostage_foll(this)){
 			newdamage *= 0.5 //如果不动再减伤0.5
 		}
-		if(GetRiJunRule() == JAP_RULE_Damage_Reduction){
+		if(RiJunRule == JAP_RULE_Damage_Reduction){
 			newdamage *= 0.95
 		}
 		SetHamParamFloat(4, newdamage)
@@ -341,7 +330,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 
 	Currentsequence = get_entvar(this, var_sequence)
 	set_entvar(this, var_health, AttackEndHeal)
-	if(GetRiJunRule() == JAP_RULE_Gyokusai_Charge && AttackEndHeal <= 0.0 && get_entvar(this , var_iuser4) == 0){
+	if(RiJunRule == JAP_RULE_Gyokusai_Charge && AttackEndHeal <= 0.0 && get_entvar(this , var_iuser4) == 0){
 		set_entvar(this , var_health , 50.0)
 		set_entvar(this , var_iuser4 , 1)
 		AttackEndHeal = 50.0
@@ -361,7 +350,8 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 
 	if(FakeTeam == CS_TEAM_CT){
 		new CanBeStop = getnpc_CanBeStop(this)
-		if(GetRiJunRule() == JAP_RULE_Stimulants && UTIL_RandFloatEvents(0.5)){
+		new Float:vec[3]
+		if(RiJunRule == JAP_RULE_Stimulants && UTIL_RandFloatEvents(0.5)){
 			//不被定身
 			CanBeStop = true
 		}
@@ -369,25 +359,19 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		&& CanBeStop == false){
 			play_anim(this , jp_beAttack_anim[random_num(0,4)], 9999.0)
 		}
-		new Float:vec[3];
 		if(CanBeStop == false){
 			vec[0] = 0.0;
 			vec[1] = 0.0;
 			vec[2] = 0.0;
 			set_entvar(this, var_velocity, vec)
-			set_entvar(this, var_nextthink, get_gametime() + 0.75)
+			set_prop_float(this ,var_BeAttackStopTime , get_gametime() + 0.75)
 		}
 		new think = getnpc_BeAttackInThink(this)
 		if(think == 0){
 			setnpc_BeAttackInThink(this, 1)
 		}
 		new foll = cs_get_hostage_foll(this)
-		new fool_isPlayer = FClassnameIs(foll , "player")
-		// if(foll && fool_isPlayer && is_user_connected(foll) && is_user_alive(foll) && !GetIsNpc(idinflictor)){
-		// 	setnpc_Attacker(this, idinflictor)
-		// }else{
-			
-		// }
+		new fool_isPlayer = ExecuteHam(Ham_IsPlayer , foll)
 		if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == CS_TEAM_T){
 			setnpc_Attacker(this, idinflictor)
 			PropagateHate(this , idinflictor)
@@ -400,25 +384,16 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 }
 
 public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, damagebits){
-	if(is_user_alive(idattacker) == false || cs_get_user_team(idattacker) == CS_TEAM_CT)
-		return HAM_SUPERCEDE
-	if(getnpc_FakeTeam(this) != CS_TEAM_CT)
-		return HAM_SUPERCEDE
 	ExecuteForward(Jpnpc_forwards[Jp_NpcOnDamagePost],_,this,idattacker,damage)
 	new Float:Hp
 	Hp = get_entvar(this,var_health)
-	if(Hp <= 0.0){
+	if(Hp <= 0.0 || get_entvar(this , var_deadflag)){
 		ExecuteForward(Jpnpc_forwards[Jp_NpcKilled], _ , this, idattacker)
-		new finder = ArrayFindValue(NpcList , this) 
-		if(finder != -1){
-			ArrayDeleteItem(NpcList , finder)
-		}
-		cs_set_user_money(idattacker, cs_get_user_money(idattacker)+50)
+		cs_set_user_money(idattacker, cs_get_user_money(idattacker) + KillMoney)
 		new frag = get_entvar(idattacker , var_frags)
-		frag += 5
-		set_entvar(idattacker , var_frags , frag)
+		set_entvar(idattacker , var_frags , frag + 5)
 		SendScoreInfo(idattacker, frag)
-		SendDeathMessage(FakeClient,idattacker)
+		SendDeathMessage(FakeClient, idattacker)
 		// DelSelf(this)
 	}
 }
@@ -429,12 +404,8 @@ public fw_HostageThink_Post(id){
 }
 
 public fw_HostageThink(id){
-	if (!is_valid_ent(id))
-        return HAM_IGNORED
-
 	new rets
 	ExecuteForward(Jpnpc_forwards[JP_NpcThinkPre], rets, id)
-
 	if(rets >= PLUGIN_HANDLED)
 		return HAM_IGNORED
 	new Faketeam = getnpc_FakeTeam(id)
@@ -446,8 +417,13 @@ public fw_HostageThink(id){
 	if(Faketeam == CS_TEAM_T){
 		return HAM_IGNORED
 	}
-	new Float:NpcHeal = get_entvar(id, var_health)
 
+	new Float:NpcHeal = get_entvar(id, var_health)
+	new Float:StopTime = get_prop_float(id , var_BeAttackStopTime)
+	if(StopTime > get_gametime()){
+		ExecuteForward(Jpnpc_forwards[Jp_NpcThinkPost], _ , id)
+		return HAM_SUPERCEDE
+	}
 	if(NpcHeal <= 0.0){
 		return HAM_IGNORED
 	}
@@ -459,7 +435,7 @@ public fw_HostageThink(id){
 		new Currentsequence = get_entvar(id, var_sequence)
 		if(NpcHeal > 0.0 && is_in_anim(jp_beAttack_anim , sizeof jp_beAttack_anim , Currentsequence)){
 			set_entvar(id , var_sequence, 13)
-			set_member(id , m_Activity , 1)
+			set_member(id , m_Activity , ACT_IDLE)
 		}
 	}else if (Beattackstatus == 2){
 		setnpc_BeAttackInThink(id, 0)
@@ -473,37 +449,41 @@ public fw_HostageThink(id){
 			}
 		}
 	}
-	if(Faketeam == CS_TEAM_CT){
-		new Float:reanim = get_prop_float(id , "reainmtime")
-		new Currentsequence = get_entvar(id, var_sequence)
-		new bool:isinanim = is_in_anim(jp_Attack_anim, sizeof jp_Attack_anim, Currentsequence)
-		if(get_gametime() > reanim && isinanim){
-			new idel = LookupActivity(id , 1)
-			play_anim(id, idel , 9999.0)
-		}
-		new owner = cs_get_hostage_foll(id)
-		new bool:ownerValid = false
-		if(owner > 0){
-			if(GetIsNpc(owner)){
-				ownerValid = (get_entvar(owner , var_deadflag) == DEAD_NO)
-			}else{
-				ownerValid = (is_valid_ent(owner) && is_user_alive(owner))
-			}
-		}
-		if(!ownerValid)
-			cs_set_hostage_foll(id)
 
-		new target
-		if(ownerValid)
-			target = owner
-		else
-			target = FindNearhuman(id)
-			
-		if(target > 0){
-			cs_set_hostage_foll(id, target)
-			if(fm_get_entity_distance(id,target) <= 210.0){
-				RibenNormlAttack(id,target)
-			}
+	new Float:reanim = get_prop_float(id , "reainmtime")
+	new Currentsequence = get_entvar(id, var_sequence)
+	new bool:isinanim = is_in_anim(jp_Attack_anim, sizeof jp_Attack_anim, Currentsequence)
+
+	if(get_gametime() > reanim && isinanim){
+		new idel = LookupActivity(id , 1)
+		play_anim(id, idel , 9999.0)
+	}
+
+	new owner = cs_get_hostage_foll(id)
+	new bool:ownerValid = false
+
+	if(owner > 0){
+		if(GetIsNpc(owner)){
+			ownerValid = (get_entvar(owner , var_deadflag) == DEAD_NO)
+		}else{
+			ownerValid = (is_valid_ent(owner) && is_user_alive(owner))
+		}
+	}
+
+	if(!ownerValid)
+		cs_set_hostage_foll(id)
+
+
+	new target
+	if(ownerValid)
+		target = owner
+	else
+		target = FindNearhuman(id)
+
+	if(target > 0){
+		cs_set_hostage_foll(id, target)
+		if(fm_get_entity_distance(id,target) <= 210.0){
+			RibenNormlAttack(id,target)
 		}
 	}
 	ExecuteForward(Jpnpc_forwards[Jp_NpcThinkPost], _ ,id)
@@ -517,7 +497,7 @@ public DelSelf(id){
 public OnKill(id){
 	new hit = get_member(id , m_LastHitGroup)
 	SetDeadAct(id , hit)
-	set_entvar(id ,var_deadflag , DEAD_DEAD)
+	set_entvar(id , var_deadflag , DEAD_DEAD)
 	set_entvar(id , var_nextthink , -1)
 	set_entvar(id , var_movetype , MOVETYPE_NONE)
 	set_entvar(id , var_solid , SOLID_NOT)
@@ -555,8 +535,8 @@ public native_CreateJpNpc(plugin_id, num_params){
 	get_array_f(4, angles, 4)
 
 	new ent = rg_create_entity("hostage_entity")
-	if(!pev_valid(ent)){
-		server_print("创建人质实体失败")
+	if(is_nullent(ent)){
+		log_error(AMX_ERR_NONE , "创建人质实体失败")
 		return -1
 	}
 	if(FakeTeam == CS_TEAM_CT){
@@ -566,9 +546,11 @@ public native_CreateJpNpc(plugin_id, num_params){
 			return ent
 	}
 	
-	formatex(origin_str,31,"%i %i %i",floatround(origin[0]),floatround(origin[1]),floatround(origin[2]))
-	DispatchKeyValue(ent,"model",Jp_Model[0])
-	DispatchKeyValue(ent,"origin",origin_str)
+	formatex(origin_str, charsmax(origin_str) ,"%i %i %i",
+		floatround(origin[0]), floatround(origin[1]), floatround(origin[2]))
+
+	DispatchKeyValue(ent,"model", Jp_Model[0])
+	DispatchKeyValue(ent,"origin", origin_str)
 	dllfunc(DLLFunc_Spawn, ent)
 	new Float:val[3] = {0.0, 0.0, -200.0}
 	set_entvar(ent, var_velocity, val)
@@ -576,17 +558,20 @@ public native_CreateJpNpc(plugin_id, num_params){
 	set_entvar(ent, var_max_health, CurrentLeavelHeal)
 	set_entvar(ent, var_health, CurrentLeavelHeal)
     set_entvar(ent, var_body, body)
-	set_prop_float(ent, "NextChange", get_gametime())
-	set_prop_float(ent, "nextattack", get_gametime())
-	set_prop_float(ent, "reainmtime", get_gametime())
 	set_prop_int(ent, "FakeTeam", FakeTeam)
 	set_prop_int(ent, "BeAttackInThink", 0)
 	set_prop_int(ent, "Attacker",0)
-	set_prop_int(ent, "IsNpc",1)
+	set_prop_int(ent, "IsNpc",true)
+
+	set_prop_float(ent, "NextChange", get_gametime())
+	set_prop_float(ent, "nextattack", get_gametime())
+	set_prop_float(ent, "reainmtime", get_gametime())
+	set_prop_float(ent, var_BeAttackStopTime , get_gametime())
+
 	if(FakeTeam == CS_TEAM_CT){
 		ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , ent)
 	}
-	ArrayPushCell(NpcList , ent)
+	// ArrayPushCell(NpcList , ent)
 	return ent
 }
 
@@ -605,6 +590,14 @@ public native_ReSpawn(id , nums){
 	set_entvar(Jpid , var_deadflag , DEAD_NO)
 	set_entvar(Jpid , var_effects , get_entvar(Jpid , var_effects) & ~EF_NODRAW)
 	set_entvar(Jpid , var_nextthink , get_gametime() + 0.1)
+
+	set_prop_float(Jpid , var_BeAttackStopTime , get_gametime())
+	set_prop_float(Jpid, "NextChange", get_gametime())
+	set_prop_float(Jpid, "nextattack", get_gametime())
+	set_prop_float(Jpid, "reainmtime", get_gametime())
+
+	set_prop_int(Jpid , "istank" , false)
+	set_prop_int(Jpid , "CanStop" , false)
 
 	SetActivity(Jpid , ACT_IDLE)
 
@@ -741,15 +734,14 @@ public getnpc_nextattack(id){
 
 public FakeClientTask(){
     if(FakeClient && is_entity(FakeClient) && is_user_bot(FakeClient)){
-        cs_set_user_team(FakeClient, CS_TEAM_CT);
-        new Float:origin[3] = {8188.0, 8188.0, 8188.0};
+		cs_set_user_team(FakeClient, CS_TEAM_CT);
+		new Float:origin[3] = {8188.0, 8188.0, 8188.0}
 
-        engfunc(EngFunc_SetOrigin, FakeClient, origin);
+		engfunc(EngFunc_SetOrigin, FakeClient, origin)
 
-        set_pev(FakeClient, pev_effects, pev(FakeClient, pev_effects) | EF_NODRAW);
-
-		set_pev(FakeClient, pev_solid, SOLID_NOT);
-		set_pev(FakeClient, pev_movetype, MOVETYPE_NOCLIP);
+		set_entvar(FakeClient, var_effects,  EF_NODRAW);
+		set_entvar(FakeClient, var_solid, SOLID_NOT);
+		set_entvar(FakeClient, var_movetype, MOVETYPE_NOCLIP);
 		return;
     }
 }
@@ -757,16 +749,18 @@ public FakeClientTask(){
 public CreateFakeClient(){
 	FakeClient = engfunc(EngFunc_CreateFakeClient, Jp_defname)
 	if(!pev_valid(FakeClient)){
-		server_print("FakeClient创建失败")
+		log_error(AMX_ERR_NONE , "FakeClient创建失败")
 		return
 	} 
-	engfunc(EngFunc_FreeEntPrivateData, FakeClient)
 	new szMsg[128]
-	dllfunc(DLLFunc_ClientConnect, FakeClient,Jp_defname, "127.0.0.1", szMsg)
+	engfunc(EngFunc_FreeEntPrivateData, FakeClient)
+	dllfunc(DLLFunc_ClientConnect, FakeClient, Jp_defname, "127.0.0.1", szMsg)
 	dllfunc(DLLFunc_ClientPutInServer, FakeClient)
 	cs_set_user_team(FakeClient, CS_TEAM_CT)
-	set_entvar(FakeClient,pev_takedamage, DAMAGE_NO)
-	set_entvar(FakeClient , var_effects , get_entvar(FakeClient , var_effects) | EF_NODRAW)
+	set_entvar(FakeClient, pev_takedamage, DAMAGE_NO)
+	set_entvar(FakeClient , var_effects , EF_NODRAW)
+	set_entvar(FakeClient , var_solid , SOLID_NOT)
+	set_entvar(FakeClient , var_movetype , MOVETYPE_NOCLIP)
 	set_prop_int(FakeClient,"IsFake", 1)
 }
 
@@ -817,9 +811,7 @@ public fw_HostageTouch(this , other){
 
 public bool:is_in_anim(anims[],animssize,sequence){
 	for(new i = 0; i < animssize; i++){
-		if(anims[i] == sequence){
-			return true
-		}
+		if(anims[i] == sequence)return true
 	}
 	return false
 }
@@ -829,24 +821,20 @@ public play_anim(id , anim , Float:PlayTimer){
 	set_pev(id, pev_frame, 0.0)
 	set_pev(id, pev_framerate, 1.0)
 	set_pev(id, pev_animtime, get_gametime())
-	set_prop_float(id,"reainmtime",get_gametime()+PlayTimer)
+	set_prop_float(id, "reainmtime", get_gametime() + PlayTimer)
 }
 
 public SendDeathMessage(vim,attacker){
-	static msgs_Deathmsg
-	if(!msgs_Deathmsg){
-		msgs_Deathmsg = DeadMsg
-	}
 	new waeponname [32]
 	new wpnid = cs_get_user_weapon(attacker)
 	if(wpnid){
-		get_weaponname(wpnid,waeponname,charsmax(waeponname))
+		get_weaponname(wpnid, waeponname, charsmax(waeponname))
 	}else{
-		copy(waeponname , 31 , "没有武器")
+		copy(waeponname , 31 , "NoWeapon")
 	}
 	
-	replace_all(waeponname, charsmax(waeponname), "weapon_", "")
-	message_begin(MSG_BROADCAST, msgs_Deathmsg)
+	replace_all(waeponname, charsmax(waeponname), "weapon_" , "")
+	message_begin(MSG_BROADCAST, DeadMsg)
 	write_byte(attacker)
 	write_byte(vim)
 	write_byte(0)
@@ -869,10 +857,10 @@ public SendScoreInfo(id , frag){
 }
 
 public FindNearhuman(ent){
-	new FakeTeam = getnpc_FakeTeam(ent)
+	new FakeTeam = KrGetFakeTeam(ent)
 	new Float:Currentlen , Float:origin[3] , Float:playerorigin[3]
-	new Float:disstance = 0.0
-	new target
+	new Float:Mindistance = 999999.0
+	new target = -1
 	get_entvar(ent, var_origin, origin)
 	for(new i = 1; i <= MaxClients; i++){
 		if(!is_user_alive(i) || IsFakeClient(i))
@@ -883,23 +871,21 @@ public FindNearhuman(ent){
 		Currentlen = vector_distance(origin, playerorigin)
 		if(Currentlen >= 2000.0)
 			continue
-		if(disstance <= 0.0 || Currentlen < disstance){
-			disstance = Currentlen
+		if(Currentlen < Mindistance){
+			Mindistance = Currentlen
 			target = i
 		}
 	}
-	new npc 
-	//npc = FindNearAttackNpc(ent)
-	return npc > 0 ? npc : target
+	return target
 }
 
 public RibenNormlAttack(this ,beattack){
 	new Float:origin[3],Float:Playerorigin[3];
-	new Float:AttackTimeer = getnpc_nextattack(this)
+	new Float:AttackTimeer = Float:getnpc_nextattack(this)
 	if(AttackTimeer > get_gametime())
 		return;
 	new Float:AttackCd = random_float(1.5, 2.7)
-	new Rule = GetRiJunRule()
+	new Japanese_Army_Rules:Rule = GetRiJunRule()
 	if(Rule == JAP_RULE_Lethal_Rhythm){
 		AttackCd =  random_float(0.5, 0.8)
 	}
@@ -933,7 +919,7 @@ public RibenNormlAttack(this ,beattack){
 			damage = 100.0
 	}
 
-	if(!get_entvar(beattack , var_takedamage) == DAMAGE_NO)
+	if(get_entvar(beattack , var_takedamage) != DAMAGE_NO)
 		ExecuteHamB(Ham_TakeDamage, beattack, GetFakeClient(), GetFakeClient(), damage, DMG_CRUSH)
 
 	if(GetIsNpc(beattack)){
@@ -941,7 +927,7 @@ public RibenNormlAttack(this ,beattack){
 	}
 	set_msg_block(DeadMsg, BLOCK_NOT)
 	if(!is_user_alive(beattack)){
-		new soundnum = AttackToDieMan
+		new Jp_RiBenSound:soundnum = AttackToDieMan
 		new g_msgDeathMsg = DeadMsg;
 		message_begin(MSG_BROADCAST, g_msgDeathMsg);
 		write_byte(FakeClient);
@@ -955,9 +941,9 @@ public RibenNormlAttack(this ,beattack){
 		UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 600.0)
 		ExecuteForward(Jpnpc_forwards[Jp_NpcKillPlayer] , _ , beattack , this)
 	}
-	new sound = 0
+	new Jp_RiBenSound:sound = AttackMan
 	if(Npc_Isgirl(this)){
-		sound = 1
+		sound = AttackGl
 	}
 	UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[sound], 600.0)
 }

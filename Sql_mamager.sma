@@ -7,19 +7,24 @@
 #include <xp_module>
 
 new forwardfunction
-new g_SqlTuple,g_SqlConnection
+new Handle:g_SqlTuple, Handle:g_SqlConnection
 
 new IsSqlLoad
 public plugin_init(){
-	register_plugin("Sql管理", "1.0", "Bing")
-    forwardfunction = CreateMultiForward("SqlInitOk",ET_STOP, FP_CELL, FP_CELL)
+    register_plugin("Sql管理", "1.0", "Bing")
+    forwardfunction = CreateMultiForward("SqlInitOk", ET_STOP, FP_CELL, FP_CELL)
     SqlInit()
+}
+
+public plugin_natives(){
+    register_native("GetSqlIsInit" , "native_GetSqlIsInit")
 }
 
 public SqlInit(){
     new Err[512],errcode
     g_SqlTuple = SQL_MakeDbTuple("127.0.0.1", "root", "114514", "amxx_sql")
-    g_SqlConnection = SQL_Connect(g_SqlTuple,errcode,Err,charsmax(Err))
+    g_SqlConnection = SQL_Connect(g_SqlTuple, errcode, Err, charsmax(Err))
+    SQL_SetCharset(g_SqlTuple , "utf8")
     if(Empty_Handle == g_SqlConnection){
         log_amx("[错误码%d]管理器Sql初始化失败。%s",errcode,Err)
         return
@@ -34,4 +39,8 @@ public plugin_end(){
         return
     SQL_FreeHandle(g_SqlTuple)
     SQL_FreeHandle(g_SqlConnection)
+}
+
+public native_GetSqlIsInit(){
+    return IsSqlLoad
 }

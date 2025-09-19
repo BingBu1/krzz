@@ -392,6 +392,8 @@ public Ham_CWeapon_PrimaryAttack_Pre(iWpn)
 	static iClip, id
 	iClip = GetWeaponClip(iWpn);
 	id = get_member(iWpn, m_pPlayer);
+	if(get_member(id , m_flNextAttack) > 0.0)
+		return HAM_SUPERCEDE;
 
 	if (!iClip)
 	{

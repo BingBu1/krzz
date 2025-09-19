@@ -843,7 +843,7 @@ public CanSpawn(){
 }
 
 public NPC_Killed(this , killer){
-    if(GetIsNpc(this) && get_entvar(this,var_deadflag) == DEAD_DEAD && KrGetFakeTeam(this) == CS_TEAM_CT){
+    if(KrGetFakeTeam(this) != CS_TEAM_T){
         CurrentNpcs--
         ReSpawnEnt(this)
         if(CurrentNpcs == 0 && GetJuDianNum() <= 7){
@@ -852,12 +852,9 @@ public NPC_Killed(this , killer){
             set_task(0.1 , "ChangeJudian")
         }
         new lv = Current_judian
-        if(Current_judian < 6){
-            AddKillRiMin(killer)
-            return
-        }else if( Current_judian == 6 || Current_judian == 7){
-            AddKillRiBing(killer)
-            return
+        switch(lv){
+            case 0 .. 5 : AddKillRiMin(killer)
+            case 6 , 7 : AddKillRiBing(killer)
         }
         if(!is_tank(this)){
             AddKillRiBenJunGuan(killer)
@@ -868,38 +865,37 @@ public NPC_Killed(this , killer){
 
 public ChangeJudian(){
     Current_judian ++
-    ExecuteForward(call_forwards[kr_On_judian_Change_Post],_,Current_judian)
+    ExecuteForward(call_forwards[kr_On_judian_Change_Post], _ , Current_judian)
     new iEntity = -1
     while ((iEntity = rg_find_ent_by_class(iEntity, "hostage_entity")) > 0){
-        if (pev_valid(iEntity) && KrGetFakeTeam(iEntity) == CS_TEAM_CT){
-            set_pev(iEntity, pev_flags,  FL_KILLME)
-        }
+        if(KrGetFakeTeam(iEntity) == CS_TEAM_CT)
+            rg_remove_entity(iEntity)
     }//移除上个据点npc
-
-    if(Current_judian + 1 <= 7){
-        CurrentNpcs = GetCurrentJuDianMaxSpawn()
-        CanSpawnNum = CurrentNpcs
-        set_hudmessage(255,255,0,-1.0,-1.0,2,3.0,6.0)
-        show_hudmessage(0,"干得好成功攻占日军据点^n每人奖励军饷3000!")
-        GiveMoney(3000)
-        EmitSoundToall(Jp_EndRoundSound[Type])
-        ChangeFakeName(Current_judian)
-        HanJianSpawn()
-    }else if(Current_judian + 1 == 8){
-        //冲锋
-        CanSpawnNum = SpawnPonitNpcNum[Current_judian]
-        CurrentNpcs = SpawnPonitNpcNum[Current_judian]
-        set_hudmessage(255,255,0,-1.0,-1.0,2,3.0,6.0)
-        show_hudmessage(0,"为了胜利冲啊！！！！^n每人不惜代价奖励军饷6000!^n冲锋！！！")
-        GiveMoney(8000)
-        new soundnum = random_num(JudianGo,JudianGo2)
-        EmitSoundToall(Jp_EndRoundSound[soundnum])
-        ChangeFakeName(Current_judian)
-        HanJianSpawn()
-    }else{
-        //据点全部攻破结算
-        server_cmd("endround 1")
-    }  
+    set_hudmessage(255,255,0,-1.0,-1.0,2,3.0,6.0)
+    switch(GetJuDianNum()){
+        case 1 .. 7:{
+            CurrentNpcs = GetCurrentJuDianMaxSpawn()
+            CanSpawnNum = CurrentNpcs
+            GiveMoney(3000)
+            EmitSoundToall(Jp_EndRoundSound[Type])
+            ChangeFakeName(Current_judian)
+            show_hudmessage(0,"干得好成功攻占日军据点^n每人奖励军饷3000!")
+            HanJianSpawn()
+            return
+        }
+        case 8 :{
+            CanSpawnNum = SpawnPonitNpcNum[Current_judian]
+            CurrentNpcs = SpawnPonitNpcNum[Current_judian]
+            GiveMoney(8000)
+            EmitSoundToall(Jp_EndRoundSound[random_num(JudianGo,JudianGo2)])
+            ChangeFakeName(Current_judian)
+            show_hudmessage(0,"为了胜利冲啊！！！！^n每人不惜代价奖励军饷6000!^n冲锋！！！")
+            HanJianSpawn()
+            return
+        }
+    }
+    //据点全部攻破结算
+    server_cmd("endround 1")
 }
 
 public HanJianSpawn(){
@@ -1004,10 +1000,10 @@ ReSpawnEnt(jpid){
         //尝试往高处生产
         Origin[2] += 75.0
         isOccupied = IsSpawnPointOccupied(Origin, owner)
-    }
-    if(isOccupied){
-        rg_remove_entity(jpid)
-        return
+        if(isOccupied){
+            rg_remove_entity(jpid)
+            return
+        }
     }
     ReSpawnJpNpc(jpid , Origin)
     CanSpawnNum--
@@ -1018,12 +1014,6 @@ public NPC_ThinkPre(id){
         return PLUGIN_HANDLED
     }
     return 0
-}
-
-//用于修改伤害，据点等级高后赋予减伤。
-public Npc_OnDamagePre(this,attacker,Float:Damage){
-    
-    
 }
 
 //仅做伤害记录
