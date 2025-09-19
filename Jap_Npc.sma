@@ -3,7 +3,6 @@
 #include <fakemeta>
 #include <engine>
 #include <props>
-// #include <fun>
 #include <fakemeta_util>
 #include <xs>
 #include <reapi>
@@ -45,11 +44,11 @@ new const Jp_Model [][]={
 	"models/rainych/krzz/tank_died.mdl",
 }
 
-new Jp_Attacksound [Jp_RiBenSound][]={
+new Jp_Attacksound [][]={
 	"rainych/krzz/kill_player2.wav",
 	"rainych/krzz/kill_player2_gl.wav",
 	"rainych/krzz/kill_player1.wav",
-	"rainych/krzz/kill_player1_gl.wav",
+	"rainych/krzz/kill_player1_gl.wav"
 }
 
 new Jp_Glbodys[]={
@@ -78,23 +77,24 @@ new DeadMsg
 public plugin_init()
 {
 	register_plugin("日本人npc", "1.0", "Bing")
-	
+
 	register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 	register_logevent("EventRoundEnd", 2, "1=Round_End")
-	
+
 	RegisterHam(Ham_TakeDamage, "hostage_entity", "HOSTAGE_TakeDamage")
 	RegisterHam(Ham_TakeDamage, "hostage_entity", "HOSTAGE_TakeDamage_Post", true)
 	RegisterHam(Ham_Think, "hostage_entity", "fw_HostageThink")
 	RegisterHam(Ham_Think, "hostage_entity", "fw_HostageThink_Post" , true)
 	RegisterHam(Ham_Use, "hostage_entity", "HOSTAGE_Use")
-    RegisterHam(Ham_Touch , "hostage_entity", "fw_HostageTouch")
-	
-	register_message(get_user_msgid("StatusValue"), "message_statusvalue")
+	RegisterHam(Ham_Touch , "hostage_entity", "fw_HostageTouch")
+
+	register_message(get_user_msgid("StatusValue"), "message_statusvalue")	
 
 	bind_pcvar_num(register_cvar("Kr_Close_JpNpc_Ai" , "0") , CloseAi) 
-	bind_pcvar_num(register_cvar("Kr_KillMoney" , "50") , KillMoney) 
+	bind_pcvar_num(register_cvar("Kr_KillMoney" , "50") , KillMoney) 	
 
 	CreateFakeClient()
+
 	FakeClientTask() //执行一次
 	NpcList = ArrayCreate()
 	DeadMsg = get_user_msgid("DeathMsg")
@@ -167,12 +167,12 @@ public OnLevelChange_Post(Lv){
 
 public message_statusvalue(msg_id, msg_dest, id){
 	new flag = get_msg_arg_int(1)
-    new value = get_msg_arg_int(2)
+	new value = get_msg_arg_int(2)
 	new msgid = get_user_msgid("StatusText")
 
 	if(flag == 3){
 		new target, _pitch;
-    	get_user_aiming(id, target, _pitch, 9999)
+		get_user_aiming(id, target, _pitch, 9999)
 		if (is_nullent(target))
 			return 0
 		new classname[33]
@@ -183,36 +183,37 @@ public message_statusvalue(msg_id, msg_dest, id){
 		}
 	}
 	if(flag == 1){
-		if(value == 2){
-			//设置参数2禁用昵称
-			set_msg_arg_int(2, get_msg_argtype(2), 0)
-		}else if(value == 3){
-			new target, _pitch;
-    		get_user_aiming(id, target, _pitch, 9999)
-    		if (is_nullent(target))
-				return 0
-			if(GetIsNpc(target)){
-				new team = KrGetFakeTeam(target)
-				new player_team = cs_get_user_team(id)
-				new bool:isSameTeam = player_team == team
-				message_begin(MSG_ONE, msgid, .player = id)
-    		    write_byte(0) // 一般第一个参数是 style/color
-				switch(player_team){
-					case CS_TEAM_T:{
-						write_string( isSameTeam ? "1 [同志] %h: %i3" : "1 [鬼子] %h: %i3")
+		switch(value){
+			case 2 : set_msg_arg_int(2, get_msg_argtype(2), 0)
+			case 3 :{
+				new target, _pitch;
+				get_user_aiming(id, target, _pitch, 9999)
+				if (is_nullent(target))
+					return 0
+				if(GetIsNpc(target)){
+					new team = KrGetFakeTeam(target)
+					new CsTeams:player_team = cs_get_user_team(id)
+					new bool:isSameTeam = (_:player_team == team)
+					message_begin(MSG_ONE, msgid, .player = id)
+					write_byte(0) // 一般第一个参数是 style/color
+					switch(player_team){
+						case CS_TEAM_T:{
+							write_string( isSameTeam ? "1 [同志] %h: %i3" : "1 [鬼子] %h: %i3")
+						}
+						case CS_TEAM_CT:{
+							write_string( isSameTeam ? "1 [太君] %h: %i3" : "1 [敌人] %h: %i3")
+						}
 					}
-					case CS_TEAM_CT:{
-						write_string( isSameTeam ? "1 [太君] %h: %i3" : "1 [敌人] %h: %i3")
-					}
+					message_end()
+					return PLUGIN_CONTINUE
 				}
-    			message_end()
-				return PLUGIN_CONTINUE
 			}
-		}else if( value == 0){
-			message_begin(MSG_ONE, msgid, .player = id)
-    		write_byte(0)
-    		write_string("")
-    		message_end()
+			case 0:{
+				message_begin(MSG_ONE, msgid, .player = id)
+				write_byte(0)
+				write_string("")
+				message_end()
+			}
 		}
 	}
 	return 0
@@ -221,17 +222,14 @@ public message_statusvalue(msg_id, msg_dest, id){
 public event_roundstart(){
 	// remove_entity_name("hostage_entity")
 	new iEntity = -1
-    while ((iEntity = find_ent_by_class(iEntity, "hostage_entity")) > 0) {
+	while ((iEntity = find_ent_by_class(iEntity, "hostage_entity")) > 0) {
 		rg_remove_entity(iEntity)
-    }
+	}
 	CurrentLeavelHeal = floatmin(100.0 + float(Getleavel()), Max_heal)
 	CurrentLeavelDamageReduction = ClacLvDamageReduction()
 	ChangeFakeClientName(0)
-    FakeClientTask()
-    set_task(1.0,"FakeClientTask", UpdateFakeClientTaskId, "", 0, "b")
-	// set_task(3.0 , "CheckNpcList" , CheckList , .flags = "b")
-	// ArrayDestroy(NpcList)
-	// NpcList = ArrayCreate()
+	FakeClientTask()
+	set_task(1.0,"FakeClientTask", UpdateFakeClientTaskId, "", 0, "b")
 }
 
 public CheckNpcList() {
@@ -295,28 +293,28 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 	}
 
 	new CurTeam = KrGetFakeTeam(this)
- 	new bool:Attacker_IsPlayer = ExecuteHam(Ham_IsPlayer , idattacker)
-	if(Attacker_IsPlayer && is_user_alive(idattacker) == false)
+ 	new bool:Attacker_IsPlayer = bool:ExecuteHam(Ham_IsPlayer , idattacker)
+	if(Attacker_IsPlayer && bool:is_user_alive(idattacker) == false)
 		return HAM_SUPERCEDE
-	if(Attacker_IsPlayer && cs_get_user_team(idattacker)== CurTeam){
+	if(Attacker_IsPlayer && _:cs_get_user_team(idattacker)== CurTeam){
 		//相同阵营不要伤害
 		return HAM_SUPERCEDE
 	}
 
 	new Float:newdamage = damage
-	new HumanRule = GetHunManRule()
-	new RiJunRule = GetRiJunRule()
-	if(CurTeam == CS_TEAM_CT){
+	new HumanRule = _:GetHunManRule()
+	new RiJunRule = _:GetRiJunRule()
+	if(CurTeam == _:CS_TEAM_CT){
 		new Float:vel[3]
 		get_entvar(this, var_velocity, vel)
 		newdamage = damage * (1.0 - CurrentLeavelDamageReduction)
-		if(HumanRule == HUMAN_RULE_Depleted_Uranium && CurrentLeavelDamageReduction > 0.1){
+		if(HumanRule == _:HUMAN_RULE_Depleted_Uranium && CurrentLeavelDamageReduction > 0.1){
 			newdamage = damage * (1.0 - (CurrentLeavelDamageReduction - 0.1))
 		}
 		if((vel[0] == 0.0 && vel[1] == 0.0 && vel[2] == 0.0) || !cs_get_hostage_foll(this)){
 			newdamage *= 0.5 //如果不动再减伤0.5
 		}
-		if(RiJunRule == JAP_RULE_Damage_Reduction){
+		if(RiJunRule == _:JAP_RULE_Damage_Reduction){
 			newdamage *= 0.95
 		}
 		SetHamParamFloat(4, newdamage)
@@ -330,7 +328,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 
 	Currentsequence = get_entvar(this, var_sequence)
 	set_entvar(this, var_health, AttackEndHeal)
-	if(RiJunRule == JAP_RULE_Gyokusai_Charge && AttackEndHeal <= 0.0 && get_entvar(this , var_iuser4) == 0){
+	if(RiJunRule == _:JAP_RULE_Gyokusai_Charge && AttackEndHeal <= 0.0 && get_entvar(this , var_iuser4) == 0){
 		set_entvar(this , var_health , 50.0)
 		set_entvar(this , var_iuser4 , 1)
 		AttackEndHeal = 50.0
@@ -348,10 +346,10 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		return HAM_SUPERCEDE;
 	}
 
-	if(FakeTeam == CS_TEAM_CT){
-		new CanBeStop = getnpc_CanBeStop(this)
+	if(FakeTeam == _:CS_TEAM_CT){
+		new bool:CanBeStop = bool:getnpc_CanBeStop(this)
 		new Float:vec[3]
-		if(RiJunRule == JAP_RULE_Stimulants && UTIL_RandFloatEvents(0.5)){
+		if(RiJunRule == _:JAP_RULE_Stimulants && UTIL_RandFloatEvents(0.5)){
 			//不被定身
 			CanBeStop = true
 		}
@@ -372,10 +370,10 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		}
 		new foll = cs_get_hostage_foll(this)
 		new fool_isPlayer = ExecuteHam(Ham_IsPlayer , foll)
-		if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == CS_TEAM_T){
+		if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == _:CS_TEAM_T){
 			setnpc_Attacker(this, idinflictor)
 			PropagateHate(this , idinflictor)
-		}else if(is_user_connected(idattacker) && is_user_alive(idattacker)){
+		}else if(fool_isPlayer && is_user_connected(idattacker) && is_user_alive(idattacker)){
 			setnpc_Attacker(this, idattacker)
 		}
 		cs_set_hostage_foll(this)
@@ -399,7 +397,7 @@ public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, dama
 }
 
 public fw_HostageThink_Post(id){
-	if(KrGetFakeTeam(id) == CS_TEAM_CT)	
+	if(KrGetFakeTeam(id) == _:CS_TEAM_CT)	
 		set_entvar(id , var_nextthink , get_gametime() + 0.1)
 }
 
@@ -409,12 +407,12 @@ public fw_HostageThink(id){
 	if(rets >= PLUGIN_HANDLED)
 		return HAM_IGNORED
 	new Faketeam = getnpc_FakeTeam(id)
-	if(CloseAi && Faketeam == CS_TEAM_CT){
+	if(CloseAi && Faketeam == _:CS_TEAM_CT){
 		StudioFrameAdvance(id)
 		cs_set_hostage_foll(id)
 		return HAM_SUPERCEDE
 	}
-	if(Faketeam == CS_TEAM_T){
+	if(Faketeam == _:CS_TEAM_T){
 		return HAM_IGNORED
 	}
 
@@ -441,10 +439,10 @@ public fw_HostageThink(id){
 		setnpc_BeAttackInThink(id, 0)
 		if(NpcHeal > 0.0){
 			new Attacker = getnpc_Attacker(id)
-			if(GetIsNpc(Attacker) && get_entvar(Attacker , var_deadflag) != DEAD_DEAD && KrGetFakeTeam(Attacker) == CS_TEAM_T){
+			if(GetIsNpc(Attacker) && get_entvar(Attacker , var_deadflag) != DEAD_DEAD && KrGetFakeTeam(Attacker) == _:CS_TEAM_T){
 				cs_set_hostage_foll(id, Attacker)
 			}
-			else if(Attacker && is_user_alive(Attacker) && is_user_connected(Attacker) && get_user_team(Attacker) == CS_TEAM_T){
+			else if(Attacker && is_user_alive(Attacker) && is_user_connected(Attacker) && get_user_team(Attacker) == _:CS_TEAM_T){
 				cs_set_hostage_foll(id, Attacker)
 			}
 		}
@@ -487,7 +485,7 @@ public fw_HostageThink(id){
 		}
 	}
 	ExecuteForward(Jpnpc_forwards[Jp_NpcThinkPost], _ ,id)
-    return HAM_IGNORED
+	return HAM_IGNORED
 }
 
 public DelSelf(id){
@@ -525,7 +523,7 @@ public SetDeadAct(id , hitGroup){
 }
 
 public native_CreateJpNpc(plugin_id, num_params){
-	new id = get_param(1)
+	// new id = get_param(1)
 	new FakeTeam = get_param(2)
 	new body = get_param(5)
 	new Float:origin[3]
@@ -539,7 +537,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 		log_error(AMX_ERR_NONE , "创建人质实体失败")
 		return -1
 	}
-	if(FakeTeam == CS_TEAM_CT){
+	if(FakeTeam == _:CS_TEAM_CT){
 		new rets
 		ExecuteForward(Jpnpc_forwards[JP_NpcCreatePre] , rets , ent)
 		if(rets >= PLUGIN_HANDLED)
@@ -557,7 +555,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 	set_entvar(ent, var_origin, origin)
 	set_entvar(ent, var_max_health, CurrentLeavelHeal)
 	set_entvar(ent, var_health, CurrentLeavelHeal)
-    set_entvar(ent, var_body, body)
+	set_entvar(ent, var_body, body)
 	set_prop_int(ent, "FakeTeam", FakeTeam)
 	set_prop_int(ent, "BeAttackInThink", 0)
 	set_prop_int(ent, "Attacker",0)
@@ -568,7 +566,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 	set_prop_float(ent, "reainmtime", get_gametime())
 	set_prop_float(ent, var_BeAttackStopTime , get_gametime())
 
-	if(FakeTeam == CS_TEAM_CT){
+	if(FakeTeam == _:CS_TEAM_CT){
 		ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , ent)
 	}
 	// ArrayPushCell(NpcList , ent)
@@ -606,7 +604,7 @@ public native_ReSpawn(id , nums){
 	ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , Jpid)
 }
 
-FVectorToiVecotr(Float:fOrigin[3] , out[3]){
+stock FVectorToiVecotr(Float:fOrigin[3] , out[3]){
 	out[0] = floatround(fOrigin[0])
 	out[1] = floatround(fOrigin[1])
 	out[2] = floatround(fOrigin[2])
@@ -697,7 +695,7 @@ public getnpc_frag(id){
 	return frag
 }
 
-public getnpc_NextChange(id){
+public Float:getnpc_NextChange(id){
 	if(!prop_exists(id, "NextChange")){
 		return 0.0
 	}
@@ -724,7 +722,7 @@ public IsFakeClient(id){
 		return false
 }
 
-public getnpc_nextattack(id){
+public Float:getnpc_nextattack(id){
 	if(!prop_exists(id, "nextattack")){
 		return 0.0
 	}
@@ -757,7 +755,7 @@ public CreateFakeClient(){
 	dllfunc(DLLFunc_ClientConnect, FakeClient, Jp_defname, "127.0.0.1", szMsg)
 	dllfunc(DLLFunc_ClientPutInServer, FakeClient)
 	cs_set_user_team(FakeClient, CS_TEAM_CT)
-	set_entvar(FakeClient, pev_takedamage, DAMAGE_NO)
+	set_entvar(FakeClient , var_takedamage, DAMAGE_NO)
 	set_entvar(FakeClient , var_effects , EF_NODRAW)
 	set_entvar(FakeClient , var_solid , SOLID_NOT)
 	set_entvar(FakeClient , var_movetype , MOVETYPE_NOCLIP)
@@ -766,46 +764,38 @@ public CreateFakeClient(){
 
 public fw_HostageTouch(this , other){
 	new thisteam =  KrGetFakeTeam(this)
-	if(GetIsNpc(this) && GetIsNpc(other)){
-		if(thisteam != KrGetFakeTeam(other) &&  thisteam == CS_TEAM_CT){
-			RibenNormlAttack(this , other)
-			return HAM_IGNORED
-		}
+	new touch_IsPlayer = ExecuteHam(Ham_IsPlayer , other)
+	if(!touch_IsPlayer && KrGetFakeTeam(other) != thisteam){
+		RibenNormlAttack(this , other)
+	}else if(touch_IsPlayer && _:cs_get_user_team(other) != thisteam){
+		RibenNormlAttack(this , other)
 	}
-    if(is_user_connected(other) && is_user_alive(other) && is_valid_ent(other)){
-        if(get_user_team(other) == CS_TEAM_CT){
-			return HAM_IGNORED
-		}else if(thisteam == CS_TEAM_CT){
-			RibenNormlAttack(this , other)
-		}
-		
-		new Float:origin[3], Float:other_origin[3];
-    	new Float:vPush[2];
-    	new Float:this_velocity[3];
-        new const Float:PushForce = 50.0
-		get_entvar(this, var_origin, origin)
-		get_entvar(other, var_origin, other_origin)
-		get_entvar(this, var_velocity, this_velocity)
-		new Float:dir[3];
-		dir[0] = origin[0] - other_origin[0];
-		dir[1] = origin[1] - other_origin[1];
-		dir[2] = 0.0; // 忽略高度
+	new Float:this_velocity[3]
+	new const Float:PushForce = 50.0
+	new Float:other_origin[3]
+	new Float:origin[3]
+	get_entvar(this, var_origin, origin)
+	get_entvar(other, var_origin, other_origin)
+	get_entvar(this, var_velocity, this_velocity)
+	new Float:dir[3];
 
-		new Float:length = vector_length(dir);
-		if (length < 1.0)
-		    return HAM_IGNORED;
+	dir[0] = origin[0] - other_origin[0];
+	dir[1] = origin[1] - other_origin[1];
+	dir[2] = 0.0; // 忽略高度	
 
-		xs_vec_normalize(dir, dir); // 单位向量
-		xs_vec_mul_scalar(dir, PushForce, dir); // 推力大小
-		
-		//这里之前没声明Float结果碰一下就飞了下次注意
-		new Float:velocity[3];
-		
-		get_entvar(this, var_velocity, velocity);
-		xs_vec_add(velocity, dir, velocity);
-		set_entvar(this, var_velocity, velocity);
+	new Float:length = vector_length(dir);
+	if (length < 1.0)
+	    return HAM_IGNORED;	
 
-    }
+	xs_vec_normalize(dir, dir); // 单位向量
+	xs_vec_mul_scalar(dir, PushForce, dir); // 推力大小
+
+	//这里之前没声明Float结果碰一下就飞了下次注意
+
+	new Float:velocity[3];
+	get_entvar(this, var_velocity, velocity);
+	xs_vec_add(velocity, dir, velocity);
+	set_entvar(this, var_velocity, velocity);	
 	return HAM_IGNORED
 }
 
@@ -852,7 +842,7 @@ public SendScoreInfo(id , frag){
 	write_short(frag)
 	write_short(cs_get_user_deaths(id))
 	write_short(0)
-	write_short(cs_get_user_team(id)) 
+	write_short(_:cs_get_user_team(id)) 
 	message_end()
 }
 
@@ -897,7 +887,7 @@ public RibenNormlAttack(this ,beattack){
 	if(distance >= AttackDisance){
 		if((distance - AttackDisance) < 5.0){
 			//空了
-			new soundnum = Npc_Isgirl(this) ? 1 : 0
+			new soundnum = (Npc_Isgirl(this) ? 1 : 0)
 			UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 600.0)
 			play_anim(this, jp_Attack_anim[random_num(0,4)], 1.0)
 		}
@@ -927,7 +917,7 @@ public RibenNormlAttack(this ,beattack){
 	}
 	set_msg_block(DeadMsg, BLOCK_NOT)
 	if(!is_user_alive(beattack)){
-		new Jp_RiBenSound:soundnum = AttackToDieMan
+		new soundnum = _:AttackToDieMan
 		new g_msgDeathMsg = DeadMsg;
 		message_begin(MSG_BROADCAST, g_msgDeathMsg);
 		write_byte(FakeClient);
@@ -936,14 +926,14 @@ public RibenNormlAttack(this ,beattack){
 		write_string("日本带派大脚");
 		message_end();
 		if(Npc_Isgirl(this)){
-			soundnum = AttackToDieGl
+			soundnum = _:AttackToDieGl
 		}
 		UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[soundnum], 600.0)
 		ExecuteForward(Jpnpc_forwards[Jp_NpcKillPlayer] , _ , beattack , this)
 	}
-	new Jp_RiBenSound:sound = AttackMan
+	new sound = _:AttackMan
 	if(Npc_Isgirl(this)){
-		sound = AttackGl
+		sound = _:AttackGl
 	}
 	UTIL_EmitSound_ByCmd2(this, Jp_Attacksound[sound], 600.0)
 }
@@ -1068,18 +1058,18 @@ stock PropagateHate(const BeAttackNpc , const Attacker){
 	NextPropaTime = get_gametime() + 2.0
 
 	new ent = -1
-    new Float:Dis = 0.0 , Float:fOrigin[3] , Float:m_Origin[3]
-    get_entvar(BeAttackNpc , var_origin , m_Origin)
+	new Float:m_Origin[3]
+	get_entvar(BeAttackNpc , var_origin , m_Origin)
 	new CurnpcTeam = KrGetFakeTeam(BeAttackNpc)
-    while(ent = rg_find_ent_by_class(ent , "hostage_entity" , true)){
-        new Team = KrGetFakeTeam(ent)
-        if(ent == BeAttackNpc || Team != CurnpcTeam)
-            continue
-        if(get_entvar(ent , var_deadflag) == DEAD_DEAD || get_entvar(ent , var_solid) == SOLID_NOT)
-            continue
+	while((ent = rg_find_ent_by_class(ent , "hostage_entity" , true)) > 0){
+		new Team = KrGetFakeTeam(ent)
+		if(ent == BeAttackNpc || Team != CurnpcTeam)
+		    continue
+		if(get_entvar(ent , var_deadflag) == DEAD_DEAD || get_entvar(ent , var_solid) == SOLID_NOT)
+			continue
 		setnpc_BeAttackInThink(ent , 1)
 		setnpc_Attacker(ent , Attacker)
-    }
+	}
 }
 
 stock UpdateHealBar(ent){
@@ -1105,11 +1095,11 @@ stock UpdateHealBar(ent){
 
 
 stock SetActivity(this, Activity: act){
-	new m_act = get_member(this , m_Activity)
+	new Activity:m_act = get_member(this , m_Activity)
 	if(m_act != act){
-		new sequence = LookupActivity(this ,act)
+		new sequence = LookupActivity(this , _:act)
 		if(get_entvar(this , var_sequence) != sequence){
-			if((m_act != ACT_WALK && m_act != ACT_RUN) || (act != ACT_WALK &&act != ACT_RUN)){
+			if((m_act != ACT_WALK && m_act != ACT_RUN) || (act != ACT_WALK && act != ACT_RUN)){
 				set_entvar(this , var_frame , 0.0)
 			}
 			set_entvar(this , var_sequence , sequence)
