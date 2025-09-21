@@ -118,7 +118,7 @@ public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
     if(FClassnameIs(ent , "HeroSpr")){
         new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
         new master = get_entvar(ent ,var_owner)
-        if(cs_get_user_team(master) == CS_TEAM_CT || !is_user_connected(master)){
+        if( !is_user_connected(master) || cs_get_user_team(master) == CS_TEAM_CT){
             rg_remove_entity(ent)
             hero[master] = false
             return FMRES_IGNORED
@@ -230,7 +230,7 @@ public DropItems(const this, const pszItemName[]){
     }
 }
 
-public SetModuleByLv(this , playsound){
+public SetModuleByLv(this , bool:playsound){
     client_cmd(this , "cl_minmodels 0")
     new lv = GetLv(this)
     new setlv = (lv / 50) + 1
@@ -245,7 +245,9 @@ public SetModuleByLv(this , playsound){
             }
             if(LastUseModel[this][Use_ed]){
                 rg_set_user_model(this , LastUseModel[this][Use_Model])
-                PlayBgm(this)
+                if(playsound){
+                    PlayBgm(this)
+                }
                 return
             }
             min(setlv , maxDiv)
@@ -273,7 +275,7 @@ public PlayBgm(this){
     }
 }
 
-public SetOtherModule(this , divlv , PlayerSound){
+public SetOtherModule(this , divlv , bool:PlayerSound){
     new lv = GetLv(this)
     new modellv = GetModeleLv(divlv - 1)
     if(divlv >= 15){

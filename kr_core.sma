@@ -1,23 +1,26 @@
 #include <amxmodx>
 #include <amxmisc>
 #include <fakemeta>
-#include <hamsandwich>
 #include <cstrike>
 #include <reapi>
 #include <json>
+#include <engine>
 #include <kr_core>
 #include <roundrule>
-#include <engine>
+#include <hamsandwich>
 #include <xp_module>
+#include <props>
 #include <xs>
-#include <bigint>
-#include <sypb>
 
 #define judian_max 8
 
 #define ShowHudid 1121
 
 #define var_Spawnid var_iuser1
+#define var_master var_skin
+#define var_Master "maste"
+#define Set_Master(%1 ,%2) set_member(%1 , maxammo_buckshot ,%2)
+#define Get_Master(%1) get_member(%1 , maxammo_buckshot)
 
 #define GameName "抗日战争v1.1"
 
@@ -123,6 +126,9 @@ public plugin_init(){
     RegisterHookChain(RG_CBasePlayer_Spawn,"PlayerSpawn_Post",true)
     RegisterHookChain(RG_CSGameRules_CheckMapConditions , "m_CheckMap",true)
     RegisterHookChain(RG_CSGameRules_RestartRound, "NewRound", true)
+
+    RegisterHam(Ham_TakeDamage , "player" , "m_TakePlayerDamge")
+
     register_message(get_user_msgid("TextMsg") , "OnTextMsg")
     
     register_event("TeamInfo", "event_TeamInfo", "a")
@@ -185,21 +191,6 @@ public FuckMapTank(){
 public KrEndRound(){
     remove_entity_name("hostage_entity")
     ChangeJudian()
-}
-
-public TestBigInt(){
-    InitByMap("Test1" , "99999999999999999999")
-    InitByMap("Test2" , "11451419191010145215")
-    new buff[255]
-    MapValueAdd("Test1" , "Test2" ,buff , charsmax(buff))
-    log_amx("大数加法结果 %s" , buff)
-    log_amx("Key存在测试 %d" , MapContainKey("Test1"))
-    log_amx("大数比较结果 %d" , MapValueCmp("Test1" , "Test2"))
-    MapGetNums("Test1" , buff , charsmax(buff))
-    log_amx("Key取大数结果测试 %s" , buff)
-
-    log_amx("符号比较结果 %d" , MapCmpByChars("Test1" , "Test2" , "=="))
-    log_amx("报错测试 %d" , MapCmpByChars("Test11" , "Test22" , "=="))
 }
 
 public SavePlayers(){
@@ -267,35 +258,49 @@ public NPC_KillPlayer(this , killer){
 }
 
 CreateHanJianMenu(id){
-	new players[32],cont
-	get_players(players , cont , "ci")
-	if(cont == 1 || get_user_team(id) == CS_TEAM_CT ){
-		return
-	}
-	new menu = menu_create("大日本黄军俘虏了你" , "HanjianHandle")
-	menu_additem(menu , "成为汉奸")
-	menu_additem(menu , "誓死不从")
-	menu_additem(menu , "出卖机密")
-	menu_setprop(menu , MPROP_EXIT , MEXIT_NEVER)
-	menu_display(id , menu)
+    new newTConut = get_member_game(m_iNumTerrorist)
+    if(newTConut == 1 || get_user_team(id) == _:CS_TEAM_CT){
+        return
+    }
+    new menu = menu_create("大日本黄军俘虏了你" , "HanjianHandle")
+    menu_additem(menu , "成为汉奸")
+    menu_additem(menu , "誓死不从")
+    menu_additem(menu , "出卖机密")
+    menu_setprop(menu , MPROP_EXIT , MEXIT_NEVER)
+    menu_display(id , menu)
 }
 
 public HanjianHandle(id, menu ,item){
-	if(item == MENU_EXIT){
-		menu_destroy(menu)
-		return
-	}
+    if(item == MENU_EXIT){
+    	menu_destroy(menu)
+    	return
+    }
     switch(item){
-        case 0: server_cmd("KR_GoToCt %d" , id)
+        case 0 : server_cmd("KR_GoToCt %d" , id)
         case 1 : CnDie(id)
         case 2 : SellBoss(id)
+    }
+}
+
+public m_TakePlayerDamge(const this , const Attack_1 , const Attack_2 , Float:Damge , DamgeBit){
+    new Team = get_member(this , m_iTeam)
+    if(Team != _:TEAM_CT)
+        return
+    new Float:Health = get_entvar(this , var_health)
+    if(Damge > Health){
+        SetHamParamFloat(4 , 10.0)
+    }else{
+        new const Float:TARGET_LEVEL = 500.0;
+        new const Float:LEVEL_COEFFICIENT = 0.65 / TARGET_LEVEL
+        new Float:COEFFICIENT= floatmin(float(Getleavel()) * LEVEL_COEFFICIENT, 0.65)
+        SetHamParamFloat(4 , Damge * (1.0 - COEFFICIENT))
     }
 }
 
 CnDie(id){
     new username[32]
     get_user_name(id , username , 31)
-    UTIL_EmitSound_ByCmd(0 , Jp_EndRoundSound[random_num(cnDie1 , cnDie2)])
+    UTIL_EmitSound_ByCmd(0 , Jp_EndRoundSound[random_num(_:cnDie1 , _:cnDie2)])
     m_print_color(id , "!g[冰布提示]%s誓死不从，奖励1大洋" , username)
     AddAmmoPak(id , 1.0) 
 }
@@ -971,7 +976,7 @@ public Npc_SpawnThink(ent){
         spawnent = CreateJpNpc(0,CS_TEAM_CT, Origin ,Angles, CurrentSpawnbody)
     }
     if(spawnent > 0){
-        set_entvar(spawnent , var_iuser2 , ent)
+        Set_Master(spawnent , ent)
         if(GetRiJunRule() == JAP_RULE_Physical_Enhancement){
             new Float:Heal = get_entvar(spawnent , var_health)//体魄强化
             Heal +=  30.0
@@ -989,8 +994,8 @@ public Npc_SpawnThink(ent){
 
 ReSpawnEnt(jpid){
     new Float:Origin[3]
-    new owner = get_entvar(jpid , var_iuser2)
-    if(owner < 0 || !CanSpawn()){
+    new owner = Get_Master(jpid)
+    if(owner <= 0 || !CanSpawn()){
         rg_remove_entity(jpid)
         return
     }

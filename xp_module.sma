@@ -3,6 +3,7 @@
 #include <kr_core>
 #include <props>
 #include <fakemeta>
+#include <hamsandwich>
 #include <sqlx>
 #include <xp_module>
 #include <bigint>
@@ -138,13 +139,20 @@ public OnQueryPlayerInfo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
 
         PlayerLoad[id] = true
 
-        formatex(Keys , charsmax(Keys) , XpKey , id)
+        GetXpKey(id , Keys , charsmax(Keys))
         InitByMap(Keys , BigXp)
-        formatex(Keys , charsmax(Keys) , XpNeedKey , id)
+        GetXpNeedKey(id , Keys , charsmax(Keys))
         InitByMap(Keys , XpNeeded)
-        log_amx("%s 大数加载测试Xp %s Need %s" , steamid , BigXp , XpNeeded)
+
+        BigNumLoadPrint(id , steamid)
         log_amx("加载成功: %s 等级: %d XP: %d/%d", steamid, PlayerLeavl[id], PlayerXp[id], PlayerXpNeeded[id])
     }
+}
+public BigNumLoadPrint(id , steamid[]){
+    new Xp[50] , Xpneeds[50]
+    GetXpBingInt(id , Xp , charsmax(Xp))
+    GetXpNeedBingInt(id , Xpneeds , charsmax(Xpneeds))
+    log_amx("%s 大数加载测试Xp %s Need %s" , steamid , Xp , Xpneeds)
 }
 
 public IgnoreHandle(FailState,Handle:Query,Error[],Errcode,Data[],DataSize){
@@ -207,9 +215,10 @@ stock GetNextLevelXpBigInt(ent , value[] , len){
 }
 
 public CheckXpCanUp(ent){
-    new xpkey[10] , xpneedkey[10]
-    GetXpNeedKey(ent , xpneedkey, 9)
-    GetXpKey(ent , xpkey, 9)
+
+    new xpkey[50] , xpneedkey[50]
+    GetXpNeedKey(ent , xpneedkey, charsmax(xpneedkey))
+    GetXpKey(ent , xpkey, charsmax(xpkey))
     if(MapCmpByChars(xpkey , xpneedkey , ">=")){
         PlayerLeavl[ent]++
         MapValueSubSaveByKey(xpkey , xpneedkey) //减去
@@ -268,8 +277,8 @@ public native_GetXp(id,num){
 public native_AddXp(id,nums){
     new ent = get_param(1)
     new addxp = get_param(2)
-    if(ent < 33 && is_user_connected(ent)){
-        new key[10]
+    if(ExecuteHam(Ham_IsPlayer , ent) && is_user_connected(ent) && !is_user_bot(ent)){
+        new key[50]
         GetXpKey(ent , key , 9)
         MapValueAddSave(key , addxp)
         PlayerXp[ent] += addxp

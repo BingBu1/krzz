@@ -362,7 +362,9 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 			vec[1] = 0.0;
 			vec[2] = 0.0;
 			set_entvar(this, var_velocity, vec)
-			set_prop_float(this ,var_BeAttackStopTime , get_gametime() + 0.75)
+			if(get_entvar(this , var_iuser4) != 1){
+				set_prop_float(this ,var_BeAttackStopTime , get_gametime() + 0.75)
+			}
 		}
 		new think = getnpc_BeAttackInThink(this)
 		if(think == 0){
@@ -765,7 +767,7 @@ public CreateFakeClient(){
 public fw_HostageTouch(this , other){
 	new thisteam =  KrGetFakeTeam(this)
 	new touch_IsPlayer = ExecuteHam(Ham_IsPlayer , other)
-	if(!touch_IsPlayer && KrGetFakeTeam(other) != thisteam){
+	if(!touch_IsPlayer && KrGetFakeTeam(other) != thisteam && GetIsNpc(other)){
 		RibenNormlAttack(this , other)
 	}else if(touch_IsPlayer && _:cs_get_user_team(other) != thisteam){
 		RibenNormlAttack(this , other)

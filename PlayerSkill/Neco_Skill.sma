@@ -23,7 +23,7 @@ public plugin_precache(){
     UTIL_Precache_Sound("kr_sound/necoact-Skill.wav")
 }
 
-// 金正恩太阳技能
+// 猫姬技能
 public NecoSKill(id){
     new username[32]
     get_user_name(id , username , charsmax(username))

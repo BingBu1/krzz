@@ -9,6 +9,7 @@ new const PLUGIN[] =    "Slot Machine Money"
 new const VERSION[] =   "0.1"
 new const AUTHOR[] =    "Psycrow"
 new PlayerBetAmmo[MAX_PLAYERS + 1 ]
+new PlayerUseAmmo[MAX_PLAYERS + 1 ]
 
 new IsInPvp[MAX_PLAYERS + 1]
 new PvpAdd[MAX_PLAYERS + 1]
@@ -46,12 +47,14 @@ public client_putinserver(id){
     PlayerBetAmmo[id] = 10
     IsInPvp[id] = 0
     PvpAdd[id] = 0
+    PlayerUseAmmo[id] = 0
 }
 
 public client_disconnected(id){
     PlayerBetAmmo[id] = 0
     IsInPvp[id] = 0
     PvpAdd[id] = 0
+    PlayerUseAmmo[id] = 0
 }
 
 public CreatemachineMenu(const id){
@@ -171,7 +174,7 @@ public PvPEndCall(ent){
     new name1[32] , name2[32]
     get_user_name(Pvp1 , name1 , charsmax(name1))
     get_user_name(Pvp2 , name2 , charsmax(name2))
-    EndPvpCost = fPvpCost * 2 * 0.2
+    EndPvpCost = (fPvpCost * 2) * 0.8
     if(!is_user_connected(Pvp1) || !IsInPvp[Pvp1]){
         m_print_color(0 , "!g[赌局提示]由于%s离线，判处%s赢得赌局获得%f押注金额(已扣除手续费)" , name1 ,name2, EndPvpCost)
         AddAmmoPak(Pvp2 , EndPvpCost)
@@ -188,7 +191,7 @@ public PvPEndCall(ent){
         m_print_color(0 , "!g[赌局提示]%s赢得赌局获得%f押注金额(已扣除手续费)" , name2 , EndPvpCost)
         AddAmmoPak(Pvp2 , EndPvpCost)
     }else if(PvpAdd[Pvp2] == PvpAdd[Pvp1] && IsInPvp[Pvp1] && IsInPvp[Pvp2]){
-        m_print_color(0 , "!g[赌局提示]%s与%s居然打成了平局，返回双份赌注！" , name1 , name2)
+        m_print_color(0 , "!g[赌局提示]%s与%s居然打成了平局，返回各位赌注！" , name1 , name2)
         AddAmmoPak(Pvp1 , fPvpCost)
         AddAmmoPak(Pvp2 , fPvpCost)
     }
@@ -221,6 +224,7 @@ public PvpCheck(id){
         m_print_color(id , "!g[冰布提示]对方的余额不足以完成对赌。")
         return 
     }
+    PvPTargetCreateMenu(id ,PvPTarget , cost)
     m_print_color(id , "!g[冰布提示]已发出对赌邀请请等待回应")
 }
 
@@ -264,7 +268,7 @@ public Change_Bet(id){
 public client_slot_machine_win(const iPlayer, const iPrize)
 {
     new Win =  GAME_PRIZES[iPrize]
-    new AddPak = PlayerBetAmmo[iPlayer] * Win
+    new AddPak = PlayerUseAmmo[iPlayer] * Win
     AddAmmoPak(iPlayer , float(AddPak))
     new name[32]
     get_user_name(iPlayer , name , charsmax(name))
@@ -278,12 +282,12 @@ public client_slot_machine_win(const iPlayer, const iPrize)
 public client_slot_machine_spin(const iPlayer)
 {
     new Float:Ammo = GetAmmoPak(iPlayer)
-    if(floatround(Ammo) < PlayerBetAmmo[iPlayer]){
-        client_print_color(iPlayer , print_team_default , "%L" , iPlayer)
+    if(Ammo < float(PlayerBetAmmo[iPlayer])){
         m_print_color(iPlayer , "%L" , iPlayer, "NOT_ENOUGH_AMMO")
         return PLUGIN_HANDLED
     }
     SubAmmoPak(iPlayer , float(PlayerBetAmmo[iPlayer]))
+    PlayerUseAmmo[iPlayer] = PlayerBetAmmo[iPlayer]
     // if (get_member(iPlayer, m_iAccount) < BET)
     // {
 	// 	message_begin(MSG_ONE, g_msgBlinkAcct, .player = iPlayer)

@@ -612,9 +612,11 @@ public CreateModeBEnt(const iPlayer , const iWpn){
 	velocity_by_aim(iPlayer, 800, fVel)
     set_entvar(iEnt, var_velocity, fVel)	
 	set_entvar(iEnt , var_owner , iPlayer)
-	set_entvar(iEnt,var_angles, fAngles)
+	set_entvar(iEnt, var_angles, fAngles)
 	set_entvar(iEnt , var_sequence , 0)
 	set_entvar(iEnt , var_framerate , 1.0)
+	set_entvar(iEnt , var_rendermode , kRenderTransAdd)
+	set_entvar(iEnt , var_renderamt , 255.0)
 
 	engfunc(EngFunc_SetModel , iEnt , "models/ef_frostbite_projectile.mdl")
 	SetTouch(iEnt , "projectile_touch")
@@ -649,16 +651,16 @@ public projectile_Thick(const this){
 		return
 	}
 	new owner_team = cs_get_user_team(owner)
-	while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
-		if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
-		if(get_entvar(ent , var_iuser2) == this)continue
-		if(ent == owner)continue
-		if(ExecuteHam(Ham_IsPlayer , ent) && cs_get_user_team(ent) == owner_team)continue
-		if(is_valid_ent(ent)){
-			// ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
-			// set_entvar(ent , var_iuser2 , this)
-		}
-	}
+	// while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
+	// 	if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
+	// 	if(get_entvar(ent , var_iuser2) == this)continue
+	// 	if(ent == owner)continue
+	// 	if(ExecuteHam(Ham_IsPlayer , ent) && cs_get_user_team(ent) == owner_team)continue
+	// 	if(is_valid_ent(ent)){
+	// 		// ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
+	// 		// set_entvar(ent , var_iuser2 , this)
+	// 	}
+	// }
 	set_entvar(this , var_nextthink , get_gametime() + 0.1)
 }
 
