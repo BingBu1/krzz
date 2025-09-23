@@ -6,10 +6,7 @@
 #include <kr_core>
 #include <hamsandwich>
 
-new JinZhengEnSkillSpr[][]= {
-    "models/Kr_Skill/ef_gatlingex_fireball.spr",
-    "models/Kr_Skill/ef_gatlingex_explosion.spr"
-}
+
 
 public plugin_init(){
     new plid = register_plugin("角色技能-猫姬" , "1.0" , "Bing")
@@ -17,9 +14,7 @@ public plugin_init(){
 }
 
 public plugin_precache(){
-    for(new i = 0 ; i < sizeof JinZhengEnSkillSpr ; i++){
-        precache_model(JinZhengEnSkillSpr[i])
-    }
+
     UTIL_Precache_Sound("kr_sound/necoact-Skill.wav")
 }
 

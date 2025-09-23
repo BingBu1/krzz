@@ -46,7 +46,7 @@ public plugin_init(){
 }
 
 public plugin_forward(){
-    Kr_ = CreateMultiForward("NpcOnCreate" , ET_IGNORE , FP_CELL ,FP_CELL)
+    Kr_NpcOnCreate = CreateMultiForward("NpcOnCreate" , ET_IGNORE , FP_CELL ,FP_CELL)
     Kr_NpcDoAttack = CreateMultiForward("NpcDoAttack" , ET_IGNORE , FP_CELL , FP_CELL)
     Kr_NpcDoSkill = CreateMultiForward("NpcOnSkill" , ET_IGNORE , FP_CELL , FP_CELL)
 }
@@ -340,7 +340,7 @@ public native_NpcSetTinkRate(id , nums){
 public Ai_Think(npc_id){
     new FakeTeam = GetNpcFakeTeam(npc_id)
     //跳过默认NPC
-    if(FakeTeam == CS_TEAM_CT && prop_exists(npc_id , var_master) == false)
+    if(FakeTeam == CS_TEAM_CT && !prop_exists(npc_id , var_npcid))
         return HAM_IGNORED
     new Float:GameTime = get_gametime()
     new npc_regid = get_prop_int(npc_id , var_npcid)
@@ -355,7 +355,7 @@ public Ai_Think(npc_id){
     if(NeedRemoveSelf(npc_id))
         rg_remove_entity(npc_id)
     
-    new Float:flTime = StudioFrameAdvance(npc_id)
+    StudioFrameAdvance(npc_id)
     // DispatchAnimEvent(npc_id, 0.1)
 
     FullThink = get_prop_float(npc_id , var_NextFullThink)
@@ -367,17 +367,17 @@ public Ai_Think(npc_id){
     new master = get_prop_int(npc_id , var_master)
     new NpcState = get_prop_int(npc_id, var_state)
     new m_AttackEnt
-    new NpcLoadMode = Kr_Npc[npc_regid][NpcMode]
+    new Npc_Mode:NpcLoadMode = Npc_Mode:Kr_Npc[npc_regid][NpcMode]
 
-    m_AttackEnt = FindNearAttackNpc(npc_id , NpcLoadMode)
+    m_AttackEnt = FakeTeam == _:CS_TEAM_T ? FindNearAttackNpc(npc_id , NpcLoadMode) : FindNearHuman(npc_id , cs_get_hostage_foll(npc_id))
 
-    if(m_AttackEnt <= 0 && NpcState == NpcState_FollowMaster){
+    if(m_AttackEnt <= 0 && NpcState == _:NpcState_FollowMaster){
         new folling = cs_get_hostage_foll(npc_id)
         if(folling != master){
             cs_set_hostage_foll(npc_id , master)
         }
         return HAM_IGNORED
-    }else if(m_AttackEnt <= 0 && NpcState == NpcState_Idel ){
+    }else if(m_AttackEnt <= 0 && NpcState == _:NpcState_Idel ){
         cs_set_hostage_foll(npc_id)
         return HAM_IGNORED
     }
@@ -493,7 +493,7 @@ stock GetNpcFakeTeam(id){
 	return FakeTeam
 }
 
-stock FindNearAttackNpc(npc , NpcMode:Mode){
+stock FindNearAttackNpc(npc , Npc_Mode:Mode){
     new ent = -1
     new target = -1
 

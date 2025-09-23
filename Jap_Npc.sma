@@ -476,9 +476,10 @@ public fw_HostageThink(id){
 
 	new target
 	if(ownerValid)
-		target = owner
+		target = FindNearHuman(id ,owner)
 	else
-		target = FindNearhuman(id)
+		target = FindNearHuman(id ,0)
+	
 
 	if(target > 0){
 		cs_set_hostage_foll(id, target)
@@ -848,28 +849,43 @@ public SendScoreInfo(id , frag){
 	message_end()
 }
 
-public FindNearhuman(ent){
-	new FakeTeam = KrGetFakeTeam(ent)
-	new Float:Currentlen , Float:origin[3] , Float:playerorigin[3]
-	new Float:Mindistance = 999999.0
-	new target = -1
-	get_entvar(ent, var_origin, origin)
-	for(new i = 1; i <= MaxClients; i++){
-		if(!is_user_alive(i) || IsFakeClient(i))
-			continue
-		if(FakeTeam == get_user_team(i))
-			continue
-		get_entvar(i, var_origin, playerorigin)
-		Currentlen = vector_distance(origin, playerorigin)
-		if(Currentlen >= 2000.0)
-			continue
-		if(Currentlen < Mindistance){
-			Mindistance = Currentlen
-			target = i
-		}
-	}
-	return target
+public FindNearHuman(ent, CurrentFollow) {
+    new FakeTeam = KrGetFakeTeam(ent);
+    new Float:CurrentLen, Float:origin[3], Float:playerOrigin[3], Float:targetOrigin[3];
+    new Float:MinDistance = 999999.0;
+    new target = -1;
+
+    // 获取实体位置
+    get_entvar(ent, var_origin, origin);
+
+    // 如果已有目标，就以它为基准距离
+    if (CurrentFollow > 0 && is_user_alive(CurrentFollow)) {
+        get_entvar(CurrentFollow, var_origin, targetOrigin);
+        MinDistance = vector_distance(origin, targetOrigin);
+        target = CurrentFollow;
+    }
+
+    for (new i = 1; i <= MaxClients; i++) {
+        if (!is_user_alive(i) || IsFakeClient(i))
+            continue;
+
+        if (FakeTeam == get_user_team(i))
+            continue;
+
+        get_entvar(i, var_origin, playerOrigin);
+        CurrentLen = vector_distance(origin, playerOrigin);
+
+        if (CurrentLen >= 2000.0)
+            continue;
+
+        if (CurrentLen < MinDistance) {
+            MinDistance = CurrentLen;
+            target = i;
+        }
+    }
+    return target;
 }
+
 
 public RibenNormlAttack(this ,beattack){
 	new Float:origin[3],Float:Playerorigin[3];

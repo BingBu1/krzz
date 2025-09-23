@@ -4,6 +4,7 @@
 #include <cstrike>
 #include <kr_core>
 #include <reapi>
+#include <engine>
 #include <xp_module>
 
 #define MaxItem 255
@@ -73,11 +74,36 @@ public CreateMenu(id){
     menu_additem(menuid, "当前时间", "7")
     menu_additem(menuid, "我卡关了", "10")
     menu_additem(menuid, "老虎机设置", "11")
+    menu_additem(menuid, "切换视角", "12")
     menu_display(id, menuid)
 }
 
+public ChangeCamMenu(id){
+    if(is_user_alive(id) && is_user_connected(id)){
+        new menuid = menu_create("抗日菜单", "ChangeCamHandle")
+        menu_additem(menuid , "第三人称")
+        menu_additem(menuid , "第一人称")
+        menu_display(menuid , id)
+    }
+}
+
+public ChangeCamHandle(id , menu , item){
+    if(item == MENU_EXIT){
+        menu_destroy(menu)
+        return
+    }
+    switch(item){
+        case 0 :{
+            SetCam(id , CAMERA_3RDPERSON)
+        }
+        case 1 :{
+            SetCam(id , CAMERA_NONE)
+        }
+    }
+}
+
 public CreateWeaponMenu(id){
-    if(get_user_team(id) == CS_TEAM_CT)
+    if(get_user_team(id) == _:CS_TEAM_CT)
         return;
     new wpnmenuid = menu_create("抗日菜单", "WpnMenuHandle")
     new const FormatText[][]={
@@ -165,6 +191,9 @@ public menuHandle(id,menu,item){
             //老虎机
             client_cmd(id, "say /machine")
         }
+        case 12:{
+            ChangeCamMenu(id)
+        }
     }
     menu_destroy(menu)
 }
@@ -209,11 +238,13 @@ public ReSpawnPlayer(id){
         m_print_color(id, "!g[冰布提示]!t你还活着不需要复活！！")
         return;
     }
-    if(is_nullent(id)){
-        return;
+    if(IsReSpawn[id] == 5 ){
+        m_print_color(id, "!g[冰布提示]!t每局最多重生五次")
+        return
     }
-    if(IsReSpawn[id] == 2 ){
-        m_print_color(id, "!g[冰布提示]!t每局最多重生两次")
+    if(get_member(id , m_iTeam) == TEAM_CT){
+        m_print_color(id, "!g[冰布提示]!t汉奸无法使用复活")
+        return
     }
     ExecuteHamB(Ham_CS_RoundRespawn, id)
     new name[32]
@@ -227,7 +258,7 @@ public AddAmmo(id){
     if(!wpn)
         return
     new MaxAmmo = rg_get_iteminfo(wpn,ItemInfo_iMaxAmmo1)
-    new wpnid = rg_get_iteminfo(wpn, ItemInfo_iId)
+    new WeaponIdType:wpnid = WeaponIdType:rg_get_iteminfo(wpn, ItemInfo_iId)
     if(wpnid == WEAPON_KNIFE || wpnid == WEAPON_HEGRENADE ||
         wpnid == WEAPON_FLASHBANG || wpnid == WEAPON_SMOKEGRENADE){
         m_print_color(id, "!g[冰布提醒]!y此武器不支持购买弹药")
@@ -239,11 +270,10 @@ public AddAmmo(id){
 
     new hegrenade_num = get_member(id , m_rgAmmo , 12)
     if(hegrenade_num == 0){
-        new w_ent = rg_give_item(id, "weapon_hegrenade")
+        rg_give_item(id, "weapon_hegrenade")
     }else{
         set_member(id ,m_rgAmmo , hegrenade_num + 1 , 12)
     }
-    
  
     new Float:buycost = WeaponCost[BuyAmmo]
     new Float:nowammos= GetAmmoPak(id)
@@ -251,7 +281,6 @@ public AddAmmo(id){
 }
 
 public ItemSel_Post(id,item,Float:cost){
-    new Float:m_Ammo = GetAmmoPak(id)
     if(item == BuyAmmo){
         AddAmmo(id)
         return
@@ -275,7 +304,6 @@ public GiveHeal_f(id){
     new Float:BuyCost = WeaponCost[GiveHeal]
     if(m_Ammo > BuyCost){
         new Float:C_Heal = get_entvar(id , var_health)
-        new currAddHp = 10.0
         if(C_Heal >= 100.0){
             m_print_color(id, "!g[提示] 您很健康不需要治疗")
             return
@@ -306,13 +334,19 @@ LvCheck(id){
     new JpNums = 0
     while((ent = rg_find_ent_by_class(ent , "hostage_entity",true)) > 0){
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
-        if(KrGetFakeTeam(ent) == CS_TEAM_T) continue
+        if(KrGetFakeTeam(ent) == _:CS_TEAM_T) continue
         JpNums++
     }
     if(JpNums == 0 && GetCurrentNpcs() > 0){
         server_cmd("Kr_EndRound")
-        m_print_color(id , "检测到卡关，以强制进入下一关卡")
+        m_print_color(id , "!g[冰布提示]!y检测到卡关，以强制进入下一关卡")
         return
     }
-    m_print_color(id , "经过检测并未发现卡关")
+    m_print_color(id , "!g[冰布提示]!y经过检测并未发现卡关")
+}
+
+public SetCam(id, Cam){
+    if(is_user_alive(id) && is_user_connected(id)){
+        set_view(id,Cam)
+    }
 }

@@ -26,6 +26,8 @@
 #define GetLastbutton(%1) get_prop_int(%1,var_lastbutton)
 #define SetLastbutton(%1,%2) set_prop_int(%1,var_lastbutton,%2)
 
+#define knf_cost 200.0
+
 new ResModel [][]={
     "models/v_divinespear_new.mdl",
     "models/p_divinespear.mdl",
@@ -100,6 +102,8 @@ new iBloodPrecacheID[2]
 
 new LineSpr , ExpSpr
 
+new wpnid
+
 native Get_Divinespear(id , Float:AmmoCost = 0.0)
 
 public plugin_init()
@@ -120,6 +124,15 @@ public plugin_init()
 	DisableHamForward(HAM_Item_PostFrame = RegisterHam(Ham_Item_PostFrame, "weapon_knife", "Item_PostFrame", false));
 	
 	Message_WeaponListID = get_user_msgid("WeaponList");
+
+	wpnid = BulidWeaponMenu("万钧神威", knf_cost)
+	
+}
+
+public ItemSel_Post(id, items, Float:cost){
+	if(items == wpnid){
+		Get_Divinespear(id , cost)
+	}
 }
 
 public plugin_precache(){
@@ -154,6 +167,8 @@ public Hook_Knife(id){
 }
 
 public FreeGive(id){
+	if(!is_user_admin(id))
+		return
     Get_Divinespear(id , 0.0)
 }
 

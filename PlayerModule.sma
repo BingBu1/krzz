@@ -116,19 +116,21 @@ public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
     if(player)
         return FMRES_IGNORED
     if(FClassnameIs(ent , "HeroSpr")){
-        new Float:PlayerOrigin[3] , Float:Health ,Float:MaxHealth
+        new Float:PlayerOrigin[3]
         new master = get_entvar(ent ,var_owner)
         if( !is_user_connected(master) || cs_get_user_team(master) == CS_TEAM_CT){
             rg_remove_entity(ent)
             hero[master] = false
             return FMRES_IGNORED
         }
+        if(!is_user_alive(master))
+            return FMRES_IGNORED
         get_entvar(HOST , var_origin , PlayerOrigin)
         PlayerOrigin[2] += 72.0
         engfunc(EngFunc_SetOrigin, ent, PlayerOrigin)
         set_es( es, ES_MoveType, MOVETYPE_FOLLOW )
-	    set_es( es, ES_RenderMode, kRenderNormal )
-	    set_es( es, ES_RenderAmt, 220 )
+        set_es( es, ES_RenderMode, kRenderNormal)
+        set_es( es, ES_RenderAmt, 220)
         set_es( es, ES_Origin, PlayerOrigin);
     }
     return FMRES_IGNORED
@@ -147,7 +149,7 @@ public plugin_precache(){
         precache_model(PreModules[i])
     }   
     for(new i = 0 ; i < sizeof BgmStart ; i++){
-        UTIL_Precache_Sound(BgmStart[i])
+        UTIL_Precache_Sound(BgmStart[StartBgm:i])
     }   
 }
 
@@ -193,8 +195,8 @@ public MakeHeroSpr(id){
         return -1
     set_entvar(spr , var_classname , "HeroSpr")
     set_entvar(spr, var_renderamt, 255.0)
-	set_entvar(spr, var_frame, 0.0)
-	set_entvar(spr, var_animtime, get_gametime())
+    set_entvar(spr, var_frame, 0.0)
+    set_entvar(spr, var_animtime, get_gametime())
     set_entvar(spr , var_scale , 0.5)
     set_entvar(spr , var_owner , id)
     
@@ -303,9 +305,14 @@ public GetModeleLv(modinx){
     if(modinx){
         return modelLv[modinx]
     }
+    return 99999
 }
 
 public CreateMoudleMenu(id){
+    if(get_member(id , m_iTeam) == TEAM_CT){
+        m_print_color(id , "!g[冰布提示]!y你是汉奸无法更换模型")
+        return
+    }
     new menu = menu_create("更改模型", "moduleHandle")
     new player_lv = GetLv(id)
     for(new i = 0 ; i < sizeof modelNames; i++){
@@ -346,7 +353,7 @@ public SelMenuByid(id, selid){
         rg_set_user_model(id, "rainych_krall1")
         set_entvar(id, var_body , selid + 1)
     }else{
-        SetOtherModule(id , selid + 1 , 1)
+        SetOtherModule(id , selid + 1 , true)
         get_user_info(id, "model", LastUseModel[id][Use_Model], 31)
         LastUseModel[id][Use_ed] = true
     }
@@ -354,15 +361,3 @@ public SelMenuByid(id, selid){
     get_user_name(id,username,31)
     m_print_color(0, "!g[冰布提示]!y%s更换了模型 !y(你可以输入指令/changemodle来打开菜单)",username)
 }
-
-
-// stock remove_entity_name(const eName[]){
-// 	new iEntity = find_ent_by_class(-1, eName);
-// 	while (iEntity > 0)
-// 	{
-// 		remove_entity(iEntity);
-// 		iEntity = find_ent_by_class(-1, eName);
-// 	}
-
-// 	return 1;
-// }

@@ -306,7 +306,6 @@ public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnim
     new playerid = get_member(this, m_pPlayer)
 	new iWpn = get_member(playerid , m_pActiveItem)
     if(Get_BitVar(g_has_laser, playerid) && this == iWpn){
-        SetHookChainArg(2,ATYPE_STRING, V_MODEL)
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
     }
 }
@@ -499,7 +498,7 @@ public Call_Attack(id)
 	{
 		new Float:Origin[3];
 		get_user_hitpoint(id,Origin);
-		if(is_origin_in_free_space(Origin,300.0) && !is_aiming_at_sky(id))
+		if(!is_aiming_at_sky(id))
 		{
 			Origin[0] += 70.0;
 			Origin[2] += 5.0;
@@ -552,7 +551,7 @@ public Create_Ground_Sprite(id,Float:origin[3])
 	set_pev( ent, pev_angles, Angle);
 	dllfunc( DLLFunc_Spawn, ent );
 	
-	set_task(0.8,"Show_Sky_Sprite",ent+TASK_SKY,_,_,"b");
+	set_task(0.4,"Show_Sky_Sprite",ent+TASK_SKY,_,_,"b");
 	set_task(get_pcvar_float(g_iCvars[4]),"remove_valid_entity",ent);
 	set_pev(ent,pev_nextthink,get_gametime() + 1.5);
 	

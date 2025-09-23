@@ -11,9 +11,9 @@ new Reg_Npcid , Moduleid
 
 public plugin_init(){
     register_plugin("雪域BOSS" , "1.0" , "Bing")
-    Reg_Npcid = NpcRegister(500.0 , Moduleid ,100.0 , 1.8, 0.0, 0.0, 1, 3, 2, 7, 28)
+    Reg_Npcid = NpcRegister(750.0 , Moduleid ,100.0 , 1.8, 0.0, 0.0, 1, 3, 2, 7, 28)
     
-    NpcSetNameAndLevel(Reg_Npcid , "秘密" , 500)
+    NpcSetNameAndLevel(Reg_Npcid , "雪域双子" , 650)
     // SetNpcHasSkill(Reg_Npcid)
 }
 
@@ -32,15 +32,14 @@ public NpcDoAttack(Npcid , Target){
     if(get_prop_int(Npcid , var_npcid) != Reg_Npcid){
         return
     }
-    new Float:Health = get_entvar(Npcid , var_health)
     new master = get_prop_int(Npcid , var_master)
     new Float:fOrigin[3]
     get_entvar(Npcid , var_origin , fOrigin)
-    NpcRadiusDamge(fOrigin , master, Npcid ,  random_float(300.0 , 600.0) , 200.0 , DMG_GENERIC)
+    NpcRadiusDamge(fOrigin , master, Npcid ,  700.0 , 200.0 , DMG_GENERIC)
 }
 
 public NpcOnSkill(Npcid , target){
-
+    
     set_prop_float(Npcid , var_skillcd , get_gametime() + 5.0)
 }
 
