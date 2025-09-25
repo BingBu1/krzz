@@ -525,8 +525,36 @@ public Call_Attack(id)
 public native_CreateGroundSprite(id, nums){
 	new Float:origin[3]
 	new p_id = get_param(1)
+	new ShotNum = get_param_f(3)
+	new Float:ShotTime = get_param_f(4)
 	get_array_f(2, origin, sizeof origin)
-	Create_Ground_Sprite(p_id , origin)
+	Create_Ground_Sprite_2(p_id , origin, ShotNum , ShotTime)
+}
+
+public Create_Ground_Sprite_2(id,Float:origin[3] , ShootNum , Float:Time){
+	new Float:Angle[3];
+	new ent = engfunc( EngFunc_CreateNamedEntity, engfunc( EngFunc_AllocString, "env_sprite" ) );
+	engfunc( EngFunc_SetOrigin, ent, origin );
+	engfunc( EngFunc_SetModel, ent, Mdl_Ground_Sprite );
+	
+	set_pev( ent, pev_classname, Ground_Sprite_ClassName);
+	set_pev( ent, pev_rendermode, kRenderTransAdd );
+	set_pev( ent, pev_movetype, MOVETYPE_TOSS);
+	set_pev( ent, pev_renderamt, 255.0 );
+	set_pev( ent, pev_animtime,get_gametime());
+	set_pev( ent, pev_frame,0.0);
+	set_pev( ent, pev_scale , 7.0);
+	set_pev( ent, pev_spawnflags, SF_SPRITE_STARTON );
+	set_pev( ent, pev_iuser3, id);
+	
+	Angle[0] += 90.0;
+	
+	set_pev( ent, pev_angles, Angle);
+	dllfunc( DLLFunc_Spawn, ent );
+	
+	set_task(Time ,"Show_Sky_Sprite", ent + TASK_SKY,_,_,"b");
+	set_task(float(ShootNum) * Time,"remove_valid_entity",ent);
+	set_pev(ent, pev_nextthink , get_gametime() + 1.5);
 }
 
 public Create_Ground_Sprite(id,Float:origin[3])
@@ -551,10 +579,9 @@ public Create_Ground_Sprite(id,Float:origin[3])
 	set_pev( ent, pev_angles, Angle);
 	dllfunc( DLLFunc_Spawn, ent );
 	
-	set_task(0.4,"Show_Sky_Sprite",ent+TASK_SKY,_,_,"b");
+	set_task(0.4 ,"Show_Sky_Sprite", ent + TASK_SKY,_,_,"b");
 	set_task(get_pcvar_float(g_iCvars[4]),"remove_valid_entity",ent);
-	set_pev(ent,pev_nextthink,get_gametime() + 1.5);
-	
+	set_pev(ent, pev_nextthink , get_gametime() + 1.5);
 }
 
 public Show_Sky_Sprite(taskid)

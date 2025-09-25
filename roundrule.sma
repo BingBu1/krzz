@@ -87,11 +87,13 @@ new RiJunText[64]
 
 new bool:RuleInitOk
 
-new HOOK_ThrowHeGrenade
+new HookChain:HOOK_ThrowHeGrenade
 
 new g_Explosion ,JpBoomSpr
 
 new BuyNextRule
+
+new NineLivesCat[33]
 
 native CreateNade(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time)
 native CreateBlast(const id)
@@ -100,7 +102,7 @@ public plugin_init(){
     register_plugin("抗日随机规则", "1.0", "Bing")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
     HOOK_ThrowHeGrenade = RegisterHookChain(RG_ThrowHeGrenade , "m_ThrowHeGrenade")
-    RegisterHookChain(RG_CBasePlayer_ThrowGrenade, "CBasePlayer_ThrowGrenade_Pre", false);
+    RegisterHookChain(RG_CBasePlayer_ThrowGrenade, "CBasePlayer_ThrowGrenade_Pre", _:false);
     RegisterHookChain(RG_CBaseEntity_FireBullets3 , "m_FireBullets")
     RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed , "m_MaxSpeed")
     RegisterHam(Ham_TakeDamage, "hostage_entity" , "RULE_HostageTakeDamage")
@@ -125,17 +127,21 @@ public plugin_natives(){
 
 public event_roundstart(){
     RuleInitOk = false
-     server_cmd("mp_infinite_ammo 0")
+    server_cmd("mp_infinite_ammo 0")
     RoundRule()
-    new Rule = GetHunManRule()
+    new Human_Rules:Rule = GetHunManRule()
     if(Rule == HUMAN_RULE_Hero_Appearance){
         set_task(0.5, "AllHero")
     }else if (Rule == HUMAN_RULE_Random_Weapon){
         set_task(0.5, "RandomWeapon")
     }
+    SpelicRule(Rule)
+    arrayset(NineLivesCat , 0 , sizeof NineLivesCat)
+}
 
-    if(Rule == HUMAN_RULE_InfAmmo){
-        server_cmd("mp_infinite_ammo 1")
+stock SpelicRule(const any:Rule){
+    switch(Rule){
+        case HUMAN_RULE_InfAmmo : server_cmd("mp_infinite_ammo 1")
     }
 }
 
@@ -356,11 +362,15 @@ public RULE_PlayerTakeDamage(this, idinflictor, idattacker, Float:damage, damage
         }
         case HUMAN_RULE_Nine_Lives:{
             new Float:Health = get_entvar(this , var_health)
-            if(Health < damage && get_entvar(this , var_takedamage) != DAMAGE_NO){
+            if(Health < damage && get_entvar(this , var_takedamage) != DAMAGE_NO && NineLivesCat[this] < 9){
                 set_entvar(this , var_health , 1.0)
-                client_print(this , print_center , "九命猫断掉了一支尾巴保护了你,你将获得无敌3秒")
                 set_entvar(this , var_takedamage , DAMAGE_NO)
                 set_task(3.0 , "UnGod" , this + 1212)
+                switch(++NineLivesCat[this]){
+                    case 8 :client_print(this , print_center , "九命猫只剩最后一条尾巴。请珍惜")
+                    case 9 :client_print(this , print_center , "九命猫耗尽所有尾巴。为你提供最后的庇佑。")
+                    default :client_print(this , print_center , "九命猫断掉了一支尾巴保护了你,你将获得无敌3秒")
+                }
                 return HAM_SUPERCEDE
             }
         }
@@ -452,7 +462,7 @@ public m_FireBullets(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:ve
             if(Clip == 0){
                 new Float:EndOrigin[3]
                 GetWatchEnd(pEntity, EndOrigin)
-                CreateGroundSprite(pEntity, EndOrigin)
+                CreateGroundSprite(pEntity, EndOrigin , 3 , 1.0)
                 return HC_CONTINUE
             }
         }

@@ -67,8 +67,8 @@ public client_disconnected(i){
 
 public RemoveMasterNpc(id){
     new ent = -1
-    while(ent = rg_find_ent_by_class(ent , "hostage_entity")){
-        if(GetNpcFakeTeam(ent) == CS_TEAM_T){
+    while((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
+        if(GetNpcFakeTeam(ent) == _:CS_TEAM_T){
             new master = get_prop_int(ent , var_master)
             if(master == id){
                 rg_remove_entity(ent)
@@ -79,6 +79,7 @@ public RemoveMasterNpc(id){
 
 public plugin_natives(){
     register_native("NpcRegister" , "native_NpcRegister")
+    register_native("CreateNpcByTeam" , "native_CreateNpcByTeam")
     register_native("NpcSetNameAndLevel" , "native_NpcSetNameAndLevel")
     register_native("SetNpcHasSkill" , "native_SetNpcHasSkill")
     register_native("GetNpcHasSkill" , "native_GetNpcHasSkill")
@@ -203,7 +204,7 @@ public NpcBuyMenu(id, menu, item){
 
 public NPC_Killed(this , killer){
     new Team = GetNpcFakeTeam(this)
-    if(Team == CS_TEAM_CT)
+    if(Team == _:CS_TEAM_CT)
         return
     new Npcid = get_prop_int(this , var_npcid)
     set_entvar(this, var_sequence ,  Kr_Npc[Npcid][Npc_Death_seqid])
@@ -213,9 +214,9 @@ public NPC_Killed(this , killer){
 }
 
 public Ai_DamgePost(this, idinflictor, idattacker, Float:damage, damagebits){
-    if(GetNpcFakeTeam(this) == CS_TEAM_CT)
+    if(GetNpcFakeTeam(this) == _:CS_TEAM_CT)
         return
-    if(get_entvar(this , var_health)  <= 0.0){
+    if(get_entvar(this , var_health) <= 0.0){
         Kr_CreateNpcNums--
         new Npcid = get_prop_int(this , var_npcid)
         new Float:Deadtime = Kr_Npc[Npcid][Npc_DeadRemoveTime]
@@ -223,28 +224,35 @@ public Ai_DamgePost(this, idinflictor, idattacker, Float:damage, damagebits){
         set_prop_float(this , var_deadtime ,  RemoveTime)
         SetThink(this , "Ai_Think")
         set_entvar(this , var_nextthink , get_gametime() + 0.2)
-    }else {
-        new iSeq = LookupActivity(this , 26)
-        if(iSeq != -1){
-            SendAnim(this ,iSeq , 26)
-            set_prop_int(this , var_seqanim , Npc_FLINCH)
-            set_prop_float(this , var_flFlinchTime , get_gametime() + 0.75)
-        }
     }
     return
 }
 
+public native_CreateNpcByTeam(nums , id){
+    new Npcid = get_param(1)
+    new NpcTeam = get_param(2)
+    new Float:fOrigin[3]
+    get_array_f(3 , fOrigin , sizeof fOrigin)
+    new Npc = CreateNpc(0 , Npcid , NpcTeam)
+    engfunc(EngFunc_SetOrigin , Npc , fOrigin)
+    return Npc
+}
 
-
-public CreateNpc(other , SelNpcid){
-    if(Kr_CreateNpcNums >= Max_SpawnNpc){
+stock CreateNpc(other , SelNpcid , CsTeams:NpcTeam = CS_TEAM_T){
+    if(Kr_CreateNpcNums >= Max_SpawnNpc && other > 0 && NpcTeam == CS_TEAM_T){
         m_print_color(other , "!t[提示]NPC已达最大上限50，不可生成。")
         return -1
     }
     new Float:WatchOrigin[3]
     new Float:zeroVec[3] = {0.0, 0.0, 0.0}
-    GetWatchEnd(other , WatchOrigin , 200.0)
-    new npc = CreateJpNpc(0 , CS_TEAM_T , WatchOrigin , zeroVec , 0)
+    new npc = 0
+    if(NpcTeam == CS_TEAM_T){
+        GetWatchEnd(other , WatchOrigin , 200.0)
+        npc = CreateJpNpc(0 , _:NpcTeam , WatchOrigin , zeroVec , 0 , true)
+    }else{
+        npc = CreateJpNpc(0 , _:NpcTeam , zeroVec , zeroVec , 0 , true)
+    }
+    
     if(is_nullent(npc)){
         log_amx("[提醒] 创建抗日伙伴失败")
         return npc
@@ -273,7 +281,7 @@ public CreateNpc(other , SelNpcid){
     set_prop_float(npc , var_NextFullThink , get_gametime())
     set_prop_int(npc , var_LastSee , 0)
 
-    if(CheckStuck(npc)){
+    if(CheckStuck(npc) && other > 0 && NpcTeam == CS_TEAM_T){
         rg_remove_entity(npc)
         client_print(other , print_center ,"此处不能放置Npc,请重新放置")
         npcMenu(other)
@@ -487,10 +495,10 @@ public native_NpcTakeDamge(npcid , targetid , Float:Damge){
 //================= stock函数 =====================
 stock GetNpcFakeTeam(id){
     if(!prop_exists(id, "FakeTeam")){
-		return 0
-	}
-	new FakeTeam = get_prop_int(id, "FakeTeam")
-	return FakeTeam
+    	return 0
+    }
+    new FakeTeam = get_prop_int(id, "FakeTeam")
+    return FakeTeam
 }
 
 stock FindNearAttackNpc(npc , Npc_Mode:Mode){
@@ -499,8 +507,8 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
 
     new Float:Dis = 999999.0 , Float:fOrigin[3] , Float:m_Origin[3] , Float:TmpDis
     
-    new regid = get_prop_int(npc , var_npcid)
-    new Float:AttackDisacne = Kr_Npc[regid][Npc_AttackDistance] + 100.0
+    // new regid = get_prop_int(npc , var_npcid)
+    // new Float:AttackDisacne = Kr_Npc[regid][Npc_AttackDistance] + 100.0
 
     new folent = cs_get_hostage_foll(npc)
     new Float:NextSer = get_prop_float(npc , var_nextSerNpc)
@@ -511,8 +519,8 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
     set_prop_float(npc , var_nextSerNpc , get_gametime() + random_float(0.2,0.5))
     get_entvar(npc , var_origin , m_Origin)
 
-    new Array:NpcHandle = GetNpcList()
-    new size = ArraySize(NpcHandle)
+    // new Array:NpcHandle = GetNpcList()
+    // new size = ArraySize(NpcHandle)
     new npcteam = GetNpcFakeTeam(npc)
     while ((ent = rg_find_ent_by_class(ent , "hostage_entity") ) > 0){
         if(is_nullent(ent))continue
@@ -540,7 +548,7 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
         if(ret){
             return target
         }
-        else if(TrHit > 0 && GetIsNpc(TrHit) && KrGetFakeTeam(TrHit) == CS_TEAM_T) {
+        else if(TrHit > 0 && GetIsNpc(TrHit) && KrGetFakeTeam(TrHit) == _:CS_TEAM_T) {
             new observer = TrHit
             while(iterations < MAX_ITER){
                 ret = Stock_CanSee(observer , target , TrHit)
@@ -548,7 +556,7 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
                     return target
                 if(TrHit <= 0 || !GetIsNpc(TrHit))
                     break
-                if(KrGetFakeTeam(TrHit) == CS_TEAM_CT)
+                if(KrGetFakeTeam(TrHit) == _:CS_TEAM_CT)
                     return TrHit
                 observer = TrHit
                 iterations++
@@ -560,7 +568,7 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
 }
 
 stock NeedRemoveSelf(npcid){
-    if(GetNpcFakeTeam(npcid) == CS_TEAM_CT)
+    if(GetNpcFakeTeam(npcid) == _:CS_TEAM_CT)
         return false
     new master = get_prop_int(npcid , var_master)
     if(is_user_connected(master))
@@ -602,14 +610,14 @@ stock ClearTries(Float:Timer){
 
 stock bool:Stock_CanSee(entindex1, entindex2 , &TrHit){
     if (is_nullent(entindex1) || is_nullent(entindex2))
-		return false
+    	return false
     static buff[10]
     new data[Npc_Cache]
     new Float:GameTime = get_gametime()
     ClearTries(GameTime)
     formatex(buff , 9 , "%d_%d" , entindex1, entindex2)
     if(TrieKeyExists(CaCheSee , buff)){
-        TrieGetArray(CaCheSee , buff , data ,sizeof data)
+        TrieGetArray(CaCheSee , buff , data , sizeof(data))
         if(GameTime < data[NpcCache_NextSeeTime]){
             return data[NpcCache_CanSee] //缓存
         }
@@ -620,10 +628,10 @@ stock bool:Stock_CanSee(entindex1, entindex2 , &TrHit){
     data[NpcCache_CanSee] = IsSee
     data[NpcCache_NextSeeTime] = GameTime + random_float(0.35,0.5)
     TrieSetArray(CaCheSee , buff , data , sizeof data)
-	return IsSee
+    return IsSee
 }
 
-stock TraceCanSee(entindex1, entindex2 , & TrHit){
+stock TraceCanSee(entindex1, entindex2 , &TrHit){
 
 	new flags = get_entvar(entindex1, var_flags)
 	TrHit = 0
@@ -689,7 +697,7 @@ stock GetWatchEnd(player , Float:OutEndOrigin[3] , Float:Distance){
     global_get(glb_v_forward, fwd)
     xs_vec_mul_scalar(fwd, Distance, EndOrigin)
     xs_vec_add(StartOrigin,EndOrigin,EndOrigin)
-	fm_trace_line(player, StartOrigin, EndOrigin, hitorigin)
+    fm_trace_line(player, StartOrigin, EndOrigin, hitorigin)
     xs_vec_copy(hitorigin, OutEndOrigin)
 }
 
@@ -698,7 +706,7 @@ stock CheckStuck(iNpcEntity){
     new Float:fOrigin[3]
     get_entvar(iNpcEntity , var_origin , fOrigin)
     engfunc(EngFunc_TraceMonsterHull, iNpcEntity, fOrigin, fOrigin, DONT_IGNORE_MONSTERS, iNpcEntity, 0)
-    if(get_tr2(0 , TR_StartSolid) && get_tr2(0 , TR_AllSolid) && !get_tr2(0, TR_InOpen)){
+    if(get_tr2(0 , TR_StartSolid) || get_tr2(0 , TR_AllSolid) || !get_tr2(0, TR_InOpen)){
         return true
     }
     return false
@@ -713,24 +721,20 @@ stock Stock_GetSpeedVector(const Float:origin1[3], const Float:origin2[3], Float
 
 public SendAnim(iEntity, iAnim , ACT)
 {
-	if(get_member(iEntity , m_Activity) == ACT)
-		return
-    // if(get_prop_int(iEntity , var_seqanim) == Npc_FLINCH && get_gametime() < get_prop_float(iEntity , var_flFlinchTime)){
-    //     set_prop_int(iEntity, var_seqanim , Npc_FLINCH)
-    //     return //播放受击
-    // }
+    if(get_member(iEntity , m_Activity) == ACT)
+        return
     new seq = get_entvar(iEntity , var_sequence)
     if(seq != iAnim){
         new is_loop = GetSeqFlags(iEntity) & STUDIO_LOOPING
         new flag , Float:flFrameRate , Float:GroundSpeed
         set_member(iEntity , m_fSequenceLoops , is_loop)
-	    set_entvar(iEntity, var_sequence, iAnim)
-	    set_entvar(iEntity, var_animtime, get_gametime())
+        set_entvar(iEntity, var_sequence, iAnim)
+        set_entvar(iEntity, var_animtime, get_gametime())
         new seqanim = get_prop_int(iEntity , var_seqanim)
-	    if(seqanim != Npc_Walk && seqanim != Npc_Run){
+        if(seqanim != _:Npc_Walk && seqanim != _:Npc_Run){
             set_entvar(iEntity, var_frame, 0.0)
         }
-	    set_entvar(iEntity, var_framerate, 1.0)
+        set_entvar(iEntity, var_framerate, 1.0)
         GetSequenceInfo(iEntity, flag , flFrameRate, GroundSpeed)
         set_member(iEntity , m_flFrameRate , flFrameRate)
         set_member(iEntity , m_flGroundSpeed , GroundSpeed)
@@ -746,10 +750,10 @@ stock StopAllNpc(id){
     for(new i = 0 ; i < size ; i++){
         new ent = ArrayGetCell(NpcHandle , i)
         if(is_nullent(ent))continue
-        if(KrGetFakeTeam(ent) == CS_TEAM_CT)continue
+        if(KrGetFakeTeam(ent) == _:CS_TEAM_CT)continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
         if(get_prop_int(ent , var_master) != id)continue
-        set_prop_int(ent , var_state , NpcState_Idel)
+        set_prop_int(ent , var_state , _:NpcState_Idel)
     }
 }
 
@@ -759,9 +763,47 @@ stock FollowAllNpc(id){
     for(new i = 0 ; i < size ; i++){
         new ent = ArrayGetCell(NpcHandle , i)
         if(is_nullent(ent))continue
-        if(KrGetFakeTeam(ent) == CS_TEAM_CT)continue
+        if(KrGetFakeTeam(ent) == _:CS_TEAM_CT)continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
         if(get_prop_int(ent , var_master) != id)continue
-        set_prop_int(ent , var_state , NpcState_FollowMaster)
+        set_prop_int(ent , var_state , _:NpcState_FollowMaster)
     }
+}
+
+stock FindNearHuman(ent, CurrentFollow = 0) {
+    new FakeTeam = KrGetFakeTeam(ent);
+    new Float:CurrentLen, Float:origin[3], Float:playerOrigin[3], Float:targetOrigin[3];
+    new Float:MinDistance = 999999.0;
+    new target = -1;
+    new TrHit
+    // 获取实体位置
+    get_entvar(ent, var_origin, origin);
+
+    // 如果已有目标，就以它为基准距离
+    if (CurrentFollow > 0 && is_user_alive(CurrentFollow)) {
+        get_entvar(CurrentFollow, var_origin, targetOrigin);
+        MinDistance = vector_distance(origin, targetOrigin);
+        target = CurrentFollow;
+    }
+
+    for (new i = 1; i <= MaxClients; i++) {
+        if (!is_user_alive(i) || is_user_bot(i))
+            continue;
+
+        if (FakeTeam == get_user_team(i))
+            continue;
+        if( !TraceCanSee(ent , i , TrHit))
+            continue;
+        get_entvar(i, var_origin, playerOrigin);
+        CurrentLen = vector_distance(origin, playerOrigin);
+
+        if (CurrentLen >= 2000.0)
+            continue;
+
+        if (CurrentLen < MinDistance) {
+            MinDistance = CurrentLen;
+            target = i;
+        }
+    }
+    return target;
 }

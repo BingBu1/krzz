@@ -405,6 +405,7 @@ public Attack_c(clientIndex , iWeaponEntityID){
 	Weapon_Animation(clientIndex , charging_shoot)
 	Create_cyclone(clientIndex , true)
 	UTIL_EmitSound_ByCmd(0 , Res_sounds[12])
+	Player_Animation(clientIndex, "ref_shoot_knife", 1.0);
 }
 
 public Attack2Release(clientIndex , iWeaponEntityID){
@@ -423,6 +424,7 @@ public Attack2Release(clientIndex , iWeaponEntityID){
 			set_entvar(iWeaponEntityID, var_nextthink, timeNextAttaack);
 			set_task(timeNextAttaack + 0.1 ,"PriAttackEnd" , iWeaponEntityID + Weapon_DefinitionID)
 			SetStatus(iWeaponEntityID , s_start)
+			Player_Animation(clientIndex, "ref_shoot_knife", 1.0);
 		}
 		case s_dononting:{
 			//释放旋风
@@ -432,6 +434,7 @@ public Attack2Release(clientIndex , iWeaponEntityID){
 			UTIL_EmitSound_ByCmd(0 , Res_sounds[11])
 			set_task(timeNextAttaack + 0.1 ,"PriAttackEnd" , iWeaponEntityID + Weapon_DefinitionID)
 			SetStatus(iWeaponEntityID , s_start)
+			Player_Animation(clientIndex, "ref_shoot_knife", 1.0);
 		}
 	}
 }
@@ -447,13 +450,20 @@ public AttackInAttack1(clientIndex , iWeaponEntityID){
 	Weapon_Animation(clientIndex, seq);
 	set_task(0.55 ,"PriAttackEnd" , iWeaponEntityID + Weapon_DefinitionID)
 	UTIL_EmitSound_ByCmd(clientIndex , Res_sounds[1 + num])
-	new Hit = Do_Damage(clientIndex, 300.0, 150.0, 90.0, 0.0, 0.0, 0.0);
+	new Hit;
+	switch(seq){
+		case attack_1: Hit = Do_Damage(clientIndex, 300.0, 150.0, 90.0, 0.0, 0.0, 0.0);
+		case attack_2: Hit = Do_Damage(clientIndex, 300.0, 150.0, 90.0, 0.0, 0.0, 0.0);
+		case attack_3: Hit = Do_Damage(clientIndex, 350.0, 150.0, 90.0, 0.0, 0.0, 0.0);
+		case attack_4: Hit = Do_Damage(clientIndex, 400.0, 150.0, 360.0, 0.0, 0.0, 0.0);
+	}
 	switch(Hit)
 	{
 		case HIT_WALL:	UTIL_EmitSound_ByCmd(clientIndex , Res_sounds[5])
 		case HIT_ENEMY:	UTIL_EmitSound_ByCmd(clientIndex , Res_sounds[8])
 	}
 	set_entvar(iWeaponEntityID, var_nextthink, get_gametime() + 0.45);
+	Player_Animation(clientIndex, "ref_shoot_knife", 1.0);
 }
 
 public PriAttackEnd(iWeaponEntityID){
@@ -665,8 +675,8 @@ stock CreateThrow(clientIndex , Float:Sp_Origin[3]){
 	
 	set_entvar(Throw, var_solid, SOLID_BBOX)
 
-	set_entvar(Throw, var_mins, Float:{-1.0, -1.0, -1.0})
-	set_entvar(Throw, var_maxs, Float:{1.0, 1.0, 1.0})
+	set_entvar(Throw, var_mins, Float:{-5.0, -5.0, -5.0})
+	set_entvar(Throw, var_maxs, Float:{5.0, 5.0, 5.0})
 
 	new Float:fAngles[3], Float:fOrigin[3]
 	// get_entvar(id , var_v_angle, fAngles)
@@ -1035,4 +1045,26 @@ public CreateSpr(sprid , DeadEnt){
     write_byte(15) // scale
     write_byte(200) // alpha
     message_end()
+}
+
+stock Player_Animation(const clientIndex, const szAnimation[], const Float:fFramerate)
+{
+	new iSequence, Float:Framerate, Float:Groundspeed, bool:Loops, Float:gameTime = get_gametime();
+	if ((iSequence = lookup_sequence(clientIndex, szAnimation, Framerate, Loops, Groundspeed)) == -1) iSequence = 0;
+
+	set_entvar(clientIndex, var_sequence, iSequence);
+	set_entvar(clientIndex, var_frame, 0.0);
+	set_entvar(clientIndex, var_animtime, gameTime);
+	set_entvar(clientIndex, var_framerate, fFramerate);
+
+	set_pdata_int(clientIndex, 40, Loops, 4);
+	set_pdata_int(clientIndex, 39, 0, 4);
+
+	set_pdata_float(clientIndex, 36, Framerate, 4);
+	set_pdata_float(clientIndex, 37, Groundspeed, 4);
+	set_pdata_float(clientIndex, 38, gameTime, 4);
+
+	set_pdata_int(clientIndex, 73, 28, 5);
+	set_pdata_int(clientIndex, 74, 28, 5);
+	set_pdata_float(clientIndex, 220, gameTime, 5);
 }

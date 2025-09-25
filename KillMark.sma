@@ -3,6 +3,7 @@
 #include <kr_core>
 #include <sqlx>
 #include <xp_module>
+#include <hamsandwich>
 
 new Handle:g_SqlTuple
 new Handle:g_SqlConnection
@@ -202,6 +203,8 @@ public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
 }
 
 public NPC_Killed(this , killer){
+    if(!ExecuteHam(Ham_IsPlayer , killer))
+        return
     new Usering = KillMarkUse[killer]
     if(is_user_admin(killer)){
         new AdminMark = ArrayGetCell(KillMarkSpr , Usering)

@@ -7,17 +7,34 @@
 #include <fakemeta_util>
 #include <xp_module>
 #include <roundrule>
-#include  <engine>
+#include <engine>
 #include <hamsandwich>
+#include <Npc_Manager>
+
+#define MaxGold 2
+
+#define LootModel "models/supplybox_Newyear.mdl"
+
+#define SpawnTimer 60.0 * 3
 
 enum TankModle_e{
     Tk_alive,
     Tk_die
 }
 
+enum Elite_Var{
+    Elite_White = 1,
+    Elite_Green,
+    Elite_Blue,
+    Elite_Red,
+    Elite_Gold
+}
+
 new has_tank
 
-new CurrentTankEnt 
+new CurrentTankEnt , SpawnGold
+
+new Float:StartTime , CurrentKill
 
 new TankModle[TankModle_e][]={
 "models/rainych/krzz/tank.mdl",
@@ -27,6 +44,11 @@ new TankModle[TankModle_e][]={
 new firesound[][]={
     "weapons/357_shot1.wav",
     "weapons/357_shot2.wav"
+}
+
+new LootSound[][]= {
+    "Kr_sound/supply_box_drop.wav",
+    "Kr_sound/get_box.wav" //1
 }
 
 new g_Explosion, sTrail
@@ -54,9 +76,13 @@ public plugin_precache(){
     for(new i = 0 ; i <sizeof firesound ; i++){
         precache_sound(firesound[i])
     }
+    for(new i = 0 ; i <sizeof LootSound ; i++){
+        UTIL_Precache_Sound(LootSound[i])
+    }
     g_Explosion = precache_model("sprites/zerogxplode.spr")
     sTrail = precache_model(GRENADE_TRAIL)
     precache_model("sprites/zb_healthbar.spr")
+    precache_model("models/supplybox_Newyear.mdl")
     precache_model(TankBoom)
 }
 
@@ -118,67 +144,49 @@ public CreateHealBar(Npc){
 }
 
 public CreateEliteNpc(ent , lv , Judian){
-    new bool:White = lv > 30
-    new bool:Blue = lv > 300
-    new bool:Green = lv > 150
-    new bool:Red = lv > 500
-    if(!White && !Blue && ! Green && !Red)
-        return false
-    if(White && RandFloatEvents(0.01)){
-        new Float:Heal = 500.0 + (30.0 * float(lv))
-        Heal = floatmin(Heal , 15000.0)
-        new Float:Color[3]= {255.0,255.0,255.0}
-        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
-        set_entvar(ent, var_rendercolor, Color)
-        set_entvar(ent ,var_renderamt , 1.0)
-        set_entvar(ent, var_health, Heal)
-        set_entvar(ent, var_max_health, Heal)
-        set_entvar(ent, var_iuser1 , 1)
-        BossNpc++
-        return true
+    new const Float:colors[4][3] = {
+        {255.0, 255.0, 255.0}, // White
+        {0.0, 255.0, 0.0},     // Green
+        {0.0, 0.0, 255.0},     // Blue
+        {255.0, 0.0, 0.0}      // Red
     }
-    if(Blue && RandFloatEvents(0.01)){
-        new Float:Heal = 1500.0 + (100.0 * float(lv))
-        Heal = floatmin(Heal , 78000.0)
-        new Float:Color[3]= {0.0,0.0,255.0}
-        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
-        set_entvar(ent, var_rendercolor, Color)
-        set_entvar(ent ,var_renderamt , 1.0)
-        set_entvar(ent, var_health, Heal)
-        set_entvar(ent, var_max_health, Heal)
-        set_entvar(ent, var_iuser1 , 2)
-        set_prop_int(ent, "CanStop", 1)
-        BossNpc++
-        return true
+
+    new Float:baseHeal[4] = {500.0, 1000.0, 1500.0, 2000.0};
+    new Float:healScale[4] = {30.0, 50.0, 100.0, 130.0};  // 对应白、绿、蓝、红
+    new Float:healMax[4] = {15000.0, 25000.0, 78000.0, 150000.0};
+    new EliteIds[4] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red};
+    new Bool:SetProp[4] = {false, false, true, true};
+    new levelThreshold[4] = {30, 150, 300, 500}; // 对应白、绿、蓝、红
+
+    new available[4], count = 0;
+    for(new i = 0; i < 4; i++)
+    {
+        if(lv >= levelThreshold[i])
+        {
+            available[count++] = i;
+        }
     }
-    if(Green && RandFloatEvents(0.01)){
-        new Float:Heal = 1000.0 + (50.0 * float(lv))
-        Heal = floatmin(Heal , 25000.0)
-        new Float:Color[3]= {0.0,255.0,0.0}
-        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
-        set_entvar(ent, var_rendercolor, Color)
-        set_entvar(ent ,var_renderamt , 1.0)
-        set_entvar(ent, var_health, Heal)
-        set_entvar(ent, var_max_health, Heal)
-        set_entvar(ent, var_iuser1 , 4)
-        BossNpc++
-        return true
-    }
-    if(Red && RandFloatEvents(0.01)){
-        new Float:Heal = 2000.0 + (130.0 * float(lv))
-        Heal = floatmin(Heal , 150000.0)
-        new Float:Color[3]= {255.0,0.0,0.0}
-        set_entvar(ent, var_renderfx, kRenderFxGlowShell)
-        set_entvar(ent, var_rendercolor, Color)
-        set_entvar(ent ,var_renderamt , 1.0)
-        set_entvar(ent, var_health, Heal)
-        set_entvar(ent, var_max_health, Heal)
-        set_entvar(ent, var_iuser1 , 3)
-        set_prop_int(ent, "CanStop", 1)
-        BossNpc++
-        return true
-    }
-    return false
+
+    if(count == 0) return false;
+
+    new index = available[random_num(0, count-1)];
+
+    new Float:chance[4] = {0.1, 0.02, 0.05, 0.01}; // 白、绿、蓝、红
+
+    if(!RandFloatEvents(chance[index])) return false;
+
+    new Float:Heal = floatmin(baseHeal[index] + lv * healScale[index], healMax[index]);
+    set_entvar(ent, var_renderfx, kRenderFxGlowShell);
+    set_entvar(ent, var_rendercolor, colors[index]);
+    set_entvar(ent, var_renderamt, 1.0);
+    set_entvar(ent, var_health, Heal);
+    set_entvar(ent, var_max_health, Heal);
+    set_entvar(ent, var_iuser1, EliteIds[index]);
+
+    if(SetProp[index]) set_prop_int(ent, "CanStop", 1);
+
+    BossNpc++;
+    return true;
 }
 
 public NPC_CreatePost(ent){
@@ -193,6 +201,24 @@ public NPC_CreatePost(ent){
             }
         }
     }
+    if(Judian_num < 8 && SpawnGold < MaxGold && level > 100 && 
+        CurrentKill >= 500 && (get_gametime() - StartTime) > SpawnTimer
+    ){
+        if(UTIL_RandFloatEvents(0.005)){
+            new Float:Color[3]= {255.0,215.0,0.0}
+            set_entvar(ent, var_renderfx, kRenderFxGlowShell)
+            set_entvar(ent, var_rendercolor, Color)
+            set_entvar(ent ,var_renderamt , 255.0)
+            set_entvar(ent, var_health, 50000.0)
+            set_entvar(ent, var_max_health, 50000.0)
+            set_entvar(ent, var_iuser1 , Elite_Gold)
+            m_print_color(0 , "!t[冰布提示] 出现了黄金精英怪物，击杀可掉落战利品！")
+            client_print(0 , print_center , "[冰布提示] 出现了黄金精英怪物，击杀可掉落战利品！")
+            CreateHealBar(ent)
+            SpawnGold++
+        }
+        CurrentKill = 0
+    }
     if(Judian_num == 8 && !has_tank){
         //如果不存在坦克创建
         new Float:Heal = 5000.0 + (250.0 * float(level))
@@ -203,7 +229,7 @@ public NPC_CreatePost(ent){
 
         set_entvar(ent , var_health, Heal)
         set_entvar(ent, var_max_health , Heal)
-        set_entvar(ent, var_body, 0)
+        // set_entvar(ent, var_body, 0)
         set_prop_int(ent , "istank" , 1)
         set_prop_int(ent, "CanStop", 1)  //无法被武器定身，和出现受伤动画
 
@@ -216,10 +242,17 @@ public NPC_CreatePost(ent){
         return
     }
     if(GetJuDianNum() == 8){
+        new Float:fOrigin[3]
         new Float:maxHeal = 2000.0//基础血量
         maxHeal = maxHeal + (150.0 * float(level))
         set_entvar(ent , var_max_health, maxHeal)
         set_entvar(ent , var_health, maxHeal)
+        get_entvar(ent , var_origin , fOrigin)
+        // rg_remove_entity(ent)
+        // new Spawnid = Get_Master(ent)
+        // ent = CreateNpcByTeam(0 , CS_TEAM_CT , fOrigin)
+        // set_entvar(ent , var_Spawnid , ent)
+        
         new spr = CreateHealBar(ent)
         if(!spr){
             log_error(AMX_ERR_NONE , "创建血条实体失败。")
@@ -285,6 +318,9 @@ public event_roundstart(){
     has_tank = false
     CurrentTankEnt = 0
     BossNpc = 0
+    SpawnGold = 0
+    StartTime = get_gametime()
+    CurrentKill = 0
     remove_entity_name("HBar")
 }
 
@@ -299,40 +335,112 @@ public native_is_tank(){
     return istank
 }
 
+CreateLoot(Float:KilledOrigin[3]){
+    new Players = get_member_game(m_iNumTerrorist)
+    if(Players < 1)
+        return
+    UTIL_EmitSound_ByCmd(0 , LootSound[0])
+    for(new i = 1 ; i < MaxClients ; i++){
+        if(!is_user_connected(i) || !is_user_alive(i))
+            continue
+        if(cs_get_user_team(i) != CS_TEAM_T)
+            continue
+        CreateLootEntity(i , KilledOrigin)
+    }
+}
+
+CreateLootEntity(const master , Float:KilledOrigin[3]){
+    new Entity = rg_create_entity("info_target")
+    if(is_nullent(Entity))
+        return
+    new Float:origin[3];
+    origin[0] = KilledOrigin[0];
+    origin[1] = KilledOrigin[1];
+    origin[2] = KilledOrigin[2];
+
+    // 随机偏移 ±50 单位
+    origin[0] += random_float(-20.0, 20.0);
+    origin[1] += random_float(-20.0, 20.0);
+    origin[2] += 10.0; // 可选稍微抬高一点
+    set_entvar(Entity , var_classname , "FuDai")
+    set_entvar(Entity , var_solid , SOLID_TRIGGER)
+    set_entvar(Entity , var_movetype , MOVETYPE_TOSS)
+    set_entvar(Entity , var_gravity , 0.5)
+    set_entvar(Entity , var_nextthink , get_gametime() + 0.1)
+    set_entvar(Entity , var_iuser1 , master) //1代表未被拾取
+    set_entvar(Entity , var_fuser1 , get_gametime() + 120.0) //1代表未被拾取
+    set_entvar(Entity , var_origin , origin)
+    SetThink(Entity , "LootThink")
+    SetTouch(Entity , "LootTouch")
+
+    engfunc(EngFunc_SetModel , Entity , LootModel)
+}
+
+public LootThink(const Lootindex){
+    new master = get_entvar(Lootindex , var_iuser1)
+    if(get_gametime() > get_entvar(Lootindex , var_fuser1) || !is_user_connected(master)){
+        rg_remove_entity(Lootindex)
+        return
+    }
+    set_entvar(Lootindex , var_nextthink , get_gametime() + 0.1)
+}
+
+public LootTouch(const Lootindex , const Toucher){
+    new master = get_entvar(Lootindex , var_iuser1)
+    if(master != Toucher)
+        return
+    new name[32]
+    get_user_name(Toucher, name, 31)
+    UTIL_EmitSound_ByCmd(Toucher , LootSound[1])
+    new Float:AddAmmo = 1.0 + float(Getleavel()) * 0.5
+    AddAmmoPak(Toucher , AddAmmo)
+    m_print_color(0 , "!g[提示] %s获得了战利品，获得了%f大洋" , name, AddAmmo)
+    rg_remove_entity(Lootindex)
+}
+
 public NPC_Killed(this , killer){
     new spr = get_entvar(this , var_impulse)
     if(spr > 0){
         set_entvar(this , var_impulse , 0)
         rg_remove_entity(spr)
     }
-    if(get_entvar(this,var_iuser1) >= 1){
-        new MonsterLv = get_entvar(this,var_iuser1)
+    if(get_entvar(this,var_iuser1) >= Elite_White){
+        new MonsterLv = get_entvar(this, var_iuser1)
         new lv = Getleavel()
-        new money = cs_get_user_money(killer)
+        new Lastmoney , money = cs_get_user_money(killer)
         new baseaddxp
+        Lastmoney = money
         switch(MonsterLv){
-            case 1 :{
+            case Elite_White :{
                 money += 3000
                 baseaddxp = 100 + random_num(100 , lv * 5)
             }
-            case 2:{
+            case Elite_Green:{
+                money += 5000
+                baseaddxp = 350 + random_num(300 , lv * (5 + MonsterLv))
+            }
+            case Elite_Blue:{
                 baseaddxp = 500 + random_num(250 , lv * (5 + MonsterLv))
                 money += 8000
             }
-            case 3:{
+            case Elite_Red :{
                 baseaddxp = 1000 + random_num(500 , lv * (5 + MonsterLv))
                 money += 15000
             }
-            case 4 :{
-                money += 5000
-                baseaddxp = 350 + random_num(300 , lv * (5 + MonsterLv))
-                MonsterLv = 2
+            case Elite_Gold:{
+                new Float:origin[3]
+                get_entvar(this, var_origin,origin)
+                money += 30000
+                baseaddxp = 1000 + random_num(500 , lv * (5 + MonsterLv))
+                m_print_color(0 , "!t[冰布提示] 黄金精英被击杀，战利品掉落完毕！")
+                client_print(0 , print_center , "[冰布提示] 黄金精英被击杀，战利品掉落完毕！")
+                CreateLoot(origin)
             }
         }
+        m_print_color(killer , "!g[击杀]击杀精英额外获得%d积分,金钱%d", baseaddxp , money - Lastmoney)
         cs_set_user_money(killer , money)
         baseaddxp *= MonsterLv 
         AddXp(killer, baseaddxp)
-        m_print_color(killer , "!g[击杀]击杀精英额外获得%d积分", baseaddxp)
         set_entvar(this, var_iuser1, 0)
         set_entvar(this, var_renderfx, kRenderFxNone)
         set_entvar(this, var_rendercolor, Float:{0.0,0.0,0.0})
@@ -347,6 +455,7 @@ public NPC_Killed(this , killer){
         AddKillTank(killer)
         KillTank_reward(killer)
     }
+    CurrentKill++
 }
 
 public KillTank_reward(id){
@@ -485,7 +594,7 @@ stock CreateTankBoom(ent , target){
     xs_vec_mul_scalar(vec, 50.0, vec)
     xs_vec_add(org, vec, org)
     xs_vec_mul_scalar(vec, 12.0, vec)
-    set_entvar(tk_ent,var_movetype,MOVETYPE_FLY)
+    set_entvar(tk_ent,var_movetype, MOVETYPE_FLY)
     set_entvar(tk_ent , var_solid, SOLID_BBOX)
     set_entvar(tk_ent,var_origin,org)
     set_entvar(tk_ent,var_velocity,vec)
@@ -497,7 +606,7 @@ stock CreateTankBoom(ent , target){
     
 
     engfunc(EngFunc_SetModel,tk_ent,TankBoom)
-    engfunc(EngFunc_SetSize,tk_ent,Float:{-1.0, -1.0, -1.0},Float:{-1.0, 1.0, 1.0})
+    engfunc(EngFunc_SetSize,tk_ent,Float:{-1.0, -1.0, -1.0},Float:{1.0, 1.0, 1.0})
 
     SetTouch(tk_ent,"tk_Touch")
 

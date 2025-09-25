@@ -16,11 +16,6 @@
 
 #define ShowHudid 1121
 
-#define var_Spawnid var_iuser1
-#define var_master var_skin
-#define var_Master "maste"
-#define Set_Master(%1 ,%2) set_member(%1 , maxammo_buckshot ,%2)
-#define Get_Master(%1) get_member(%1 , maxammo_buckshot)
 
 #define GameName "抗日战争v1.1"
 
@@ -118,6 +113,8 @@ new Float:ClearWaeponTime
 
 new IsHanJian[33]
 
+new TrHandle
+
 public plugin_init(){
     register_plugin("抗日核心", "1.0", "Bing")
     
@@ -141,8 +138,8 @@ public plugin_init(){
     register_clcmd("jointeam","NoReTeam")
     register_clcmd("say /save","SavePlayer_Buy")
     register_clcmd("say /me","ShowPlayerInfo")
-    register_concmd("KR_GoToCt", "ChangTeamToCt")
-    register_concmd("Kr_EndRound", "KrEndRound")
+    register_srvcmd("KR_GoToCt", "ChangTeamToCt")
+    register_srvcmd("Kr_EndRound", "KrEndRound")
 
     bind_pcvar_float(register_cvar("clear_weaponbox","120.0"), ClearWaeponTime)    
 
@@ -157,12 +154,19 @@ public plugin_init(){
     Hud_ShowJudianUp = CreateHudSyncObj()
     Hud_Damage = CreateHudSyncObj()
     Hud_xp = CreateHudSyncObj()
+    TrHandle = create_tr2()
+
     set_task(1.0,"ShowHud",.flags = "b")
     set_task(30.0,"Qa",.flags = "b")
 
     reg_forward()
     LoadMapconfig()
     FuckMapTank()
+}
+
+public plugin_end(){
+    free_tr2(TrHandle)
+    
 }
 
 public Qa(){
@@ -848,13 +852,11 @@ public CanSpawn(){
 }
 
 public NPC_Killed(this , killer){
-    if(KrGetFakeTeam(this) != CS_TEAM_T){
-        CurrentNpcs--
+    if(KrGetFakeTeam(this) != _:CS_TEAM_T && ExecuteHam(Ham_IsPlayer , killer)){
         ReSpawnEnt(this)
-        if(CurrentNpcs == 0 && GetJuDianNum() <= 7){
-            set_task(3.0 , "ChangeJudian")
-        }else if(CurrentNpcs <= 0 && GetJuDianNum() == 8){
-            set_task(0.1 , "ChangeJudian")
+        new Judian = GetJuDianNum()
+        if(--CurrentNpcs <= 0){
+            set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
         }
         new lv = Current_judian
         switch(lv){
@@ -1134,71 +1136,75 @@ public ShowPlayerInfo(id){
  */
 stock bool:IsSpawnPointOccupied(const Float:origin[3] , pentToSkip)
 {   
-    new tr = create_tr2()
+    new tr = TrHandle
     static Float:CheckPoint[3]
     static Float:CheckPoint2[3]
     xs_vec_copy(origin, CheckPoint)
     xs_vec_copy(origin, CheckPoint2)
-    CheckPoint2[2] -= 50.0
-    CheckPoint[2] += 60.0
+    CheckPoint2[2] -= 40.0
+    CheckPoint[2] += 40.0
     engfunc(EngFunc_TraceHull, CheckPoint, CheckPoint2, DONT_IGNORE_MONSTERS, HULL_HUMAN, pentToSkip, tr)
     new Float:TR_flFractions
     new touchent
     if(get_tr2(tr , TR_AllSolid) || get_tr2(tr, TR_StartSolid) || !get_tr2(tr, TR_InOpen)){
-        free_tr2(tr)
         return true
     }
     get_tr2(tr,TR_flFraction, TR_flFractions)
     touchent = get_tr2(tr , TR_pHit)
     if(TR_flFractions < 1.0){
         if(touchent < 0){
-            free_tr2(tr)
             return false
         }
         new flags = get_entvar(touchent, var_flags)
         if(flags & FL_MONSTER || flags & FL_CLIENT){
-            free_tr2(tr)
             return true
         }
         if(GetIsNpc(touchent) == true){
-            free_tr2(tr)
             return true
         }
-        free_tr2(tr)
         return false
     }
-    free_tr2(tr)
     return false
 }
 
-stock CheckStuck(iEntity, Float:fMin[3], Float:fMax[3])
-{
-    new Float:testorigin[3]
-    get_entvar(iEntity, var_origin, testorigin) // 获取实体的原点（通常是脚底中心）
-
-    new Float:Origin_F[3], Float:Origin_R[3], Float:Origin_L[3], Float:Origin_B[3]
-    xs_vec_copy(testorigin, Origin_L) ; xs_vec_copy(testorigin, Origin_F)
-    xs_vec_copy(testorigin, Origin_B) ; xs_vec_copy(testorigin, Origin_R)
-
-    // 基于实体的原点和提供的碰撞盒边缘，计算四个方向上的点
-    // 注意：fMax[0] 对应 X 轴正向，fMin[0] 对应 X 轴负向
-    // fMax[1] 对应 Y 轴正向，fMin[1] 对应 Y 轴负向
-    Origin_F[0] += fMax[0] // 前 (X轴正向)
-    Origin_B[0] += fMin[0] // 后 (X轴负向)
-    Origin_L[1] += fMax[1] // 左 (Y轴正向)
-    Origin_R[1] += fMin[1] // 右 (Y轴负向)
-
-    // 检查这四个点的内容
-    if(engfunc(EngFunc_PointContents, Origin_F) != CONTENTS_EMPTY ||
-       engfunc(EngFunc_PointContents, Origin_R) != CONTENTS_EMPTY ||
-       engfunc(EngFunc_PointContents, Origin_L) != CONTENTS_EMPTY ||
-       engfunc(EngFunc_PointContents, Origin_B) != CONTENTS_EMPTY)
-    {
-        return 0 // 如果任何一个点不是空的（即被实体或地图占据），返回 0（卡住）
+stock CheckStuck(iNpcEntity){
+    new Float:fOrigin[3]
+    get_entvar(iNpcEntity , var_origin , fOrigin)
+    engfunc(EngFunc_TraceMonsterHull, iNpcEntity, fOrigin, fOrigin, DONT_IGNORE_MONSTERS, iNpcEntity, 0)
+    if(get_tr2(0 , TR_StartSolid) || get_tr2(0 , TR_AllSolid) || !get_tr2(0, TR_InOpen)){
+        return true
     }
-
-    return 1 // 如果所有四个点都是空的，返回 1（没有卡住）
+    return false
 }
+
+// stock CheckStuck(iEntity, Float:fMin[3], Float:fMax[3])
+// {
+//     new Float:testorigin[3]
+//     get_entvar(iEntity, var_origin, testorigin) // 获取实体的原点（通常是脚底中心）
+
+//     new Float:Origin_F[3], Float:Origin_R[3], Float:Origin_L[3], Float:Origin_B[3]
+//     xs_vec_copy(testorigin, Origin_L) ; xs_vec_copy(testorigin, Origin_F)
+//     xs_vec_copy(testorigin, Origin_B) ; xs_vec_copy(testorigin, Origin_R)
+
+//     // 基于实体的原点和提供的碰撞盒边缘，计算四个方向上的点
+//     // 注意：fMax[0] 对应 X 轴正向，fMin[0] 对应 X 轴负向
+//     // fMax[1] 对应 Y 轴正向，fMin[1] 对应 Y 轴负向
+//     Origin_F[0] += fMax[0] // 前 (X轴正向)
+//     Origin_B[0] += fMin[0] // 后 (X轴负向)
+//     Origin_L[1] += fMax[1] // 左 (Y轴正向)
+//     Origin_R[1] += fMin[1] // 右 (Y轴负向)
+
+//     // 检查这四个点的内容
+//     if(engfunc(EngFunc_PointContents, Origin_F) != CONTENTS_EMPTY ||
+//        engfunc(EngFunc_PointContents, Origin_R) != CONTENTS_EMPTY ||
+//        engfunc(EngFunc_PointContents, Origin_L) != CONTENTS_EMPTY ||
+//        engfunc(EngFunc_PointContents, Origin_B) != CONTENTS_EMPTY)
+//     {
+//         return 0 // 如果任何一个点不是空的（即被实体或地图占据），返回 0（卡住）
+//     }
+
+//     return 1 // 如果所有四个点都是空的，返回 1（没有卡住）
+// }
 
 stock remove_weaponbox_pakitem(boxid){
     for(new i = 0 ; i < 6; i++){

@@ -22,6 +22,6 @@ public plugin_precache(){
 public NecoSKill(id){
     new username[32]
     get_user_name(id , username , charsmax(username))
-    m_print_color(0 , "!g[冰布提示]!t%s释放了猫姬技能：暂定" , username)
+    m_print_color(0 , "!g[冰布提示]!t%s释放了猫姬技能:暂定" , username)
     UTIL_EmitSound_ByCmd(0 , "kr_sound/necoact-Skill.wav")
 }

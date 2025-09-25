@@ -105,7 +105,7 @@ public plugin_init(){
 
     RegisterHam(Ham_Item_AddToPlayer, "weapon_c4", "fw_Item_AddToPlayer_Post", 1)
 
-    register_forward(FM_AddToFullPack , "Fw_AddToFullPack_Post" , true)
+    register_forward(FM_AddToFullPack , "Fw_AddToFullPack_Post" , 1)
 
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
@@ -123,9 +123,11 @@ public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
             hero[master] = false
             return FMRES_IGNORED
         }
-        if(!is_user_alive(master))
+        if(!is_user_alive(master)){
+            set_es(es , ES_Effects , EF_NODRAW)
             return FMRES_IGNORED
-        get_entvar(HOST , var_origin , PlayerOrigin)
+        }
+        get_entvar(master , var_origin , PlayerOrigin)
         PlayerOrigin[2] += 72.0
         engfunc(EngFunc_SetOrigin, ent, PlayerOrigin)
         set_es( es, ES_MoveType, MOVETYPE_FOLLOW )
@@ -212,6 +214,8 @@ public MakeHero(const id){
 }
 
 public GiveHeroWeapon(id){
+    if(!is_user_connected(id))
+        return
     new Rand = random_num(0,1)
     if(!Rand){
         GiveWeaponByNames("暗影狙击", id)
@@ -302,7 +306,7 @@ public GetModeleLv(modinx){
     if(modinx > sizeof modelLv){
         return modelLv[sizeof modelLv - 1 ]
     }
-    if(modinx){
+    if(modinx >= 0){
         return modelLv[modinx]
     }
     return 99999

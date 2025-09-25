@@ -51,5 +51,9 @@ public native_GetPlayerMul(id, nums){
             PlayerItem = get_member(PlayerItem , m_pNext)
         }
     }
-    return RetMul < 1.0 ? 1.0 : RetMul
+    if(RetMul < 1.0)
+        RetMul = 1.0
+    else if (RetMul > 3.0)
+        RetMul = 3.0
+    return RetMul
 }

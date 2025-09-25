@@ -14,6 +14,14 @@ new JinZhengEnSkillSpr[][]= {
 public plugin_init(){
     new plid = register_plugin("角色技能-金正恩" , "1.0" , "Bing")
     RegPlayerSkill(plid , "SunCall" , "jinzhengen" , 80.0)
+    register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
+}
+
+public event_roundstart(){
+    new ent = -1
+    while((ent = rg_find_ent_by_class(ent , "Sun")) > 0){
+        rg_remove_entity(ent)
+    }
 }
 
 public plugin_precache(){
@@ -78,7 +86,7 @@ public SunThink(ent){
     if(GameTime < FullThink || isDeadSun){
         return
     }
-    set_entvar(ent , var_fuser2 , GameTime + 0.5)
+    set_entvar(ent , var_fuser2 , GameTime + 1.0)
     new getent = -1 , owner = get_entvar(ent , var_owner)
     while((getent = rg_find_ent_by_class(getent ,"hostage_entity" , true)) > 0){
         if(get_entvar(getent , var_deadflag) == DEAD_DEAD )continue

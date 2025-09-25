@@ -286,6 +286,8 @@ public message_DeathMsg(msg_id, msg_dest, msg_ent)
 {
 	new szWeapon[64], id, iEntity//, iVic
 	id = get_msg_arg_int(1)
+	if(ExecuteHam(Ham_IsPlayer , id) == false)
+		return PLUGIN_CONTINUE
 	//iVic = get_msg_arg_int(2)
 	get_msg_arg_string(4, szWeapon, charsmax(szWeapon))
 	iEntity = get_member(id, m_pActiveItem)

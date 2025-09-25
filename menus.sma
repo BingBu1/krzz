@@ -75,6 +75,7 @@ public CreateMenu(id){
     menu_additem(menuid, "我卡关了", "10")
     menu_additem(menuid, "老虎机设置", "11")
     menu_additem(menuid, "切换视角", "12")
+    menu_additem(menuid, "查询掉难度情况", "13")
     menu_display(id, menuid)
 }
 
@@ -83,7 +84,7 @@ public ChangeCamMenu(id){
         new menuid = menu_create("抗日菜单", "ChangeCamHandle")
         menu_additem(menuid , "第三人称")
         menu_additem(menuid , "第一人称")
-        menu_display(menuid , id)
+        menu_display(id ,menuid)
     }
 }
 
@@ -144,56 +145,20 @@ public menuHandle(id,menu,item){
     }
     new infoid = str_to_num(info)
     switch(infoid){
-        case 0:{
-            //抗日武器
-            CreateWeaponMenu(id)
-        }
-        case 1:{
-            //大洋系统
-            client_cmd(id,"say /ammomenu")
-        }
-        case 2:{
-            //重返战场
-            ReSpawnPlayer(id)
-        }
-        case 3:{
-            //更改模型
-            client_cmd(id, "say /changemodle")
-        }
-        case 4: {
-            //下一张地图
-            client_cmd(id, "say nextmap")
-        }
-        case 5:{
-            //剩余时间
-            client_cmd(id, "say timeleft")
-        }
-        case 6:{
-            //难度调整
-            client_cmd(id, "say /lv")
-        }
-        case 7:{
-            //当前时间
-            client_cmd(id, "say thetime")
-        }
-        case 8:{
-            //武器菜单
-            client_cmd(id, "say givewpn")
-        }
-        case 9:{
-            //购买下局规则
-            client_cmd(id, "say /buyrule")
-        }
-        case 10:{
-            LvCheck(id)
-        }
-        case 11:{
-            //老虎机
-            client_cmd(id, "say /machine")
-        }
-        case 12:{
-            ChangeCamMenu(id)
-        }
+        case 0: CreateWeaponMenu(id)//抗日武器
+        case 1: client_cmd(id,"say /ammomenu")//大洋系统
+        case 2: ReSpawnPlayer(id)//重返战场
+        case 3: client_cmd(id, "say /changemodle")//更改模型
+        case 4: client_cmd(id, "say nextmap")//下一张地图
+        case 5: client_cmd(id, "say timeleft")//剩余时间
+        case 6: client_cmd(id, "say /lv") //难度调整
+        case 7: client_cmd(id, "say thetime")//当前时间
+        case 8: client_cmd(id, "say givewpn") //武器菜单
+        case 9: client_cmd(id, "say /buyrule") //购买下局规则
+        case 10: LvCheck(id) //查询是否卡关
+        case 11: client_cmd(id, "say /machine") //老虎机
+        case 12: ChangeCamMenu(id) //切换视角
+        case 13 : client_cmd(id  , "kr_checklv")//查询掉难度
     }
     menu_destroy(menu)
 }
@@ -238,19 +203,24 @@ public ReSpawnPlayer(id){
         m_print_color(id, "!g[冰布提示]!t你还活着不需要复活！！")
         return;
     }
-    if(IsReSpawn[id] == 5 ){
-        m_print_color(id, "!g[冰布提示]!t每局最多重生五次")
-        return
-    }
+    // if(IsReSpawn[id] >= 3 ){
+    //     m_print_color(id, "!g[冰布提示]!t每局最多重生三次")
+    //     return
+    // }
     if(get_member(id , m_iTeam) == TEAM_CT){
         m_print_color(id, "!g[冰布提示]!t汉奸无法使用复活")
+        return
+    }
+    new Float:nowammos = GetAmmoPak(id)
+    if(nowammos < 2.0){
+        m_print_color(id, "!g[冰布提示]!y你没有足够的大洋进行复活")
         return
     }
     ExecuteHamB(Ham_CS_RoundRespawn, id)
     new name[32]
     get_user_name(id, name,31)
     m_print_color(0, "!g[冰布提示]!t%s抗日战士康复出院，已重返战场。", name)
-    IsReSpawn[id]++
+    SubAmmoPak(id , 2.0)
 }
 
 public AddAmmo(id){

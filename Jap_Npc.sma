@@ -384,16 +384,20 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 }
 
 public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, damagebits){
-	ExecuteForward(Jpnpc_forwards[Jp_NpcOnDamagePost],_,this,idattacker,damage)
+	if(ExecuteHam(Ham_IsPlayer , idattacker) && get_member(idattacker , m_iTeam) != TEAM_CT){
+		ExecuteForward(Jpnpc_forwards[Jp_NpcOnDamagePost],_, this, idattacker, damage)
+	}
 	new Float:Hp
 	Hp = get_entvar(this,var_health)
 	if(Hp <= 0.0 || get_entvar(this , var_deadflag)){
 		ExecuteForward(Jpnpc_forwards[Jp_NpcKilled], _ , this, idattacker)
-		cs_set_user_money(idattacker, cs_get_user_money(idattacker) + KillMoney)
-		new frag = get_entvar(idattacker , var_frags)
-		set_entvar(idattacker , var_frags , frag + 5)
-		SendScoreInfo(idattacker, frag)
-		SendDeathMessage(FakeClient, idattacker)
+		if(ExecuteHam(Ham_IsPlayer , idattacker)){
+			cs_set_user_money(idattacker, cs_get_user_money(idattacker) + KillMoney)
+			new frag = get_entvar(idattacker , var_frags)
+			set_entvar(idattacker , var_frags , frag + 5)
+			SendScoreInfo(idattacker, frag)
+			SendDeathMessage(FakeClient, idattacker)
+		}
 		// DelSelf(this)
 	}
 }
@@ -466,7 +470,8 @@ public fw_HostageThink(id){
 		if(GetIsNpc(owner)){
 			ownerValid = (get_entvar(owner , var_deadflag) == DEAD_NO)
 		}else{
-			ownerValid = (is_valid_ent(owner) && is_user_alive(owner))
+			new owner_team = get_member(owner , m_iTeam)
+			ownerValid = (is_valid_ent(owner) && is_user_alive(owner) && owner_team == _:TEAM_TERRORIST)
 		}
 	}
 
@@ -476,7 +481,7 @@ public fw_HostageThink(id){
 
 	new target
 	if(ownerValid)
-		target = FindNearHuman(id ,owner)
+		target = FindNearHuman(id , owner)
 	else
 		target = FindNearHuman(id ,0)
 	
@@ -526,12 +531,12 @@ public SetDeadAct(id , hitGroup){
 }
 
 public native_CreateJpNpc(plugin_id, num_params){
-	// new id = get_param(1)
 	new FakeTeam = get_param(2)
 	new body = get_param(5)
+	new IsNpcCreate = get_param(6) // 是否为Npc创建
 	new Float:origin[3]
 	new Float:angles[3]
-	new origin_str[32]
+	static origin_str[32]
 	get_array_f(3, origin, 3)
 	get_array_f(4, angles, 4)
 
@@ -540,7 +545,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 		log_error(AMX_ERR_NONE , "创建人质实体失败")
 		return -1
 	}
-	if(FakeTeam == _:CS_TEAM_CT){
+	if(FakeTeam == _:CS_TEAM_CT && !IsNpcCreate){
 		new rets
 		ExecuteForward(Jpnpc_forwards[JP_NpcCreatePre] , rets , ent)
 		if(rets >= PLUGIN_HANDLED)
@@ -569,7 +574,7 @@ public native_CreateJpNpc(plugin_id, num_params){
 	set_prop_float(ent, "reainmtime", get_gametime())
 	set_prop_float(ent, var_BeAttackStopTime , get_gametime())
 
-	if(FakeTeam == _:CS_TEAM_CT){
+	if(FakeTeam == _:CS_TEAM_CT && !IsNpcCreate){
 		ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , ent)
 	}
 	// ArrayPushCell(NpcList , ent)
@@ -859,7 +864,7 @@ public FindNearHuman(ent, CurrentFollow) {
     get_entvar(ent, var_origin, origin);
 
     // 如果已有目标，就以它为基准距离
-    if (CurrentFollow > 0 && is_user_alive(CurrentFollow)) {
+    if (CurrentFollow > 0) {
         get_entvar(CurrentFollow, var_origin, targetOrigin);
         MinDistance = vector_distance(origin, targetOrigin);
         target = CurrentFollow;
