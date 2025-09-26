@@ -8,6 +8,7 @@
 #include <fakemeta_util>
 #include <fun>
 #include <kr_core>
+#include <xp_module>
 // #include <zombieplague>
 
 #define FLAG_ACESS 	ADMIN_RCON
@@ -142,7 +143,7 @@ public plugin_init()
 	
 	//System Ammor Packs
 	cvar_dmg_ap_allow = register_cvar("zp_lightz_dmg_ap_reward_allow", "1")		// Ganhar Ammo Packs Por Dano
-	cvar_ammodamage = register_cvar("zp_lightz_dmg_for_reward", "245") 			// Dmg Necessario Para Ganhar Ammo Packs
+	cvar_ammodamage = register_cvar("zp_lightz_dmg_for_reward", "1000") 			// Dmg Necessario Para Ganhar Ammo Packs
 	cvar_ammo_quantity  = register_cvar("zp_lightz_reward_ap_quantity", "2") 		// Quantia de Ammo Packs que ira ganhar por dano	
 	cvar_ammo_killed = register_cvar("zp_lightz_kill_reward_ap_quantity", "1000")	// Quantia de Ammo Packs que ira ganhar ao matar o Boss
 	
@@ -154,8 +155,15 @@ public plugin_init()
 }
 
 public plugin_natives(){
-	
+	register_native("Create_Boss_Boom" , "native_Create_Boss_Boom")
 }
+
+public native_Create_Boss_Boom(id , nums){
+	new Float:SpawnOrigin[3]
+	get_array_f(1 , SpawnOrigin , 3)
+	Game_Start(SpawnOrigin)
+}
+
 
 /*================================================================================
 [Plugin Precache]
@@ -176,10 +184,10 @@ public plugin_precache()
 		UTIL_Precache_Sound(CSO_Lightzombie[i])
 		
 	//Precache Music Round 
-	engfunc(EngFunc_PrecacheSound, ROUND_START)	
-	engfunc(EngFunc_PrecacheSound, ROUND_MUSIC)			
-	engfunc(EngFunc_PrecacheSound, ROUND_WIN)	
-	
+	// engfunc(EngFunc_PrecacheSound, ROUND_START)	
+	// engfunc(EngFunc_PrecacheSound, ROUND_MUSIC)			
+	// engfunc(EngFunc_PrecacheSound, ROUND_WIN)	
+	UTIL_Precache_Sound(ROUND_WIN)
 	m_iBlood[0] = precache_model("sprites/blood.spr")
 	m_iBlood[1] = precache_model("sprites/bloodspray.spr")	
 	exp_spr_id = precache_model("sprites/zerogxplode.spr")
@@ -253,9 +261,9 @@ public Camera_boss()
 /*================================================================================
 [Criar Boss]
 =================================================================================*/
-public Game_Start(id[])
+public Game_Start(Float:Sp_Origin[3])
 {
-	new spawnerid = id[0]
+	// new spawnerid = id[0]
 	if(pev_valid(Lightz_Ent))
 		engfunc(EngFunc_RemoveEntity, Lightz_Ent)
 	
@@ -266,14 +274,14 @@ public Game_Start(id[])
 		return
 	
 	Lightz_Ent = Lightz
-	new Float:Sp_origin[3],Float:angles[3],Float:vec[3]
-	get_entvar(spawnerid,var_origin , Sp_origin)
-	get_entvar(spawnerid,var_angles , angles)
-	angle_vector(angles,200.0,vec)
-	xs_vec_add(Sp_origin,vec,Sp_origin)
+	// new Float:Sp_origin[3],Float:angles[3],Float:vec[3]
+	// get_entvar(spawnerid,var_origin , Sp_origin)
+	// get_entvar(spawnerid,var_angles , angles)
+	// angle_vector(angles,200.0,vec)
+	// xs_vec_add(Sp_origin,vec,Sp_origin)
 	// Set Origin & Angles
 	// set_pev(Lightz, pev_origin, {2366.411376, -368.851348, 276.031250})
-	set_pev(Lightz,pev_origin,Sp_origin)	
+	set_pev(Lightz,pev_origin,Sp_Origin)	
 
 	Angles[1] = 180.0
 	
@@ -288,6 +296,7 @@ public Game_Start(id[])
 	set_pev(Lightz, pev_gamestate, 1)
 	set_pev(Lightz, pev_solid, SOLID_BBOX)
 	set_pev(Lightz, pev_movetype, MOVETYPE_PUSHSTEP)
+	set_pev(Lightz , pev_flags , FL_MONSTER)
 	
 	// Setar Tamanho do Lightz
 	new Float:maxs[3] = {70.0, 70.0, 160.0}
@@ -367,12 +376,7 @@ public fw_Lightz_Tracer_DMG(victim, inflictor, attacker, Float:damage, damagebit
 		while (g_damagedealt[attacker] > get_pcvar_num(cvar_ammodamage))
 		{
 			g_damagedealt[attacker] = 0
-			//zp_set_user_ammo_packs(attacker, zp_get_user_ammo_packs(attacker) + get_pcvar_num(cvar_ammo_quantity)) 
-			if(!invisibilidade)
-			{
-				// set_hudmessage(0, 255, 0, -1.0, 0.30, 0, 6.0, 0.5 );
-				// ShowSyncHudMsg(attacker, MSGSYNC, "[ + 2 Ammo Packs ]")
-			}
+			AddAmmoPak(attacker , 0.02)
 		}
 	}
 }
@@ -389,8 +393,8 @@ public Lightz_Killed(Lightz, attacker)
 		StopSound() 
 		new name[32]; get_user_name(attacker, name, 31)		
 		Fix_Death_Boss = true
-		// client_printcolor(0, "/g[ZP]/nO Player /g%s /n ganhou /g%d packs /npor matar o Light Zombie Boss", name,get_pcvar_num(cvar_ammo_killed))
-		// zp_set_user_ammo_packs(attacker, zp_get_user_ammo_packs(attacker) + get_pcvar_num(cvar_ammo_killed))
+		m_print_color(0 , "!g[冰布提示]!t%s击败了小斑比挫败了日军生化武器,获得了%d个大洋奖励!" , name , get_pcvar_num(cvar_ammo_killed))
+		AddAmmoPak(attacker , float(get_pcvar_num(cvar_ammo_killed)))
 	}
 	return HAM_SUPERCEDE
 }
@@ -403,12 +407,11 @@ public Remove_boss(Lightz)
 	PlaySound(0, ROUND_WIN)
 	engfunc(EngFunc_RemoveEntity, Lightz_Ent)
 	remove_entity(y_hpbar)		
-	server_cmd("sv_restartround 20")	
+	// server_cmd("sv_restartround 20")	
 	Boss_Create_Fix = false
-	// client_printcolor(0, "/g[ZP] /nAviso o Mapa Sera Reiniciado em 20 Secs Guardem os Seus Packs")
-	
-	//N�o Remover esta linha pode bugar o boss por completo ok
-	set_task(20.0, "Restart_Map_antibug")
+	server_cmd("endround 1")
+
+	// set_task(20.0, "Restart_Map_antibug")
 
 	remove_task(Lightz+TASK_DEATH)
 }
@@ -1169,12 +1172,13 @@ public Attack4_Special_5Lopp(Lightz)
 public Bombs_Random_Exps(ent)
 {
 	static Float:RanOrigin[10][3]
-	
+	static Float:fOrigin[3]
+	get_entvar(ent , var_origin , fOrigin)
 	for(new i = 0; i < 10; i++)
 	{
-		RanOrigin[i][0] = 487.928771 + random_float(-380.0, 380.0)
-		RanOrigin[i][1] = -12.379676 + random_float(-380.0, 380.0)
-		RanOrigin[i][2] = 286.0
+		RanOrigin[i][0] = fOrigin[0]+ random_float(-380.0, 380.0)
+		RanOrigin[i][1] = fOrigin[1] + random_float(-380.0, 380.0)
+		RanOrigin[i][2] = fOrigin[2] + 20.0
 		
 		Create_explosions(ent, RanOrigin[i])
 	}

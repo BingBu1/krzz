@@ -5,6 +5,13 @@
 #include <fakemeta>
 #include <sqlx>
 #include <xp_module>
+#include <bigint>
+
+
+#if defined Usedecimal
+    #define Decamil_MapStr "%d_Dec"
+#endif
+
 #define task_id 19190
 new bool:IsSqlLoad
 
@@ -16,9 +23,9 @@ new Float:AmmoPak[33],IsLoad[33]
 new bool:FirstInit[33]
 
 public plugin_init(){
-	register_plugin("弹药袋系统", "1.0", "Bing")
-
+    register_plugin("弹药袋系统", "1.0", "Bing")    
     register_concmd("Kr_AmmoAdd" , "AddAmmoAdmin" , ADMIN_RCON)
+    register_concmd("Kr_AmmoSet" , "SetAmmoAdmin" , ADMIN_RCON)
 }
 
 public AddAmmoAdmin(id, level, cid){
@@ -29,6 +36,15 @@ public AddAmmoAdmin(id, level, cid){
     new pl_id = read_argv_int(1)
     new Float:addammo = read_argv_float(2)
     AddAmmoPak(pl_id , addammo)
+}
+public SetAmmoAdmin(id, level, cid){
+    if (read_argc() < 3){
+        server_print("参数<id><ammo>");
+        return PLUGIN_HANDLED
+    }
+    new pl_id = read_argv_int(1)
+    new Float:ammo = read_argv_float(2)
+    SetAmmo(pl_id , ammo)
 }
 
 public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
@@ -71,10 +87,17 @@ public QueryPlayerAmmo(id){
     data[0] = id
     get_user_authid(id, steamid, charsmax(steamid))
     log_amx("玩家加入开始查询弹药袋。steamid : %s",steamid)
-    formatex(query, charsmax(query),
-    "SELECT steamid, pakammo \
-    FROM ammopaks WHERE steamid = '%s'",
-    steamid)
+    #if defined Usedecimal
+        formatex(query, charsmax(query),
+        "SELECT * \
+        FROM ammopaks WHERE steamid = '%s'",
+        steamid)
+    #else
+        formatex(query, charsmax(query),
+            "SELECT steamid, pakammo \
+            FROM ammopaks WHERE steamid = '%s'",
+            steamid)
+    #endif
     SQL_ThreadQuery(g_SqlTuple, "OnQueryPlayerAmmo", query, data ,sizeof data)
 }
 
@@ -92,6 +115,9 @@ public OnQueryPlayerAmmo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
     }
     get_user_authid(id, steamid, charsmax(steamid))
     get_user_name(id,name,charsmax(name))
+    #if defined Usedecimal
+        decimal_SqlPlayer(Query , steamid , name , Data , DataSize)
+    #else
     if(!SQL_NumResults(Query)){
         log_amx("%s不存在数据开始初始化 id : %s", name,steamid)
         formatex(querystr,charsmax(querystr),"INSERT INTO ammopaks (steamid,pakammo)\
@@ -107,7 +133,29 @@ public OnQueryPlayerAmmo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
             set_task(3.0, "GiveAmmoFirst", id + 1000,.flags = "b")
         }
     }
+    #endif
 }
+
+#if defined Usedecimal
+public decimal_SqlPlayer(Handle:Query , steamid[] , name[] , Data[] , DataSize){
+    new id = Data[0]
+    if(!SQL_NumResults(Query)){
+        new querystr[256]
+        log_amx("%s不存在数据开始初始化 id : %s", name,steamid)
+        formatex(querystr,charsmax(querystr),
+        "INSERT INTO ammopaks (steamid , pakammo , pakammo_decimal)\
+        VALUES ('%s', 0.0 , 0.0)", steamid)
+        SQL_ThreadQuery(g_SqlTuple, "OnInsertComplete", querystr, Data ,DataSize)
+        return
+    }
+    new Q_PakAmmo = SQL_FieldNameToNum(Query , "pakammo_decimal")
+    new decimal_string[32]
+    SQL_ReadResult(Query , Q_PakAmmo ,decimal_string,charsmax(decimal_string))
+    InitDec_Map(id , decimal_string)
+    IsLoad[id] = true
+}
+#endif
+
 public GiveAmmoFirst(ids){
     new id = ids - 1000
     if(FirstInit[id] == true && is_user_connected(id) && is_user_alive(id)){
@@ -130,11 +178,18 @@ public OnInsertComplete(FailState,Handle:Query,Error[],Errcode,Data[],DataSize){
     get_user_authid(id, steamid, charsmax(steamid));
     
     new querystr[256];
-    formatex(querystr, charsmax(querystr),
-    "SELECT steamid, pakammo \
-    FROM ammopaks WHERE steamid = '%s'",
-    steamid)
-    
+    #if defined Usedecimal
+        formatex(querystr, charsmax(querystr),
+        "SELECT * \
+        FROM ammopaks WHERE steamid = '%s'",
+        steamid)
+    #else
+        formatex(querystr, charsmax(querystr),
+            "SELECT steamid, pakammo \
+            FROM ammopaks WHERE steamid = '%s'",
+            steamid)
+    #endif
+
     SQL_ThreadQuery(g_SqlTuple, "OnQueryPlayerAmmo", querystr, Data, DataSize);
 }
 
@@ -145,7 +200,12 @@ public native_AddAmmoPak(pl_id, num){
     new Float:amount = get_param(2)
     if(!is_user_connected(id))
         return
+#if defined Usedecimal
+    AddDec_Map(id , amount)
+#else
     AmmoPak[id] += amount
+#endif
+    
 }
 
 public native_SubAmmoPak(pl_id, num){
@@ -155,16 +215,28 @@ public native_SubAmmoPak(pl_id, num){
     new Float:amount = get_param(2)
     if(!is_user_connected(id))
         return
+#if defined Usedecimal
+    SubDec_Map(id , amount)
+#else
     AmmoPak[id] -= amount
+#endif
 }
 
 public native_GetAmmoPak(pl_id, num){
-    if(!IsSqlLoad)
-        return 0.0
     new id = get_param(1)
-    if(!is_user_connected(id))
+#if defined Usedecimal
+    if(!IsSqlLoad || !is_user_connected(id)){
+        set_string(2 , "0.0" , get_param(3))
+        return
+    }
+    new buff[32]
+    GetDec_Map(id , buff , charsmax(buff))
+    set_string(2 , buff , charsmax(buff))
+#else
+    if(!IsSqlLoad || !is_user_connected(id))
         return 0.0
     return AmmoPak[id]
+#endif   
 }
 
 
@@ -178,9 +250,15 @@ public native_SaveAmmo(pl_id, num){
     if(!is_user_alive(id))
         return
     get_user_authid(id, steamid, charsmax(steamid))
-
-    formatex(querystr , charsmax(querystr) , "UPDATE ammopaks SET pakammo = %f WHERE steamid = '%s'" , AmmoPak[id] , steamid)
-
+#if defined Usedecimal
+    new DecAmmo[32]
+    GetDec_Map(id , DecAmmo , charsmax(DecAmmo))
+    formatex(querystr , charsmax(querystr) , "UPDATE ammopaks SET pakammo_decimal = %s \
+        WHERE steamid = '%s'" , DecAmmo , steamid)
+#else
+    formatex(querystr , charsmax(querystr) , "UPDATE ammopaks SET pakammo = %f \
+        WHERE steamid = '%s'" , AmmoPak[id] , steamid)
+#endif
     SQL_ThreadQuery(g_SqlTuple,"PlayerUpdate",querystr,data,sizeof data)
 }
 
@@ -191,7 +269,13 @@ public native_SetAmmo(pl_id, num){
     new Float:amount = get_param(2)
     if(!is_user_alive(id))
         return
+#if defined Usedecimal
+    new NewFloat[32]
+    formatex(NewFloat , charsmax(NewFloat), "%f" , amount)
+    InitDec_Map(id , NewFloat)
+#else
     AmmoPak[id] = amount
+#endif
 }
 
 public PlayerUpdate(FailState,Handle:Query,Error[],Errcode,Data[],DataSize){
@@ -204,3 +288,29 @@ public PlayerUpdate(FailState,Handle:Query,Error[],Errcode,Data[],DataSize){
 
     client_print_color(Data[0],print_chat,"[^3冰布]^1保存大洋数据成功。")
 }
+
+#if defined Usedecimal
+stock InitDec_Map(id , Value[]){
+    new Key[50]
+    formatex(Key , charsmax(Key) , Decamil_MapStr , id)
+    Initdecimal_Map(Key , Value)
+}
+
+stock AddDec_Map(id , Float:Value){
+    new Key[50]
+    formatex(Key , charsmax(Key) , Decamil_MapStr , id)
+    Adddecimal_Map(Key , Value)
+}
+
+stock SubDec_Map(id , Float:Value){
+    new Key[50]
+    formatex(Key , charsmax(Key) , Decamil_MapStr , id)
+    Subdecimal_Map(Key , Value)
+}
+
+stock GetDec_Map(id , GetDecBuff[] , len){
+    new Key[50]
+    formatex(Key , charsmax(Key) , Decamil_MapStr , id)
+    Getdecimal_Map(Key , GetDecBuff , len)
+}
+#endif

@@ -107,8 +107,14 @@ public BuyKillMark(id , item , bool:IsHave){
         return
     }
     new Float:BuyCost = MarkName[item][Data_cost]
+    new bool:HasAmmoToBuy
+#if defined Usedecimal
+    HasAmmoToBuy = Dec_cmp(id , BuyCost , ">")
+#else
     new Float:HasCost = GetAmmoPak(id)
-    if(BuyCost > HasCost){
+    HasAmmoToBuy = (HasCost > BuyCost)
+#endif
+    if(HasAmmoToBuy){
         m_print_color(id , "!g[冰布提示]!y你的大洋不足以购买")
         return
     }

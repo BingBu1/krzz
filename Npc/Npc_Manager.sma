@@ -181,9 +181,14 @@ public NpcBuyMenu(id, menu, item){
     
     new lv = GetLv(id)
     new Float:NeedAmmo = Kr_Npc[SelNpcid][Npc_Money]
+    new bool:IsHaveBuyAmmo
+#if defined Usedecimal
+    IsHaveBuyAmmo = Dec_cmp(id , NeedAmmo , ">=")
+#else
     new Float:Ammo = GetAmmoPak(id)
-
-    if(Ammo < NeedAmmo){
+    IsHaveBuyAmmo = (Ammo >= NeedAmmo)
+#endif
+    if(!IsHaveBuyAmmo){
         m_print_color(id , "[提示] !t 大洋不足。")
         menu_destroy(menu)
         return
@@ -233,7 +238,7 @@ public native_CreateNpcByTeam(nums , id){
     new NpcTeam = get_param(2)
     new Float:fOrigin[3]
     get_array_f(3 , fOrigin , sizeof fOrigin)
-    new Npc = CreateNpc(0 , Npcid , NpcTeam)
+    new Npc = CreateNpc(0 , Npcid , CsTeams:NpcTeam)
     engfunc(EngFunc_SetOrigin , Npc , fOrigin)
     return Npc
 }
@@ -269,10 +274,10 @@ stock CreateNpc(other , SelNpcid , CsTeams:NpcTeam = CS_TEAM_T){
 
     set_prop_int(npc , var_npcid , SelNpcid)
     set_prop_int(npc , var_master , other)
-    set_prop_int(npc , var_state , NpcState_FollowMaster)
+    set_prop_int(npc , var_state , _:NpcState_FollowMaster)
     set_prop_float(npc , var_deadtime , 0.0)
-    set_prop_int(npc , var_thinkstate , Npc_Thinking)
-    set_prop_int(npc , var_seqanim , Npc_IDLE)
+    set_prop_int(npc , var_thinkstate , _:Npc_Thinking)
+    set_prop_int(npc , var_seqanim , _:Npc_IDLE)
     set_prop_float(npc , var_flFlinchTime , get_gametime())
     set_prop_float(npc , var_lastattack , get_gametime())
     set_prop_float(npc , var_skillcd , get_gametime())
@@ -314,7 +319,7 @@ public native_NpcRegister(id , nums){
     Kr_Npc[Aiid][Npc_Run_seqid] = get_param(9)
     Kr_Npc[Aiid][Npc_Attack_seqid] = get_param(10)
     Kr_Npc[Aiid][Npc_Death_seqid] = get_param(11)
-    Kr_Npc[Aiid][Npc_DeadRemoveTime] = get_param(12)
+    Kr_Npc[Aiid][Npc_DeadRemoveTime] = get_param_f(12)
     Kr_Npc[Aiid][Npc_Money] = get_param_f(13)
     Kr_Npc[Aiid][NpcMode] = get_param(14)
     Kr_Npc[Aiid][Npc_ThinkRate] = 0.1
@@ -331,7 +336,7 @@ public native_NpcSetNameAndLevel(id , nums){
 
 public native_SetNpcHasSkill(id , nums){
     new Npcid = get_param(1)
-    new bool:HasSkill = get_param(2)
+    new HasSkill = get_param(2)
     Kr_Npc[Npcid][Npc_HasSkill] = HasSkill
 }
 
@@ -348,7 +353,7 @@ public native_NpcSetTinkRate(id , nums){
 public Ai_Think(npc_id){
     new FakeTeam = GetNpcFakeTeam(npc_id)
     //跳过默认NPC
-    if(FakeTeam == CS_TEAM_CT && !prop_exists(npc_id , var_npcid))
+    if(FakeTeam == _:CS_TEAM_CT && !prop_exists(npc_id , var_npcid))
         return HAM_IGNORED
     new Float:GameTime = get_gametime()
     new npc_regid = get_prop_int(npc_id , var_npcid)
@@ -411,17 +416,17 @@ public Ai_Think(npc_id){
             new Float:vDir[3] ,  Float:AttackOrig[3] , Float:vecVelocity[3] , Float:NewAngle[3]
             new Float:NextAttackTime = GameTime + Kr_Npc[npc_regid][Npc_AttackRate]
             xs_vec_sub(TargetOrigin, fOrigin, vDir)
-		    xs_vec_normalize(vDir, vDir)
-		    xs_vec_add(fOrigin, vDir, AttackOrig)
+            xs_vec_normalize(vDir, vDir)
+            xs_vec_add(fOrigin, vDir, AttackOrig)
             Stock_GetSpeedVector(fOrigin , TargetOrigin , 0.01 , vecVelocity)
             vector_to_angle(vecVelocity , NewAngle)
             if(NewAngle[0] > 90.0) NewAngle[0] = -(360.0 - NewAngle[0])
             NewAngle[0] = 0.0
             set_entvar(npc_id , var_angles , NewAngle)
             ExecuteForward(Kr_NpcDoAttack , _ , npc_id , m_AttackEnt)
-            SendAnim(npc_id , Kr_Npc[npc_regid][Npc_Attack_seqid] , ACT_RANGE_ATTACK1)
+            SendAnim(npc_id , Kr_Npc[npc_regid][Npc_Attack_seqid] , _:ACT_RANGE_ATTACK1)
             set_member(npc_id , m_fSequenceFinished , 0)
-            set_prop_int(npc_id , var_seqanim , Npc_Attack)
+            set_prop_int(npc_id , var_seqanim , _:Npc_Attack)
             set_prop_float(npc_id , var_lastattack ,NextAttackTime)
         }
         if(NpcLoadMode == NpcMode_Ranged){
@@ -429,7 +434,7 @@ public Ai_Think(npc_id){
         }
         return HAM_IGNORED
     }else if((NpcLoadMode == NpcMode_Warrior && disance >= 600.0) || NpcLoadMode == NpcMode_Ranged){
-        if(NpcState == NpcState_FollowMaster){
+        if(NpcState == _:NpcState_FollowMaster){
             cs_set_hostage_foll(npc_id , master)
         }
     }
@@ -437,15 +442,15 @@ public Ai_Think(npc_id){
 }
 
 public Ai_Think_Post(npc_id){
-    if(get_entvar(npc_id ,var_deadflag) == DEAD_DEAD || GetNpcFakeTeam(npc_id) == CS_TEAM_CT)
+    if(get_entvar(npc_id ,var_deadflag) == DEAD_DEAD || GetNpcFakeTeam(npc_id) == _:CS_TEAM_CT)
         return
     
-    new npc_regid = get_prop_int(npc_id , var_npcid)
-    new Float:NextThink = Kr_Npc[npc_regid][Npc_ThinkRate]
+    // new npc_regid = get_prop_int(npc_id , var_npcid)
+    // new Float:NextThink = Kr_Npc[npc_regid][Npc_ThinkRate]
     set_entvar(npc_id , var_nextthink , get_gametime() + 0.03)
 
     new SequenceFinished = get_member(npc_id , m_fSequenceFinished)
-    if(!SequenceFinished && get_prop_int(npc_id , var_seqanim) == Npc_Attack){
+    if(!SequenceFinished && get_prop_int(npc_id , var_seqanim) == _:Npc_Attack){
         return
     }
 
@@ -455,7 +460,7 @@ public Ai_Think_Post(npc_id){
 
     if(Speed > 135.0){
         new Seq = LookupActivity(npc_id , 4) //ACT_RUN
-        set_prop_int(npc_id , var_seqanim , Npc_Run)
+        set_prop_int(npc_id , var_seqanim , _:Npc_Run)
         if(Seq != -1){
             SendAnim(npc_id , Seq , 4)
             return
@@ -464,7 +469,7 @@ public Ai_Think_Post(npc_id){
     }else{
         if(Speed > 0.0){
             new Seq = LookupActivity(npc_id , 3) //ACT_WALK
-            set_prop_int(npc_id , var_seqanim , Npc_Walk)
+            set_prop_int(npc_id , var_seqanim , _:Npc_Walk)
             if(Seq != -1){
                 SendAnim(npc_id , Seq , 3)
                 return
@@ -472,7 +477,7 @@ public Ai_Think_Post(npc_id){
             SendAnim(npc_id , Kr_Npc[get_prop_int(npc_id , var_npcid)][Npc_Walk_seqid] , 3)
         }else{
             new Seq = LookupActivity(npc_id , 1) //ACT_IDLE
-            set_prop_int(npc_id , var_seqanim , Npc_IDLE)
+            set_prop_int(npc_id , var_seqanim , _:Npc_IDLE)
             if(Seq != -1){
                 SendAnim(npc_id , Seq , 1)
                 return
@@ -631,7 +636,7 @@ stock bool:Stock_CanSee(entindex1, entindex2 , &TrHit){
     return IsSee
 }
 
-stock TraceCanSee(entindex1, entindex2 , &TrHit){
+stock bool:TraceCanSee(entindex1, entindex2 , &TrHit){
 
 	new flags = get_entvar(entindex1, var_flags)
 	TrHit = 0

@@ -10,12 +10,12 @@
 #include <xp_module>
 #include <kr_core>
 
-#pragma semicolon 1
-#pragma compress 1
 #define m_pPlayer 41
 #define cost 0.1
-const Float:OICW_ShootDelay = 3.0;
+
+
 new Projectile_OICW;
+const Float:OICW_ShootDelay = 3.0;
 
 new String:Weapon_sound[5][64] = {
     "weapons/oicw_move_grenade.wav", 
@@ -45,12 +45,18 @@ public ItemSel_Post(id, items, Float:cost1){
 }
 
 public GiveWpn(id){
-    new Float:ammopak = GetAmmoPak(id);
-    if(ammopak < cost){
+    new bool:CanBuy
+#if defined Usedecimal
+	CanBuy = Dec_cmp(id , cost , ">=")
+#else
+	new Float:ammopak = GetAmmoPak(id)
+	CanBuy = (ammopak >= cost)
+#endif
+    if(!CanBuy){
         m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买");
         return;
     }
-    SetAmmo(id , ammopak - cost);
+    SubAmmoPak(id , cost);
     GiveWeaponByID(id, Weaponid);
 }
 

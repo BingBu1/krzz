@@ -88,12 +88,18 @@ public FreeGive(id){
 }
 
 public Getrpg(id){
+    new bool:CanBuy
+#if defined Usedecimal
+	CanBuy = Dec_cmp(id , cost , ">=")
+#else
 	new Float:ammopak = GetAmmoPak(id)
-    if(ammopak < cost){
+	CanBuy = (ammopak >= cost)
+#endif
+    if(!CanBuy){
         m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
         return
     }
-    SetAmmo(id , ammopak - cost)
+    SubAmmoPak(id , cost)
 	GiveWeaponByID(id, Waeponid)
 }
 
@@ -172,8 +178,8 @@ public m_Touch(toucher, touched){
 
 	new attacker = pev(toucher, pev_owner)
 	
-
-	rg_radius_damage(fOrigin, attacker, attacker, ROCKET_DAMAGE, 300.0, DMG_GENERIC)
+	rg_dmg_radius(fOrigin , attacker , attacker ,ROCKET_DAMAGE , 300.0 , CLASS_PLAYER , DMG_GENERIC)
+	// rg_radius_damage(fOrigin, attacker, attacker, ROCKET_DAMAGE, 300.0, DMG_GENERIC)
 	 //RadiusDamageEx(fOrigin,300.0,200.0,attacker,attacker,DMG_BLAST,RDFlag_Knockback)
 
 	if(pev_valid(touched)){

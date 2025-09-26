@@ -189,12 +189,19 @@ public Damge_DisableFall(this , attack , attackcaller , Float:damge , damgbit){
 public Native_Get_WhipSword(iPlugin, iParams)
 {
 	new clientIndex = get_param(1);
+	new bool:CanBuy
+#if defined Usedecimal
+	CanBuy = Dec_cmp(clientIndex , buy_cost , ">=")
+#else
 	new Float:ammos = GetAmmoPak(clientIndex)
-	if(ammos < buy_cost){
+	CanBuy = (ammopak >= buy_cost)
+#endif
+
+	if(!CanBuy){
 		m_print_color(clientIndex, "!g[冰布提示]大洋不足以购买此武器")
 		return
 	}
-	SetAmmo(clientIndex ,ammos - buy_cost)
+	SubAmmoPak(clientIndex , buy_cost)
 	if(clientIndex > 0 && clientIndex <= MAX_PLAYERS && playerTeam[clientIndex] != PLAYER_TEAM_ZOMBIE)
 	{
 		EnableHookChain(HC_AddPlayerItem);

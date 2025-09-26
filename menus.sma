@@ -12,7 +12,7 @@
 new Waeponid
 new WeaponName[MaxItem][64]
 new Float:WeaponCost[MaxItem]
-new IsReSpawn[33]
+// new IsReSpawn[33]
 
 new WpnForwad , OnCreateIteam_
 
@@ -188,8 +188,15 @@ public WpnMenuHandle(id,menu,item){
     }
     new infoid = str_to_num(info)
     new Float:buycost = WeaponCost[infoid]
+    new bool:IsHaveBuyAmmo
+#if defined Usedecimal
+    IsHaveBuyAmmo = Dec_cmp(id , buycost , ">=")
+#else
     new Float:nowammos = GetAmmoPak(id)
-    if(nowammos >= buycost){
+    IsHaveBuyAmmo = (nowammos >= buycost)
+#endif
+    
+    if(IsHaveBuyAmmo){
         ExecuteForward(WpnForwad, _, id, infoid, buycost)
         SetWpnMul(id, buycost)
     }else{
@@ -203,16 +210,19 @@ public ReSpawnPlayer(id){
         m_print_color(id, "!g[冰布提示]!t你还活着不需要复活！！")
         return;
     }
-    // if(IsReSpawn[id] >= 3 ){
-    //     m_print_color(id, "!g[冰布提示]!t每局最多重生三次")
-    //     return
-    // }
     if(get_member(id , m_iTeam) == TEAM_CT){
         m_print_color(id, "!g[冰布提示]!t汉奸无法使用复活")
         return
     }
+    new bool:IsHaveBuyAmmo
+    const Float:buycost = 2.0
+#if defined Usedecimal
+    IsHaveBuyAmmo = Dec_cmp(id , buycost , ">=")
+#else
     new Float:nowammos = GetAmmoPak(id)
-    if(nowammos < 2.0){
+    IsHaveBuyAmmo = (nowammos >= buycost)
+#endif
+    if(!IsHaveBuyAmmo){
         m_print_color(id, "!g[冰布提示]!y你没有足够的大洋进行复活")
         return
     }
@@ -246,8 +256,7 @@ public AddAmmo(id){
     }
  
     new Float:buycost = WeaponCost[BuyAmmo]
-    new Float:nowammos= GetAmmoPak(id)
-    SetAmmo(id, nowammos - buycost)
+    SubAmmoPak(id, buycost)
 }
 
 public ItemSel_Post(id,item,Float:cost){
@@ -270,15 +279,21 @@ public ItemSel_Post(id,item,Float:cost){
 }
 
 public GiveHeal_f(id){
-    new Float:m_Ammo = GetAmmoPak(id)
+    new bool:IsHaveBuyAmmo
     new Float:BuyCost = WeaponCost[GiveHeal]
-    if(m_Ammo > BuyCost){
+#if defined Usedecimal
+    IsHaveBuyAmmo = Dec_cmp(id , BuyCost , ">=")
+#else
+    new Float:nowammos = GetAmmoPak(id)
+    IsHaveBuyAmmo = (nowammos >= BuyCost)
+#endif
+    if(IsHaveBuyAmmo){
         new Float:C_Heal = get_entvar(id , var_health)
         if(C_Heal >= 100.0){
             m_print_color(id, "!g[提示] 您很健康不需要治疗")
             return
         }
-        SetAmmo(id, m_Ammo - BuyCost)
+        SubAmmoPak(id, BuyCost)
         if(C_Heal + 10.0 > 100.0){
             set_entvar(id , var_health, 100.0)
             return
@@ -290,13 +305,19 @@ public GiveHeal_f(id){
 }
 
 public Buy_Ammo(id){
-    new Float:buycost = WeaponCost[BuyAmmo]
-    new Float:nowammos= GetAmmoPak(id)
-    if(nowammos >= buycost){
-        AddAmmo(id)
-    }else{
+    new Float:BuyCost = WeaponCost[BuyAmmo]
+    new bool:IsHaveBuyAmmo
+#if defined Usedecimal
+    IsHaveBuyAmmo = Dec_cmp(id , BuyCost , ">=")
+#else
+    new Float:nowammos = GetAmmoPak(id)
+    IsHaveBuyAmmo = (nowammos >= BuyCost)
+#endif
+    if(!IsHaveBuyAmmo){
         m_print_color(id, "!g[冰布提醒]!y你的大洋不够。")
+        return
     }
+    AddAmmo(id)
 }
 
 LvCheck(id){

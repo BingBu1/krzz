@@ -228,8 +228,14 @@ public Native_Get_Divinespear(iPlugin, iParams)
 {
 	new clientIndex = get_param(1);
     new Float:buy_cost = get_param_f(2)
-	new Float:ammos = GetAmmoPak(clientIndex)
-	if(ammos < buy_cost){
+    new bool:CanBuy
+#if defined Usedecimal
+	CanBuy = Dec_cmp(clientIndex , buy_cost , ">=")
+#else
+	new Float:ammopak = GetAmmoPak(id)
+	CanBuy = (ammopak >= buy_cost)
+#endif
+	if(!CanBuy){
 		m_print_color(clientIndex, "!g[冰布提示]大洋不足以购买此武器")
 		return
 	}

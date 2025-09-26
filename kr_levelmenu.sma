@@ -95,8 +95,14 @@ public ReLv(id){
 }
 
 public AddLvByAmmo(id, Float:NeedAmmo, AddLv){
+    new bool:HasAmmoBuy
+#if defined Usedecimal
+    HasAmmoBuy = Dec_cmp(id , NeedAmmo , ">")
+#else
     new Float:Ammo = GetAmmoPak(id)
-    if(NeedAmmo > Ammo){
+    HasAmmoBuy = (Ammo > NeedAmmo)
+#endif
+    if(!HasAmmoBuy){
         m_print_color(id, "!g[冰布提醒] !y您的大洋不足")
         return
     }
@@ -111,7 +117,7 @@ public AddLvByAmmo(id, Float:NeedAmmo, AddLv){
         Rt_Ammo *= float(setlv - MaxLv)
         NeedAmmo -= Rt_Ammo
         setlv = MaxLv
-        SetAmmo(id, Ammo - NeedAmmo)
+        SubAmmoPak(id, NeedAmmo)
         Setleavel(setlv)
         m_print_color(id, "!g[冰布提醒] !t难度最大支持1300,已返回多余%f弹药袋" , Rt_Ammo)
         m_print_color(0, "!g[冰布提醒] !y%s将当前难度提升了!g%d!y等级(%d当前等级)",username, AddLv,Getleavel())
@@ -120,7 +126,7 @@ public AddLvByAmmo(id, Float:NeedAmmo, AddLv){
         m_print_color(id, "!g[冰布提醒] !t难度最大支持%d" , MaxLv)
         return
     }
-    SetAmmo(id, Ammo - NeedAmmo)
+    SubAmmoPak(id, NeedAmmo)
     Setleavel(setlv)
     m_print_color(0, "!g[冰布提醒] !y%s将当前难度提升了!g%d!y等级(%d当前等级)",username, AddLv,Getleavel())
 }

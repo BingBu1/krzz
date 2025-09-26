@@ -105,7 +105,7 @@ new Float:ProectPlayerTime//开局保护玩家不被直接突脸
 //前面为origin后面为angles
 new Float:NewSpawn[33][6],NewSpawnNums
 
-new rgSpawn,lvadd
+new rgSpawn , lvadd , bool:IsSpawnBoss
 
 new p_floodtime
 
@@ -140,6 +140,7 @@ public plugin_init(){
     register_clcmd("say /me","ShowPlayerInfo")
     register_srvcmd("KR_GoToCt", "ChangTeamToCt")
     register_srvcmd("Kr_EndRound", "KrEndRound")
+    register_srvcmd("Kr_BossSpawnEnable", "SpawnBossEnable")
 
     bind_pcvar_float(register_cvar("clear_weaponbox","120.0"), ClearWaeponTime)    
 
@@ -195,6 +196,11 @@ public FuckMapTank(){
 public KrEndRound(){
     remove_entity_name("hostage_entity")
     ChangeJudian()
+}
+
+public SpawnBossEnable(){
+    IsSpawnBoss = true
+    m_print_color(0 , "!g[冰布提示]!y本局将会出现BOSS")
 }
 
 public SavePlayers(){
@@ -263,7 +269,7 @@ public NPC_KillPlayer(this , killer){
 
 CreateHanJianMenu(id){
     new newTConut = get_member_game(m_iNumTerrorist)
-    if(newTConut == 1 || get_user_team(id) == _:CS_TEAM_CT){
+    if(newTConut == 1 || get_user_team(id) == _:CS_TEAM_CT || GetJuDianNum() >= 7){
         return
     }
     new menu = menu_create("大日本黄军俘虏了你" , "HanjianHandle")
@@ -313,7 +319,7 @@ SellBoss(id){
     new username[32]
     get_user_name(id , username , 31)
     m_print_color(id , "!g[冰布提示]该死的%s向日军出卖我军机密(本局可能出现BOSS)" , username)
-    AddAmmoPak(id , 2.0)
+    IsSpawnBoss = true
 }
 
 public SavePlayer_Buy(id){
@@ -335,20 +341,19 @@ public GameDesc(){
 }
 
 public fwSpawn(iEntity){
-    if(!pev_valid(iEntity)) 
-	    return FMRES_IGNORED
-	
-	static classname[33]
-    pev(iEntity , pev_classname , classname , charsmax(classname))
-	for(new i = 0; i < sizeof g_remove_entities; ++i)
-	{
-	    if(strcmp(classname, g_remove_entities[i]))
-	    continue
-	
-	    rg_remove_entity(iEntity)
-	    return FMRES_SUPERCEDE
-	}
-	return FMRES_IGNORED
+    if(is_nullent(iEntity)) 
+        return FMRES_IGNORED
+
+    static classname[33]
+    get_entvar(iEntity , var_classname , classname , charsmax(classname))
+    for(new i = 0; i < sizeof g_remove_entities; ++i){
+        if(strcmp(classname, g_remove_entities[i]))
+            continue
+
+        rg_remove_entity(iEntity)
+        return FMRES_SUPERCEDE
+    }
+    return FMRES_IGNORED
 }
 
 public m_CheckMap(this){
@@ -420,13 +425,15 @@ public ChangTeamToCt(){
 }
 
 public event_roundstart(){
+    IsSpawnBoss = false;
     Current_judian = 0;
     NpcNum_level = SpawnPonitNpcNum[Current_judian];
     CurrentNpsMaxnum = GetCurrentJuDianMaxSpawn();
     CanSpawnNum = CurrentNpsMaxnum;
     CurrentNpcs = CurrentNpsMaxnum;
     ProectPlayerTime = get_gametime() + 3.0;
-
+    remove_entity_name("LightZombie")
+    remove_entity_name("env_sprite")
     //玩家相关
     arrayset(TakeDamge,0,sizeof(TakeDamge))
     new i = 0
@@ -515,23 +522,29 @@ public ShowHud(){
             ShowSyncHudMsg(i,Hud_Damage,"伤害计数: %.1f" , TakeDamge[i])
 
             new lv,xp,XpNeed
-            new Float:Ammo
             new name[32]
             lv = GetLv(i)
             xp = GetXp(i)
-            // XpNeed = GetXpNeed(i) - GetXp(i)
-            Ammo = GetAmmoPak(i)
+        #if defined Usedecimal
+            new Ammo[32]
+            GetAmmoPak(i , Ammo , charsmax(Ammo))
+        #else
+            new Float:Ammo = GetAmmoPak(i)
+        #endif
             new xpstr[50],xpneedstr[50]
             GetXpBingInt(i , xpstr , 49)
             GetXpNeedBingInt(i , xpneedstr , 49)
             new const MaxLen = sizeof LvName
             copy(name, 31 , LvName[min(lv/50 , MaxLen - 1)])
             set_hudmessage(0,255,100,-1.0,0.9,.holdtime = 2.0)
-            ShowSyncHudMsg(i,Hud_xp,
-            "【当前等级】: %d 【当前积分】:%s 【需求积分】:%s^n【你的大洋】:%.2f 【军衔】:%s" , 
-            lv,xpstr,xpneedstr,Ammo,name
+        #if defined Usedecimal
+            new ShowHud[] = "【当前等级】: %d 【当前积分】:%s 【需求积分】:%s^n【你的大洋】:%s 【军衔】:%s"
+        #else
+            new ShowHud[] = "【当前等级】: %d 【当前积分】:%s 【需求积分】:%s^n【你的大洋】:%0.2f 【军衔】:%s"
+        #endif
+            ShowSyncHudMsg(i, Hud_xp , ShowHud, 
+            lv , xpstr , xpneedstr , Ammo, name
             )
-            
         }
     }
 }
@@ -855,13 +868,14 @@ public NPC_Killed(this , killer){
     if(KrGetFakeTeam(this) != _:CS_TEAM_T && ExecuteHam(Ham_IsPlayer , killer)){
         ReSpawnEnt(this)
         new Judian = GetJuDianNum()
-        if(--CurrentNpcs <= 0){
+        CurrentNpcs--
+        if(CurrentNpcs <= 0){
             set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
         }
         new lv = Current_judian
         switch(lv){
             case 0 .. 5 : AddKillRiMin(killer)
-            case 6 , 7 : AddKillRiBing(killer)
+            case 6,7 : AddKillRiBing(killer)
         }
         if(!is_tank(this)){
             AddKillRiBenJunGuan(killer)
@@ -994,6 +1008,19 @@ public Npc_SpawnThink(ent){
     return
 }
 
+native Create_Boss_Boom(const Float:CreateOrigin[3])
+
+public NPC_CreatePost(ent){
+    if(!IsSpawnBoss || GetJuDianNum() < 8)
+        return
+    new Float:fOrigin[3]
+    CanSpawnNum = 0
+    CurrentNpcs = 1
+    get_entvar(ent , var_origin , fOrigin)
+    rg_remove_entity(ent)
+    Create_Boss_Boom(fOrigin)
+}
+
 ReSpawnEnt(jpid){
     new Float:Origin[3]
     new owner = Get_Master(jpid)
@@ -1026,41 +1053,41 @@ public NPC_ThinkPre(id){
 //仅做伤害记录
 public Npc_OnDamagePost(this,attacker,Float:Damage){
     static PlayerDamgeInc[33]
-    if(is_valid_ent(attacker) && is_user_alive(attacker)){
-        new Float:New_Damage = floatmin(Damage, 20000.0) //禁止伤害非常高的逆天万一
+    if(!is_valid_ent(attacker) || !is_user_alive(attacker))
+        return
+    new AddxpBase = 1
+    new Float:New_Damage = floatmin(Damage, 20000.0) // 限制异常伤害-Fuck Map Tank
+    TakeDamge[attacker] += New_Damage
+    XpDamage[attacker] += New_Damage
+    new lv = Getleavel()
 
-        TakeDamge[attacker] += New_Damage
-        XpDamage[attacker] += New_Damage
-        new lv = Getleavel()
-        static AddxpBase = 1
-        if( lv < 90){
-            AddxpBase = 1
-            lvadd = (Getleavel() / 10)  * AddxpBase
-        }else if(lv < 500){
-            AddxpBase = 4
-            lvadd = (Getleavel() / 10)  * AddxpBase
-        }else if(lv < 999){
-             AddxpBase = 6
-             lvadd = (Getleavel() / 10)  * AddxpBase
-        }else if(lv >= 1000){
-            AddxpBase = 8
-            lvadd = (Getleavel() / 10)  * AddxpBase
-        }
+    if( lv < 90){
+        AddxpBase = 1
+    }else if(lv < 500){
+        AddxpBase = 4
+    }else if(lv < 999){
+         AddxpBase = 6
+    }else if(lv >= 1000){
+        AddxpBase = 8
+    }
 
-        if(XpDamage[attacker] >= 1000.0){
-            new daminc = floatround(XpDamage[attacker]) / 1000
-            new RealAddxp = 3 + lvadd
-            RealAddxp *= daminc
-            RealAddxp *= floatround(GetPlayerMul(attacker))
-            XpDamage[attacker] -= float(daminc) * 1000.0
-            AddXp(attacker, RealAddxp)
-            AddAmmoPak(attacker, 0.01 * float(daminc))
-            PlayerDamgeInc[attacker] += daminc
-            if(PlayerDamgeInc[attacker] >= 20){
-                AddXp(attacker , 100)
-                PlayerDamgeInc[attacker] = 0
-                m_print_color(attacker , "!g[积分奖励]!t您达到积分奖励条件奖励100积分")
-            }
+    lvadd = (Getleavel() / 10)  * AddxpBase
+
+    // ====== 伤害转经验 & 金钱 ======
+    const Float:DamgeToAmmo = 3000.0
+    if(XpDamage[attacker] >= DamgeToAmmo){
+        new daminc = floatround(XpDamage[attacker]) / floatround(DamgeToAmmo)
+        new RealAddxp = 3 + lvadd * daminc
+        RealAddxp *= floatround(GetPlayerMul(attacker))
+        XpDamage[attacker] -= float(daminc) * DamgeToAmmo
+        AddXp(attacker, RealAddxp)
+        AddAmmoPak(attacker, 0.01 * float(daminc))
+        PlayerDamgeInc[attacker] += daminc
+        if(PlayerDamgeInc[attacker] >= 80){
+            const Xp_Award = 560
+            AddXp(attacker , Xp_Award)
+            PlayerDamgeInc[attacker] = 0
+            m_print_color(attacker , "!g[积分奖励]!t您达到积分奖励条件奖励积分%d" , Xp_Award)
         }
     }
 }

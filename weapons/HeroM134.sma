@@ -6,7 +6,6 @@
 #include <engine>
 #include <cstrike>
 #include <kr_core>
-#include <xp_module>
 #include <xs>
 
 #define Get_BitVar(%1,%2)		(%1 & (1 << (%2 & 31)))
@@ -42,15 +41,13 @@ new HasWaepon
 
 new FW_OnFreeEntPrivateData
 
-new Weaponid
-
 new Sounds[][] ={
     "weapons/HeroGun/m249-1.wav",
     "weapons/HeroGun/m249-2.wav",
     "AVV10/Vortigaunt/avv10_explode2.wav"
 }
 
-new KickBackHandle, FireBulletsHandle, ExpSprId
+new ExpSprId
 
 new bool:FireKickBack
 public fw_UpdateClientData_Post(Player, SendWeapons, CD_Handle)
@@ -58,20 +55,19 @@ public fw_UpdateClientData_Post(Player, SendWeapons, CD_Handle)
     new wpn = get_member(Player , m_pActiveItem)
     if(is_nullent(wpn))
         return FMRES_IGNORED
-	if(!is_user_alive(Player) || get_entvar(wpn , var_impulse) == WaeponIDs) {
+    if(!is_user_alive(Player) || get_entvar(wpn , var_impulse) == WaeponIDs) {
         return FMRES_IGNORED
     }
-        
-	set_cd(CD_Handle, CD_flNextAttack, get_gametime() + 0.001)
-	return FMRES_IGNORED
+    set_cd(CD_Handle, CD_flNextAttack, get_gametime() + 0.001)
+    return FMRES_IGNORED
 }
+
 public plugin_init(){
-    new plid = register_plugin("英雄机枪", "1.0", "Bing")
+    register_plugin("英雄机枪", "1.0", "Bing")
     RegisterHookChain(RG_CreateWeaponBox , "m_CreateWaeponBox_Post" , true)
     RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
     RegisterHookChain(RG_CBasePlayer_AddPlayerItem, "m_AddPlayerItem")
-    KickBackHandle = RegisterHookChain(RG_CBasePlayerWeapon_KickBack, "m_KickBack")
-    // FireBulletsHandle = RegisterHookChain(RG_CBaseEntity_FireBullets3, "m_FireBullets3")
+    RegisterHookChain(RG_CBasePlayerWeapon_KickBack, "m_KickBack")
 
     register_forward(FM_UpdateClientData , "fw_UpdateClientData_Post")
 
@@ -81,14 +77,7 @@ public plugin_init(){
 
     RegisterHam(Ham_Weapon_PrimaryAttack , HeroGun , "m_PrimaryAttack")
     RegisterHam(Ham_Weapon_PrimaryAttack , HeroGun , "m_PrimaryAttack_Post" , true)
-
-    // register_forward(FM_EmitSound , "fw_EmitSound")
-    
-    // register_clcmd("GiveHeroGun", "GiveHeroGunFunc")
     register_concmd("GiveHeroGun", "GiveHeroGunFunc")
-    //register_clcmd("say /buy_HeroGun", "BuyHeroGun")
-    //Weaponid = BulidWeaponMenu("速杀阴魔", cost)
-    //BulidCrashGunWeapon("速杀银魔", W_MODEL , "FreeGive", plid)
 }
 
 public plugin_precache(){
@@ -203,26 +192,26 @@ public FreeGive(id){
     client_print(id, print_center, "购买成功！攻击力+1.5倍")
 }
 
-public BuyHeroGun(id){
-    if(access(id ,ADMIN_KICK)){
-        //管理员直接获取
-        goto GetWpn
-    }
-    new Float:ammopak = GetAmmoPak(id)
-    if(ammopak < cost){
-        m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
-        return
-    }
-    SetAmmo(id , ammopak - cost)
-GetWpn:
-    new wpn = rg_give_custom_item(id , HeroGun , GT_DROP_AND_REPLACE, WaeponIDs)
-    Set_BitVar(HasWaepon, id)
-    rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
-    rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
-    set_member(wpn, m_Weapon_iClip, CLIP)
-    rg_set_user_bpammo(id,WEAPON_MP5N,Max_bpammo)
-    client_print(id, print_center, "购买成功！攻击力+1.5倍")
-}
+// public BuyHeroGun(id){
+//     if(access(id ,ADMIN_KICK)){
+//         //管理员直接获取
+//         goto GetWpn
+//     }
+//     new Float:ammopak = GetAmmoPak(id)
+//     if(ammopak < cost){
+//         m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
+//         return
+//     }
+//     SetAmmo(id , ammopak - cost)
+// GetWpn:
+//     new wpn = rg_give_custom_item(id , HeroGun , GT_DROP_AND_REPLACE, WaeponIDs)
+//     Set_BitVar(HasWaepon, id)
+//     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
+//     rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
+//     set_member(wpn, m_Weapon_iClip, CLIP)
+//     rg_set_user_bpammo(id,WEAPON_MP5N,Max_bpammo)
+//     client_print(id, print_center, "购买成功！攻击力+1.5倍")
+// }
 
 public GiveHeroGunFunc(){
     new argc = read_argc()

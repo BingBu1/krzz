@@ -46,8 +46,15 @@ public GiveAmmo(id,menu,item){
         menu_destroy(menu)
         return
     }
+    new bool:IsHasAmmo
+    const MIN_TRANSFER = 2100.0
+#if defined Usedecimal
+    IsHasAmmo = Dec_cmp(id , MIN_TRANSFER , ">")
+#else
     new Float:ammo = GetAmmoPak(id)
-    if(ammo < 2100.0){
+    IsHasAmmo = (ammo > MIN_TRANSFER)
+#endif
+    if(!IsHasAmmo){
         menu_destroy(menu)
         m_print_color(id, "!g[冰布提示]转账最少需要2100大洋。" )
         return
@@ -74,11 +81,18 @@ public GivePlayerMoney(id){
         m_print_color(id, "!g[冰布提示]错误，您要转账的对象不属于人类或者已离线不存在服务器")
         return
     }
-    new money[32] , Float:hasmoney
+    new money[32]
     read_argv(1, money, charsmax(money))
     new Float:giveammo = str_to_float(money)
-    hasmoney = GetAmmoPak(id)
-    if(hasmoney < giveammo){
+    new bool:IsHaveAmmo
+#if defined Usedecimal
+    IsHaveAmmo = Dec_cmp(id , giveammo , ">")
+#else
+    new Float:hasmoney = GetAmmoPak(id)
+    IsHaveAmmo = (hasmoney > giveammo)
+#endif
+    
+    if(!IsHaveAmmo){
         m_print_color(id, "!g[冰布提示]你的大洋不够")
         return
     }
@@ -132,10 +146,8 @@ public MoneyCallback(id){
         m_print_color(id, "!g[冰布提示]您无法兑换可能是金钱不足或不足5w")
         return
     }
-    new Float:ammopak = GetAmmoPak(id)
     new Float:get = float(cost) / 50000.0
-    ammopak += get
-    SetAmmo(id, ammopak)
+    AddAmmoPak(id, get)
     cs_set_user_money(id, m_money - cost)
     m_print_color(id, "!g[冰布提示]您兑换了%f块大洋", get)
 }
@@ -147,10 +159,8 @@ public AllMoneyToAmmo(id){
         return
     }
     m_money = floatround(float(m_money) * 0.8)
-    new Float:ammopak = GetAmmoPak(id)
     new Float:get = float(m_money) / 50000.0
-    Float:ammopak += get
-    SetAmmo(id, ammopak)
+    AddAmmoPak(id, get)
     cs_set_user_money(id, 0)
     m_print_color(id, "!g[冰布提示]您兑换了%f块大洋", get)
 }

@@ -198,7 +198,7 @@ public CreateBuyNextRule(const id){
 
     for(new i = 0 ; i < size ; i++){
         num_to_str(i , info , charsmax(info))
-        formatex(text , charsmax(text) , "\r%s [10.0大洋]" , HumanRule[i])
+        formatex(text , charsmax(text) , "\r%s [18.0大洋]" , HumanRule[i])
         menu_additem(menu , text, info)
     }
     menu_display(id , menu)
@@ -209,8 +209,15 @@ public BuyRule(id , menu , item){
         menu_destroy(menu)
         return
     }
+    const Float:RuleBuyCost = 18.0
+    new bool:CanBuyRule
+#if defined Usedecimal
+    CanBuyRule = Dec_cmp(id , RuleBuyCost , ">=")
+#else
     new Float:ammo = GetAmmoPak(id)
-    if(ammo < 10.0){
+    CanBuyRule = (ammo >= RuleBuyCost)
+#endif
+    if(!CanBuyRule){
         m_print_color(id , "!g[提示]!y您的大洋不足")
         menu_destroy(menu)
         return
@@ -589,8 +596,12 @@ stock JpBoom(Npc){
                 damageFactor = 0.0
             new Float:actualDamage = minDamage + (maxDamage - minDamage) * damageFactor
             ExecuteHamB(Ham_TakeDamage , ent , Npc, GetFakeClient() , actualDamage , DMG_CRUSH)
+            new Health = get_entvar(ent , var_health)
+            if(Health <= 0.0)
+                ExecNpcKillCallBack(ent , Npc)
         }
     }
+    
     new iOrigin[3]
     iOrigin[0] = floatround(fOrigin[0])
     iOrigin[1] = floatround(fOrigin[1])

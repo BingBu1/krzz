@@ -152,6 +152,11 @@ public plugin_natives(){
 	register_native("GetFakeClient","native_GetFakeClient")
 	register_native("KrGetFakeTeam" , "getnpc_FakeTeam" , 1)
 	register_native("GetNpcList" , "KrGetNpcList" , 1)
+	register_native("ExecNpcKillCallBack" , "native_ExecNpcKillCallBack")
+}
+
+public native_ExecNpcKillCallBack(){
+	ExecuteForward(Jpnpc_forwards[Jp_NpcKillPlayer] , _ , get_param(1) , get_param(2))
 }
 
 Float:ClacLvDamageReduction(){
@@ -607,8 +612,9 @@ public native_ReSpawn(id , nums){
 
 	SetActivity(Jpid , ACT_IDLE)
 
+	engfunc(EngFunc_SetModel , Jpid , Jp_Model[0])
 	engfunc(EngFunc_SetSize , Jpid , HULL_MIN , HULL_MAX)
-	engfunc(EngFunc_SetOrigin , Jpid , fOrigin)
+	// engfunc(EngFunc_SetOrigin , Jpid , fOrigin)
 	ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , Jpid)
 }
 

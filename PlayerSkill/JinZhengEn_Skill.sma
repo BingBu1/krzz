@@ -46,7 +46,7 @@ public SunCall(id){
     set_entvar(ent , var_origin , fOrigin)
     set_entvar(ent, var_rendermode, kRenderTransAdd)
     set_entvar(ent, var_renderamt, 255.0)
-    set_entvar(ent , var_fuser1 , get_gametime() + 20.0)
+    set_entvar(ent , var_fuser1 , get_gametime() + 25.0)
     set_entvar(ent , var_scale  , 3.0)
     set_entvar(ent , var_owner , id)
     SetThink(ent , "SunThink")
@@ -86,7 +86,7 @@ public SunThink(ent){
     if(GameTime < FullThink || isDeadSun){
         return
     }
-    set_entvar(ent , var_fuser2 , GameTime + 1.0)
+    set_entvar(ent , var_fuser2 , GameTime + 0.5)
     new getent = -1 , owner = get_entvar(ent , var_owner)
     while((getent = rg_find_ent_by_class(getent ,"hostage_entity" , true)) > 0){
         if(get_entvar(getent , var_deadflag) == DEAD_DEAD )continue

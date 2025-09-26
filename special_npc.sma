@@ -190,6 +190,8 @@ public CreateEliteNpc(ent , lv , Judian){
 }
 
 public NPC_CreatePost(ent){
+    if(is_nullent(ent) || !is_valid_ent(ent))
+        return
     new Judian_num = GetJuDianNum()
     new level = Getleavel()
     if(level > 30 && Judian_num <= 7 && BossNpc < MaxBossNpc){
@@ -529,6 +531,7 @@ stock FireBullets(this , target , Float:Damage = 1.0){
         heal = get_entvar(target,var_health)
         if(heal <=0.0){
             MakeDie(target,"被biu死了")
+            ExecNpcKillCallBack(target , this)
         }
     }
 }

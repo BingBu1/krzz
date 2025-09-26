@@ -214,13 +214,21 @@ public PvpCheck(id){
     }
     new PvPTarget = get_prop_int(id , "pvp")
     set_prop_int(id , "pvp" , 0)
+    new bool:CanPvpA , bool:CanPvpB
+#if !defined Usedecimal
     new PvpA_Ammo = GetAmmoPak(id)
     new PVpB_Ammo = GetAmmoPak(PvPTarget)
-    if(floatround(PvpA_Ammo) < (cost + 100)){
+    CanPvpA = (floatround(PvpA_Ammo) > (cost + 100))
+    CanPvpB = (floatround(PVpB_Ammo) > (cost + 100))
+#else
+    CanPvpA =  Dec_cmp(id , float(cost + 100), ">")
+    CanPvpB = Dec_cmp(PvPTarget , float(cost + 100), ">")
+#endif
+    if(!CanPvpA){
         m_print_color(id , "!g[冰布提示]你的余额不足以完成对赌。")
         return 
     }
-    if(floatround(PVpB_Ammo) < (cost + 100)){
+    if(!CanPvpB){
         m_print_color(id , "!g[冰布提示]对方的余额不足以完成对赌。")
         return 
     }
@@ -281,8 +289,15 @@ public client_slot_machine_win(const iPlayer, const iPrize)
 
 public client_slot_machine_spin(const iPlayer)
 {
+    new Float:NeedAmmo = float(PlayerBetAmmo[iPlayer])
+    new bool:HasAmooToSlot
+#if !defined Usedecimal
     new Float:Ammo = GetAmmoPak(iPlayer)
-    if(Ammo < float(PlayerBetAmmo[iPlayer])){
+    HasAmooToSlot = (Ammo >= NeedAmmo)
+#else
+    HasAmooToSlot = Dec_cmp(iPlayer , NeedAmmo , ">=")
+#endif
+    if(!HasAmooToSlot){
         m_print_color(iPlayer , "%L" , iPlayer, "NOT_ENOUGH_AMMO")
         return PLUGIN_HANDLED
     }

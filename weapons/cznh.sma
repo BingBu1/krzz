@@ -235,12 +235,18 @@ public Buycznh(id){
         //管理员直接获取
         goto GetWpn
     }
-    new Float:ammopak = GetAmmoPak(id)
-    if(ammopak < cost){
+    new bool:CanBuy
+#if defined Usedecimal
+	CanBuy = Dec_cmp(id , cost , ">=")
+#else
+	new Float:ammopak = GetAmmoPak(id)
+	CanBuy = (ammopak >= cost)
+#endif
+    if(!CanBuy){
         m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
         return
     }
-    SetAmmo(id , ammopak - cost)
+    SubAmmoPak(id , cost)
 GetWpn:
     new wpn = rg_give_custom_item(id , cznh , GT_DROP_AND_REPLACE, WaeponIDs)
     Set_BitVar(HasWaepon, id)

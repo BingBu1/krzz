@@ -140,7 +140,7 @@ public plugin_init()
 	
 	// Cache
 	register_clcmd("weapon_gungnir", "hook_weapon")
-	register_clcmd("say /buy_dylh", "zd_weapon_bought")
+	// register_clcmd("say /buy_dylh", "zd_weapon_bought")
 	register_concmd("KR_givedylh", "Give_Concmd")
 
 	Weaponid = BulidWeaponMenu("断域雷魂",cost)
@@ -174,12 +174,18 @@ public GiveWpn(id){
 
 public zd_weapon_bought(id)
 {
+    new bool:CanBuy
+#if defined Usedecimal
+	CanBuy = Dec_cmp(id , cost , ">=")
+#else
 	new Float:ammopak = GetAmmoPak(id)
-    if(ammopak < cost){
+	CanBuy = (ammopak >= cost)
+#endif
+    if(!CanBuy){
         m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
         return
     }
-    SetAmmo(id , ammopak - cost)
+    SubAmmoPak(id , cost)
 	Get_Base(id)
 }
 
