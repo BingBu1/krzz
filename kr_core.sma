@@ -87,7 +87,7 @@ new const hint[][] = {
 
 new gameconfigdir[] = "addons/amxmodx/configs/krzz"
 //当前据点剩余npc,据点等级,当前据点Npc有多少个重生点
-new CurrentNpsMaxnum,judian_leavel,NpcNum_level,CanSpawnNum
+new CurrentNpsMaxnum,judian_leavel,CanSpawnNum
 
 new call_forwards[kr_forwads]
 //8个据点分别默认是几个npc,根据放置的来
@@ -113,7 +113,7 @@ new Float:ClearWaeponTime
 
 new IsHanJian[33]
 
-new TrHandle
+new TrHandle , LvMaxNps ,PlayerKilled[33]
 
 public plugin_init(){
     register_plugin("抗日核心", "1.0", "Bing")
@@ -132,6 +132,8 @@ public plugin_init(){
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
     register_event("ResetHUD","eventHud","b")
 
+    bind_pcvar_num(register_cvar("Kr_MaxLvNpc" , "32000" , FCVAR_SERVER) , LvMaxNps) 
+
     unregister_forward(FM_Spawn, rgSpawn) 
     register_forward( FM_GetGameDescription, "GameDesc" )
 
@@ -141,6 +143,8 @@ public plugin_init(){
     register_srvcmd("KR_GoToCt", "ChangTeamToCt")
     register_srvcmd("Kr_EndRound", "KrEndRound")
     register_srvcmd("Kr_BossSpawnEnable", "SpawnBossEnable")
+
+    
 
     bind_pcvar_float(register_cvar("clear_weaponbox","120.0"), ClearWaeponTime)    
 
@@ -318,8 +322,12 @@ CnDie(id){
 SellBoss(id){
     new username[32]
     get_user_name(id , username , 31)
-    m_print_color(id , "!g[冰布提示]该死的%s向日军出卖我军机密(本局可能出现BOSS)" , username)
-    IsSpawnBoss = true
+    if(UTIL_RandFloatEvents(0.08)){
+        IsSpawnBoss = true
+        m_print_color(0 , "!g[冰布提示]该死的%s出售的关键情报，日军已研究出生化兵器将在关底出现！" , username)
+        return
+    }
+    m_print_color(0 , "!g[冰布提示]该死的%s向日军出卖我军机密，日军已在研究生化机密" , username)
 }
 
 public SavePlayer_Buy(id){
@@ -395,7 +403,7 @@ public NoReTeam(id){
         return PLUGIN_CONTINUE
     }
     if(is_valid_ent(id)){
-        new team = get_user_team(id) 
+        new CsTeams:team = cs_get_user_team(id) 
         if (team == CS_TEAM_CT || team == CS_TEAM_T){
             return PLUGIN_HANDLED
         }
@@ -420,14 +428,14 @@ public ChangTeamToCt(){
         get_user_name(id , name , charsmax(name))
         IsHanJian[id] = true
         m_print_color(0 , "!g【提醒】!t%s!y没顶住日军的折磨，成为了汉奸" , name)
-        UTIL_EmitSound_ByCmd(0 , Jp_EndRoundSound[random_num(cnGoTr , cnGoTr2)])
+        UTIL_EmitSound_ByCmd(0 , Jp_EndRoundSound[random_num(_:cnGoTr , _:cnGoTr2)])
     }
 }
 
 public event_roundstart(){
     IsSpawnBoss = false;
     Current_judian = 0;
-    NpcNum_level = SpawnPonitNpcNum[Current_judian];
+    // NpcNum_level = SpawnPonitNpcNum[Current_judian];
     CurrentNpsMaxnum = GetCurrentJuDianMaxSpawn();
     CanSpawnNum = CurrentNpsMaxnum;
     CurrentNpcs = CurrentNpsMaxnum;
@@ -445,12 +453,14 @@ public event_roundstart(){
     }
     set_task(ClearWaeponTime, "ClearWaeponBox",1121, .flags = "b")
     set_task(60.0, "SavePlayers",1122, .flags = "b")
+    ChangeAllPlayerTeam(CS_TEAM_T)
+    CalcLvAdd()
     // set_task(0.5,"MakeBommer")
 }
 
 public NewRound(){
     new timer = get_member_game(m_iRoundTime)
-    timer += Getleavel() * 15
+    timer += Getleavel() * 10
     set_member_game(m_iRoundTime, timer)
 }
 
@@ -521,10 +531,9 @@ public ShowHud(){
             set_hudmessage(0,255,100,-1.0,0.88,.holdtime = 2.0)
             ShowSyncHudMsg(i,Hud_Damage,"伤害计数: %.1f" , TakeDamge[i])
 
-            new lv,xp,XpNeed
+            new lv
             new name[32]
             lv = GetLv(i)
-            xp = GetXp(i)
         #if defined Usedecimal
             new Ammo[32]
             GetAmmoPak(i , Ammo , charsmax(Ammo))
@@ -657,8 +666,8 @@ public LoadPlayerNewSpawn(JSON:root){
 }
 
 public EventRoundEnd_Reapi(WinStatus:status, ScenarioEventEndRound:event, Float:tmDelay){
-	remove_task(1121)
-	remove_task(1122)
+    remove_task(1121)
+    remove_task(1122)
     arrayset(IsHanJian , 0 , sizeof IsHanJian)
     if(status == WINSTATUS_TERRORISTS){
         if(event == ROUND_TERRORISTS_WIN){
@@ -677,15 +686,25 @@ public EventRoundEnd_Reapi(WinStatus:status, ScenarioEventEndRound:event, Float:
             KillAllT()
         }
     }
-    ChangeAllPlayerTeam(CS_TEAM_T)
+    EndClacPlayerAmmo()
 }
 
-public ChangeAllPlayerTeam(team){
+public EndClacPlayerAmmo(){
+    // for(new i = 1 ; i < MaxClients ; i++){
+    //     new Base = PlayerKilled[i] / 3
+    //     new Float:GetAmmo = float(Base) * 0.001
+    //     AddAmmoPak(i , GetAmmo)
+    //     m_print_color(i , "!g[冰布提示]回合结算你获得了%f大洋" , GetAmmo)
+    //     PlayerKilled[i] = 0
+    // }
+}
+
+public ChangeAllPlayerTeam(CsTeams:team){
     new playermax = get_maxplayers()
     for(new i = 1 ; i < playermax ; i++){
         if(!is_user_connected(i))
             continue
-        new user_team = cs_get_user_team(i)
+        new CsTeams:user_team = cs_get_user_team(i)
         if(is_user_bot(i) && user_team != team && user_team != CS_TEAM_SPECTATOR)
             continue
         cs_set_user_team(i , CS_TEAM_T)
@@ -729,11 +748,11 @@ public PlayerSpawn_Post(this){
         }
         case CS_TEAM_CT:{
             new ent = -1
+            rg_give_default_items(this)
             while ((ent = rg_find_ent_by_class(ent , "riben_respawnponit")) > 0){
                 if(GetJuDianNum() == get_entvar(ent ,var_body)){
                     new Float:Origin[3]
-                    get_entvar(ent , var_origin,Origin)
-                    Origin[2] += 90.0
+                    get_entvar(ent , var_origin, Origin)
                     set_entvar(this, var_origin , Origin)
                     break
                 }
@@ -801,7 +820,7 @@ public GiveMoney(mon){
     new playernums = get_maxplayers()
     for (new i = 1; i < playernums; i++){
         if(is_user_bot(i))continue
-        if(get_user_team(i) == CS_TEAM_T && is_user_alive(i) && is_user_connected(i)){
+        if(get_user_team(i) == _:CS_TEAM_T && is_user_alive(i) && is_user_connected(i)){
            new new_m = cs_get_user_money(i) + mon
            cs_set_user_money(i,new_m)
         }
@@ -811,20 +830,20 @@ public KillAllT(){
     new playernums = get_maxplayers()
     for (new i = 1; i < playernums; i++){
         if(is_user_bot(i))continue
-        if(get_user_team(i)==CS_TEAM_T && is_user_alive(i) && is_user_connected(i)){
+        if(get_user_team(i) == _:CS_TEAM_T && is_user_alive(i) && is_user_connected(i)){
             user_kill(i, 1)
         }
     }
 }
 
 public FaildSound(){
-    new soundnum = random_num(RiBenWin,RiBenWin2)
+    new soundnum = random_num(_:RiBenWin , _:RiBenWin2)
     EmitSoundToall( Jp_EndRoundSound[soundnum])
     Setleavel(judian_leavel - 1)
 }
 
 public WinSound(){
-    new Rand[2] = {EndJudian , ChineseWin}
+    new Rand[2] = {_:EndJudian , _:ChineseWin}
     new Emit = Rand[random_num(0,1)]
     EmitSoundToall( Jp_EndRoundSound[Emit])
     Setleavel(judian_leavel + 1)
@@ -865,7 +884,12 @@ public CanSpawn(){
 }
 
 public NPC_Killed(this , killer){
-    if(KrGetFakeTeam(this) != _:CS_TEAM_T && ExecuteHam(Ham_IsPlayer , killer)){
+    if(KrGetFakeTeam(this) != CS_TEAM_T && ExecuteHam(Ham_IsPlayer , killer)){
+        PlayerKilled[killer]++
+        if(PlayerKilled[killer] >= 5){
+            AddAmmoPak(killer , 0.01)
+            PlayerKilled[killer] = 0
+        }
         ReSpawnEnt(this)
         new Judian = GetJuDianNum()
         CurrentNpcs--
@@ -875,11 +899,8 @@ public NPC_Killed(this , killer){
         new lv = Current_judian
         switch(lv){
             case 0 .. 5 : AddKillRiMin(killer)
-            case 6,7 : AddKillRiBing(killer)
-        }
-        if(!is_tank(this)){
-            AddKillRiBenJunGuan(killer)
-            return
+            case 6, 7 : AddKillRiBing(killer)
+            case 8 : if(!is_tank(this))AddKillRiBenJunGuan(killer)
         }
     }
 }
@@ -898,7 +919,7 @@ public ChangeJudian(){
             CurrentNpcs = GetCurrentJuDianMaxSpawn()
             CanSpawnNum = CurrentNpcs
             GiveMoney(3000)
-            EmitSoundToall(Jp_EndRoundSound[Type])
+            EmitSoundToall(Jp_EndRoundSound[_:Type])
             ChangeFakeName(Current_judian)
             show_hudmessage(0,"干得好成功攻占日军据点^n每人奖励军饷3000!")
             HanJianSpawn()
@@ -908,7 +929,7 @@ public ChangeJudian(){
             CanSpawnNum = SpawnPonitNpcNum[Current_judian]
             CurrentNpcs = SpawnPonitNpcNum[Current_judian]
             GiveMoney(8000)
-            EmitSoundToall(Jp_EndRoundSound[random_num(JudianGo,JudianGo2)])
+            EmitSoundToall(Jp_EndRoundSound[random_num(_:JudianGo,_:JudianGo2)])
             ChangeFakeName(Current_judian)
             show_hudmessage(0,"为了胜利冲啊！！！！^n每人不惜代价奖励军饷6000!^n冲锋！！！")
             HanJianSpawn()
@@ -959,7 +980,7 @@ public Npc_SpawnThink(ent){
     get_entvar(ent , var_angles, Angles)
     CurrentSpawnbody = Current_judian + 1
     new TrueJudian = min(Current_judian , 7)
-    new lastnpc = get_entvar(ent , var_Spawnid)
+    // new lastnpc = get_entvar(ent , var_Spawnid)
     if(!CanSpawn()){
         set_entvar(ent , var_nextthink, get_gametime() + 0.5)
         return
@@ -985,11 +1006,11 @@ public Npc_SpawnThink(ent){
         isOccupied = IsSpawnPointOccupied(Origin, ent)
     }
     if(body == CurrentSpawnbody && !isOccupied){
-        spawnent = CreateJpNpc(0,CS_TEAM_CT, Origin, Angles, CurrentSpawnbody)
+        spawnent = CreateJpNpc(0 , CS_TEAM_CT, Origin, Angles, CurrentSpawnbody)
     }
     //如果不存在其他据点默认使用据点一的位置进行生成！
     else if(DontHasOtherJudian[TrueJudian] && body == 1 && !isOccupied){
-        spawnent = CreateJpNpc(0,CS_TEAM_CT, Origin ,Angles, CurrentSpawnbody)
+        spawnent = CreateJpNpc(0 , CS_TEAM_CT, Origin ,Angles, CurrentSpawnbody)
     }
     if(spawnent > 0){
         Set_Master(spawnent , ent)
@@ -1051,37 +1072,26 @@ public NPC_ThinkPre(id){
 }
 
 //仅做伤害记录
-public Npc_OnDamagePost(this,attacker,Float:Damage){
+public Npc_OnDamagePost(this , attacker, Float:Damage){
     static PlayerDamgeInc[33]
     if(!is_valid_ent(attacker) || !is_user_alive(attacker))
         return
-    new AddxpBase = 1
+    if(KrGetFakeTeam(this) == CS_TEAM_T)
+        return
     new Float:New_Damage = floatmin(Damage, 20000.0) // 限制异常伤害-Fuck Map Tank
     TakeDamge[attacker] += New_Damage
     XpDamage[attacker] += New_Damage
-    new lv = Getleavel()
 
-    if( lv < 90){
-        AddxpBase = 1
-    }else if(lv < 500){
-        AddxpBase = 4
-    }else if(lv < 999){
-         AddxpBase = 6
-    }else if(lv >= 1000){
-        AddxpBase = 8
-    }
-
-    lvadd = (Getleavel() / 10)  * AddxpBase
+    CalcLvAdd()
 
     // ====== 伤害转经验 & 金钱 ======
-    const Float:DamgeToAmmo = 3000.0
+    const Float:DamgeToAmmo = 1800.0
     if(XpDamage[attacker] >= DamgeToAmmo){
         new daminc = floatround(XpDamage[attacker]) / floatround(DamgeToAmmo)
         new RealAddxp = 3 + lvadd * daminc
         RealAddxp *= floatround(GetPlayerMul(attacker))
         XpDamage[attacker] -= float(daminc) * DamgeToAmmo
         AddXp(attacker, RealAddxp)
-        AddAmmoPak(attacker, 0.01 * float(daminc))
         PlayerDamgeInc[attacker] += daminc
         if(PlayerDamgeInc[attacker] >= 80){
             const Xp_Award = 560
@@ -1090,6 +1100,21 @@ public Npc_OnDamagePost(this,attacker,Float:Damage){
             m_print_color(attacker , "!g[积分奖励]!t您达到积分奖励条件奖励积分%d" , Xp_Award)
         }
     }
+}
+
+public CalcLvAdd(){
+    new AddxpBase = 1
+    new lv = Getleavel()
+    if( lv < 90){
+        AddxpBase = 1
+    }else if(lv < 500){
+        AddxpBase = 4
+    }else if(lv < 999){
+        AddxpBase = 6
+    }else if(lv >= 1000){
+        AddxpBase = 8
+    }
+    lvadd = (Getleavel() / 10)  * AddxpBase
 }
 
 public native_GetJuDianNum(){
@@ -1129,7 +1154,7 @@ public GetCurrentJuDianMaxSpawn(){
     }
     new c_NpcNum_level = SpawnPonitNpcNum[TrueJudian]
     c_NpcNum_level = c_NpcNum_level + (c_NpcNum_level * level) / 2
-    c_NpcNum_level = min(c_NpcNum_level , 32000)
+    c_NpcNum_level = min(c_NpcNum_level , LvMaxNps)
     if(GetRiJunRule() == JAP_RULE_Japanese_Mobilization){
         c_NpcNum_level = floatround(float(c_NpcNum_level) * 1.20)
     }

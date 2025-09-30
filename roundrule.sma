@@ -318,8 +318,9 @@ public CBasePlayer_ThrowGrenade_Pre(const id, const item, const Float:vecSrc[3],
 
 public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Float:time, const team, const usEvent){
     new Rule = GetHunManRule()
-    if(GetIsNpc(index))
+    if(!ExecuteHam(Ham_IsPlayer , index) || is_user_bot(index))
         return HC_CONTINUE
+    if(get_member(index , m_iTeam) == _:TEAM_CT)
     switch(Rule){
         case HUMAN_RULE_Grenadier:{
             DisableHookChain(HOOK_ThrowHeGrenade)

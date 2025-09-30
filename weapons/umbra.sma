@@ -424,9 +424,9 @@ public fw_SetModel(entity, model[])
 }
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
-    new playerid = get_member(this, m_pPlayer)
-	new iWpn = get_member(playerid , m_pActiveItem)
-    if(Get_BitVar(g_Had_Base, playerid) && iWpn == this){
+	new playerid = get_member(this, m_pPlayer)
+	new WeaponIdType:id = WeaponIdType:rg_get_iteminfo(this , ItemInfo_iId)
+	if(Get_BitVar(g_Had_Base, playerid) && id == WEAPON_AK47){
         SetHookChainArg(3, ATYPE_STRING, P_CHAINSR)
     }
 }

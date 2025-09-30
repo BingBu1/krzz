@@ -7,8 +7,8 @@
 #include <hamsandwich>
 
 new JinZhengEnSkillSpr[][]= {
-    "models/Kr_Skill/ef_gatlingex_fireball.spr",
-    "models/Kr_Skill/ef_gatlingex_explosion.spr"
+    "models/Bing_Kr_res/Kr_Skill/ef_gatlingex_fireball.spr",
+    "models/Bing_Kr_res/Kr_Skill/ef_gatlingex_explosion.spr"
 }
 
 public plugin_init(){

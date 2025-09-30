@@ -47,10 +47,10 @@ new const MoneyNums[] =
 
 new Array:GunNames,Array:GunCallBack,Array:GunWModule,Array:GunPlid
 
-#define W_Shit "models/kr_CrashGun/shit_2.mdl"
-#define W_KongFuBook "models/kr_CrashGun/books_2.mdl"
-#define W_Sex "models/kr_CrashGun/avs.mdl"
-#define W_Money "models/kr_CrashGun/money.mdl"
+#define W_Shit "models/Bing_Kr_res/kr_CrashGun/shit_2.mdl"
+#define W_KongFuBook "models/Bing_Kr_res/kr_CrashGun/books_2.mdl"
+#define W_Sex "models/Bing_Kr_res/kr_CrashGun/avs.mdl"
+#define W_Money "models/Bing_Kr_res/kr_CrashGun/money.mdl"
 
 new Float:Weapon_EventProbability
 

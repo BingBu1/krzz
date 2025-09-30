@@ -18,7 +18,7 @@
     new sTrail , g_Explosion
 
     new PujingSkill[][]= {
-        "models/Kr_Skill/apachef.mdl",
+        "models/Bing_Kr_res/Kr_Skill/apachef.mdl",
     }
 
     new Sounds[][]={

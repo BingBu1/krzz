@@ -680,7 +680,8 @@ public Exp(const expEnt , owner){
 	write_byte(TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NODLIGHTS)	// flags
 	message_end()
 
-	rg_radius_damage(ExpOrigin ,owner ,  owner, 1500.0 , 350.0 , DMG_BULLET)
+	rg_dmg_radius(ExpOrigin , owner , owner , 1500.0 , 250.0 , CLASS_PLAYER , DMG_BULLET)
+	// rg_radius_damage(ExpOrigin ,owner ,  owner, 1500.0 , 350.0 , DMG_BULLET)
 }
 
 public Ham_CWeapon_Holster_Post(ent) 
@@ -1219,8 +1220,6 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
     new Float:final_damage
 	new Float:Origin_[3]
 	new Float:Heal;
-	//server_print("%f %f %f rg_radius_damage in put" , origin[0],origin[1],origin[2]);
-	// get_entvar(inflictor, var_origin, Origin_)
 
     while ((ent = find_ent_in_sphere(ent, origin, radius)) != 0)
     {

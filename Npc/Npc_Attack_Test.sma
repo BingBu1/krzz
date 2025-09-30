@@ -18,7 +18,7 @@ public plugin_init(){
 
 public plugin_precache(){
     // Moduleid = precache_model("models/Kr_npcs/officer.mdl")
-    Moduleid = precache_model("models/Kr_npcs/Small_Boss.mdl")
+    Moduleid = precache_model("models/Bing_Kr_res/Kr_npcs/Small_Boss.mdl")
 }
 
 public NpcOnCreate(Npcid , RegId){

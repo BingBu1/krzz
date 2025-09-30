@@ -393,8 +393,11 @@ public Lightz_Killed(Lightz, attacker)
 		StopSound() 
 		new name[32]; get_user_name(attacker, name, 31)		
 		Fix_Death_Boss = true
-		m_print_color(0 , "!g[冰布提示]!t%s击败了小斑比挫败了日军生化武器,获得了%d个大洋奖励!" , name , get_pcvar_num(cvar_ammo_killed))
-		AddAmmoPak(attacker , float(get_pcvar_num(cvar_ammo_killed)))
+		new Float:DeadOrigin[3]
+		get_entvar(Lightz , var_origin , DeadOrigin)
+		CreateLoot_Cso(DeadOrigin)
+		m_print_color(0 , "!g[冰布提示]!t日军生化武器已被挫败，请尽快拾取战利品")
+		// AddAmmoPak(attacker , float(get_pcvar_num(cvar_ammo_killed)))
 	}
 	return HAM_SUPERCEDE
 }

@@ -17,6 +17,8 @@
 
 #define SpawnTimer 60.0 * 3
 
+#define EliteNeedKilled 150
+
 enum TankModle_e{
     Tk_alive,
     Tk_die
@@ -59,7 +61,7 @@ new TankBoom[] = "sprites/blueflare1.spr"
 
 new const GRENADE_TRAIL[] = "sprites/laserbeam.spr"
 
-new MaxBossNpc
+new MaxBossNpc , KilledNpcNum
 
 public plugin_init(){
     register_plugin("特殊日本Npc", "1.0", "Bing")
@@ -89,6 +91,7 @@ public plugin_precache(){
 public plugin_natives(){
     register_native("is_tank" , "native_is_tank")
     register_native("GetTankNpcEnt" , "native_GetTankNpcEnt")
+    register_native("CreateLoot_Cso" , "native_CreateLoot")
 }
 
 public native_GetTankNpcEnt(){
@@ -150,12 +153,13 @@ public CreateEliteNpc(ent , lv , Judian){
         {0.0, 0.0, 255.0},     // Blue
         {255.0, 0.0, 0.0}      // Red
     }
-
+    if(KilledNpcNum < EliteNeedKilled)
+        return false
     new Float:baseHeal[4] = {500.0, 1000.0, 1500.0, 2000.0};
     new Float:healScale[4] = {30.0, 50.0, 100.0, 130.0};  // 对应白、绿、蓝、红
     new Float:healMax[4] = {15000.0, 25000.0, 78000.0, 150000.0};
-    new EliteIds[4] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red};
-    new Bool:SetProp[4] = {false, false, true, true};
+    new Elite_Var:EliteIds[4] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red};
+    new bool:SetProp[4] = {false, false, true, true};
     new levelThreshold[4] = {30, 150, 300, 500}; // 对应白、绿、蓝、红
 
     new available[4], count = 0;
@@ -173,7 +177,10 @@ public CreateEliteNpc(ent , lv , Judian){
 
     new Float:chance[4] = {0.1, 0.02, 0.05, 0.01}; // 白、绿、蓝、红
 
-    if(!RandFloatEvents(chance[index])) return false;
+    if(!RandFloatEvents(chance[index])){
+        KilledNpcNum = 0
+        return false
+    }
 
     new Float:Heal = floatmin(baseHeal[index] + lv * healScale[index], healMax[index]);
     set_entvar(ent, var_renderfx, kRenderFxGlowShell);
@@ -186,6 +193,7 @@ public CreateEliteNpc(ent , lv , Judian){
     if(SetProp[index]) set_prop_int(ent, "CanStop", 1);
 
     BossNpc++;
+    KilledNpcNum = 0
     return true;
 }
 
@@ -204,7 +212,7 @@ public NPC_CreatePost(ent){
         }
     }
     if(Judian_num < 8 && SpawnGold < MaxGold && level > 100 && 
-        CurrentKill >= 500 && (get_gametime() - StartTime) > SpawnTimer
+        CurrentKill >= 800 && (get_gametime() - StartTime) > SpawnTimer
     ){
         if(UTIL_RandFloatEvents(0.005)){
             new Float:Color[3]= {255.0,215.0,0.0}
@@ -337,6 +345,12 @@ public native_is_tank(){
     return istank
 }
 
+public native_CreateLoot(id , nums){
+    new Float:CreateOrigin[3]
+    get_array_f(1 , CreateOrigin , 3)
+    CreateLoot(CreateOrigin)
+}
+
 CreateLoot(Float:KilledOrigin[3]){
     new Players = get_member_game(m_iNumTerrorist)
     if(Players < 1)
@@ -394,13 +408,14 @@ public LootTouch(const Lootindex , const Toucher){
     new name[32]
     get_user_name(Toucher, name, 31)
     UTIL_EmitSound_ByCmd(Toucher , LootSound[1])
-    new Float:AddAmmo = 1.0 + float(Getleavel()) * 0.5
+    new Float:AddAmmo = random_float(20.0 , 20.0 + (Getleavel() / 3))
     AddAmmoPak(Toucher , AddAmmo)
-    m_print_color(0 , "!g[提示] %s获得了战利品，获得了%f大洋" , name, AddAmmo)
+    m_print_color(0 , "!g[提示] %s获得了战利品,获得了%f大洋" , name, AddAmmo)
     rg_remove_entity(Lootindex)
 }
 
 public NPC_Killed(this , killer){
+    KilledNpcNum++
     new spr = get_entvar(this , var_impulse)
     if(spr > 0){
         set_entvar(this , var_impulse , 0)
@@ -449,13 +464,18 @@ public NPC_Killed(this , killer){
         set_entvar(this ,var_renderamt , 1.0)
         BossNpc--
     }
+    new origin[3]
+    get_entvar(this, var_origin,origin)
     if(has_tank && this == CurrentTankEnt){
-        new origin[3]
-        get_entvar(this, var_origin,origin)
         engfunc(EngFunc_SetModel , this , TankModle[Tk_die])
         MakeBoom(origin)
         AddKillTank(killer)
         KillTank_reward(killer)
+    }
+    if (get_entvar(this , var_body) == 8 && GetJuDianNum() == 8 && this != CurrentTankEnt){
+        if(UTIL_RandFloatEvents(0.05)){
+            CreateLoot(origin)
+        }
     }
     CurrentKill++
 }

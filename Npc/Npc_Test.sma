@@ -15,7 +15,7 @@ public plugin_init(){
 }
 
 public plugin_precache(){
-    Moduleid = precache_model("models/Kr_npcs/officer.mdl")
+    Moduleid = precache_model("models/Bing_Kr_res/Kr_npcs/officer.mdl")
     precache_sound("weapons/mp5-1.wav")
 }
 

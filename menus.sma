@@ -18,7 +18,7 @@ new WpnForwad , OnCreateIteam_
 
 new BuyAmmo,GiveHeal,NpcMenu,KillMarkMenu
 
-new menuname[64]
+new menuname[64] , bool:CanUseMenu[33]
 public plugin_init(){
     register_plugin("抗日菜单", "1.0", "Bing")
 
@@ -42,6 +42,9 @@ public plugin_precache(){
 public plugin_natives(){
     register_native("BulidWeaponMenu","native_BulidWeaponMenu")
     register_native("ChangeMenuName","native_ChangeMenuName")
+    register_native("DisableMenu","native_DisableMenu")
+    register_native("EnableMenu","native_EnableMenu")
+    // register_native("OnBuySubAmmo","native_OnBuySubAmmo")
 }
 
 //const weaponname , cost
@@ -55,6 +58,14 @@ public native_BulidWeaponMenu(plid,nums){
     Waeponid++
     return oldid
 }
+
+// public native_AmmoCanBuy(plid , nums){
+//     new id = get_param(1)
+//     new  = get_param_f(2)
+//     new WeaponCost = WeaponCost[Waeponid]
+//     SubAmmoPak(id , WeaponCost)
+// }
+
 public OpenMenu(id){
     CreateMenu(id)
     return PLUGIN_HANDLED
@@ -81,7 +92,7 @@ public CreateMenu(id){
 
 public ChangeCamMenu(id){
     if(is_user_alive(id) && is_user_connected(id)){
-        new menuid = menu_create("抗日菜单", "ChangeCamHandle")
+        new menuid = menu_create("人称切换", "ChangeCamHandle")
         menu_additem(menuid , "第三人称")
         menu_additem(menuid , "第一人称")
         menu_display(id ,menuid)
@@ -106,6 +117,10 @@ public ChangeCamHandle(id , menu , item){
 public CreateWeaponMenu(id){
     if(get_user_team(id) == _:CS_TEAM_CT)
         return;
+    if(!CanUseMenu[id]){
+        m_print_color(id , "!g[冰布提示]!t你无法使用商店，你可能已成为汉奸或被寄生。")
+        return ;
+    }
     new wpnmenuid = menu_create("抗日菜单", "WpnMenuHandle")
     new const FormatText[][]={
         "%s (\r价格: %.2f大洋\y)",
@@ -134,6 +149,14 @@ public native_ChangeMenuName(pluginid , nums){
     get_string(1 , menuname , charsmax(menuname))
 }
 
+public native_DisableMenu(pluginid , nums){
+    CanUseMenu[get_param(1)] = false
+}
+
+public native_EnableMenu(pluginid , nums){
+    CanUseMenu[get_param(1)] = true
+}
+
 public menuHandle(id,menu,item){
     if(item == MENU_EXIT){
         menu_destroy(menu)
@@ -148,7 +171,7 @@ public menuHandle(id,menu,item){
         case 0: CreateWeaponMenu(id)//抗日武器
         case 1: client_cmd(id,"say /ammomenu")//大洋系统
         case 2: ReSpawnPlayer(id)//重返战场
-        case 3: client_cmd(id, "say /changemodle")//更改模型
+        case 3: if(CanUseMenu[id])client_cmd(id, "say /changemodle")//更改模型
         case 4: client_cmd(id, "say nextmap")//下一张地图
         case 5: client_cmd(id, "say timeleft")//剩余时间
         case 6: client_cmd(id, "say /lv") //难度调整

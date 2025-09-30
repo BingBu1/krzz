@@ -13,7 +13,7 @@ new Float:SkillCd[33]
 new SkillId
 
 public plugin_init(){
-    new plid = register_plugin("角色技能" , "1.0" , "Bing")
+    register_plugin("角色技能" , "1.0" , "Bing")
     
     SkillReg = TrieCreate()
 
@@ -42,7 +42,7 @@ public GetSkillId(id){
         new key[10]
         new SkillData[SKillStruct]
         num_to_str(i , key , charsmax(key))
-        TrieGetArray(SkillReg , key , SkillData , sizeof(SkillData))
+        TrieGetArray(SkillReg , key , SkillData , sizeof SkillData)
         if(!strcmp(SkillData[SkillModelNames] , modelName))
             return i
     }
@@ -56,10 +56,11 @@ public GetSKillData(keynum , DataBuff[SKillStruct] , len){
 }
 
 public SkillOn(id){
+    if(!is_user_connected(id) || !is_user_alive(id))
+        return PLUGIN_CONTINUE
     new skillid = GetSkillId(id)
     if(skillid == -1)
-        return PLUGIN_HANDLED
-    static SkillFuns[64]
+        return PLUGIN_CONTINUE
     if(get_gametime() < SkillCd[id]){
         m_print_color(id , "你的技能还在冷却，剩余%0.f秒" , SkillCd[id] - get_gametime())
         return PLUGIN_HANDLED
@@ -79,7 +80,7 @@ public SkillOn(id){
 public native_RegPlayerSkill(id , nums){
     new SKillData[SKillStruct]
     new key[10]
-    new old_Skillid = SkillId
+    // new old_Skillid = SkillId
     num_to_str(SkillId , key , charsmax(key))
     SKillData[SkillPlugin_id] = get_param(1)
     get_string(2 , SKillData[SkillCallBack] , charsmax(SKillData[SkillCallBack]))
@@ -92,7 +93,7 @@ public native_RegPlayerSkill(id , nums){
 
 public GetPlayerSkillFun(SkillId:skillid , output[] , len){
     new key[10]
-    num_to_str(skillid , key , charsmax(key))
+    num_to_str(_:skillid , key , charsmax(key))
     TrieGetString(SkillReg , key , output , len)
 }
 

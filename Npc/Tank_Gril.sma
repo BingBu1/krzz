@@ -19,12 +19,12 @@ public plugin_init(){
 
 public plugin_precache(){
     // Moduleid = precache_model("models/Kr_npcs/officer.mdl")
-    Moduleid = precache_model("models/Kr_npcs/envy_zavist.mdl")
+    Moduleid = precache_model("models/Bing_Kr_res/Kr_npcs/envy_zavist.mdl")
 }
 
 public NpcOnCreate(Npcid , Regid){
     if(Reg_Npcid == Regid){
-        SetBodyGroup(Npcid , 2  , 1)
+        // SetBodyGroup(Npcid , 2  , 1)
     }
 }
 

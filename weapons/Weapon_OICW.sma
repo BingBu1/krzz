@@ -122,37 +122,36 @@ public plugin_precache()
 public OICW_PrimaryAttackPre(EntityID)
 {
     
-	if (!GetWeaponEntityData(EntityID, WED_INA2))
-		return CSWM_IGNORED;
-	
-	if (!CanPrimaryAttack(EntityID))
-		return CSWM_SUPERCEDE;
-	
-	SetNextAttack(EntityID, OICW_ShootDelay, true);
-	new ProjectileID = ShootProjectileContact(get_pdata_cbase(EntityID, m_pPlayer), Projectile_OICW);
-	new Float:AVelocity[3];
-	entity_get_vector(ProjectileID, EV_VEC_avelocity, AVelocity);
-	AVelocity[0] = random_float(-100.0, -250.0);
-	entity_set_vector(ProjectileID, EV_VEC_avelocity, AVelocity);
-    entity_set_float(ProjectileID,EV_FL_friction,1.0);
-	SendWeaponAnim(EntityID, 7);
-	emit_sound(EntityID, CHAN_VOICE, "weapons/oicw_grenade_shoot1.wav", VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
-	new args[1];
-    args[0] = ProjectileID;
-    set_task(2.5,"OICW_Projetile",0,args,1);//��ը
+    if (!GetWeaponEntityData(EntityID, WED_INA2))
+    	return CSWM_IGNORED;
 
+    if (!CanPrimaryAttack(EntityID))
+    	return CSWM_SUPERCEDE;
+
+    SetNextAttack(EntityID, OICW_ShootDelay, true);
+    new ProjectileID = ShootProjectileContact(get_pdata_cbase(EntityID, m_pPlayer), Projectile_OICW);
+    new Float:AVelocity[3];
+    entity_get_vector(ProjectileID, EV_VEC_avelocity, AVelocity);
+    AVelocity[0] = random_float(-100.0, -250.0);
+    entity_set_vector(ProjectileID, EV_VEC_avelocity, AVelocity);
+    entity_set_float(ProjectileID,EV_FL_friction,1.0);
+    SendWeaponAnim(EntityID, 7);
+    emit_sound(EntityID, CHAN_VOICE, "weapons/oicw_grenade_shoot1.wav", VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+    new args[1];
+    args[0] = ProjectileID;
+    set_task(2.5,"OICW_Projetile",0,args,1);  
     message_begin(MSG_BROADCAST, SVC_TEMPENTITY);
-	write_byte(TE_BEAMFOLLOW);	// Temp entity type
-	write_short(ProjectileID);		// entity
-	write_short(g_Trail);	// sprite index
-	write_byte(25);	// life time in 0.1's
-	write_byte(5);	// line width in 0.1's
-	write_byte(random_num(100,255));	// red (RGB)
-	write_byte(random_num(100,255));	// green (RGB)
-	write_byte(random_num(100,255));	// blue (RGB)
-	write_byte(255);	// brightness 0 invisible, 255 visible
-	message_end();
-    
+    write_byte(TE_BEAMFOLLOW);	// Temp entity type
+    write_short(ProjectileID);		// entity
+    write_short(g_Trail);	// sprite index
+    write_byte(25);	// life time in 0.1's
+    write_byte(5);	// line width in 0.1's
+    write_byte(random_num(100,255));	// red (RGB)
+    write_byte(random_num(100,255));	// green (RGB)
+    write_byte(random_num(100,255));	// blue (RGB)
+    write_byte(255);	// brightness 0 invisible, 255 visible
+    message_end();
+
     return CSWM_SUPERCEDE;
 }
 
@@ -163,34 +162,29 @@ public OICW_HolsterPost(EntityID)
 
 public OICW_Projetile(args[])
 {
-    new EntityID = args[0];//��idΪCreateEnt����pvdate���������Ի�ȡ����
+    new EntityID = args[0];
+    new Float:ZeroVec[3];
+    set_entvar(EntityID , var_velocity , ZeroVec);
 
-	entity_set_vector(EntityID, EV_VEC_velocity, Float:{0.0, 0.0, 0.0});
-	
-	new Float:Origin[3];
-
-	entity_get_vector(EntityID, EV_VEC_origin, Origin);
-    new player = pev(EntityID,pev_owner);
-    rg_radius_damage(Origin,player,player,100.0,255.0,DMG_GENERIC);
-	// RadiusDamageEx(Origin,256.0,100.0,player,player,DMG_GRENADE,RDFlag_Knockback | RDFlag_IgnoreSelf);
-	CreateExplosion(Origin, 0);
-	remove_entity(EntityID);
+    new Float:Origin[3];    
+    get_entvar(EntityID, var_origin, Origin);
+    new player = get_entvar(EntityID , var_owner);
+    rg_dmg_radius(Origin , player , player ,150.0 , 300.0 , CLASS_PLAYER , DMG_GENERIC)
+    CreateExplosion(Origin, 0);
+    remove_entity(EntityID);
 }
 
 public OnOicwTouch(ter){
-    //������Other��ײ��������
     if(is_valid_ent(ter)){
         new Float:vec[3],classname[32];
         new rendermode;
         get_entvar(ter,var_velocity,vec);
         new flags;
         get_entvar(ter,var_flags,flags);
-        //�ڵ������
         if(flags & FL_ONGROUND){
             xs_vec_mul_scalar(vec,0.8,vec);
             set_entvar(ter,var_velocity,vec);
         }else{
-            //��ײ���������ǵ���
             xs_vec_mul_scalar(vec,0.9,vec);
             set_entvar(ter,var_velocity,vec);
         }

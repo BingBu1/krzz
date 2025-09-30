@@ -201,7 +201,6 @@ public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnim
     if(!equal(classname , cznh)){
         return
     }
-    // new wpn = get_member(get_member(this, m_pPlayer), m_pActiveItem)
     new playerid = get_member(this, m_pPlayer)
     if(Get_BitVar(HasWaepon, playerid)){
         SetHookChainArg(2,ATYPE_STRING, V_MODEL)

@@ -141,7 +141,7 @@ public ShowWallMenu(id){
 }
 
 public OnMenuShow(id){
-    if(!is_user_alive(id))
+    if(!is_user_alive(id) || !is_user_admin(id))
         return PLUGIN_HANDLED;
     menu_display(id, NpcMenu);
     return PLUGIN_HANDLED;

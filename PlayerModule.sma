@@ -26,6 +26,13 @@ enum StartBgm{
     neco_Sel
 }
 
+enum ModelLvNames{
+    _:Lv,
+    _:ModelNames[32],
+    _:SetModelName[32],
+    _:IsVip
+}
+
 new BgmStart[StartBgm][]= {
     "corssfire_bgm/N_Hero_CrossFire.wav",
     "corssfire_bgm/N_Lv_CrossFire.wav",
@@ -41,61 +48,46 @@ new PreModules [][]= {
     "models/player/pujing/pujing.mdl",
     "models/player/jinzhengen/jinzhengen.mdl",
     "models/player/NecoArc/NecoArc.mdl",
+    "models/player/kobelaoda/kobelaoda.mdl",
+    "models/player/hongdou/hongdou.mdl",
     "sprites/wrbot/cn.spr"
 }
 
-new modelNames[][]={
-    "小八路",
-    "老八路",
-    "士兵",
-    "男军官",
-    "女军官",
-    "黄皮八路",
-    "黄皮男军官",
-    "黄皮女军官",
-    "特警",
-    "黑皮男军官",
-    "黑皮女军官",
-    "海军",
-    "老蒋",
-    "毛爷爷",
-    "灵狐者",
-    "普京",
-    "金正恩",
-    "猫姬-管理模型"
-}
-
-new modelLv[] = {
-    0,
-    50,
-    100,
-    150,
-    200,
-    250,
-    300,
-    350,
-    400,
-    450,
-    500,
-    550,
-    600,
-    650,
-    700,
-    750,
-    1000,
-    0,
+new g_ModelData[][ModelLvNames] = {
+    {   0, "小八路"        },
+    {  50, "老八路"        },
+    { 100, "士兵"          },
+    { 150, "男军官"        },
+    { 200, "女军官"        },
+    { 250, "黄皮八路"      },
+    { 300, "黄皮男军官"    },
+    { 350, "黄皮女军官"    },
+    { 400, "特警"          },
+    { 450, "黑皮男军官"    },
+    { 500, "黑皮女军官"    },
+    { 550, "海军"          },
+    { 600, "老蒋"          },
+    { 650, "毛爷爷"        },
+    { 700, "灵狐者"  ,"linghu_yellow" },
+    { 750, "普京"    ,"pujing"      },
+    { 850, "kobe牢大","kobelaoda"      },
+    {1000, "金正恩"   ,"jinzhengen"     },
+    {   0, "猫姬-管理模型" , "NecoArc" ,2},
+    {   0, "红豆(Vip或管理)" , "hongdou" ,1},
 };
 
+//设置模型开场音乐
 new ModelSounds[][ModelSoundData]={
     {"linghu_yellow", "corssfire_bgm/N_Lv_CrossFire.wav"},
     {"jinzhengen", "kr_sound/jinzhengen.wav"}, // 假设的音乐路径
     {"NecoArc", "kr_sound/necoact-start.wav"},
+    {"kobelaoda", "kr_sound/LaoDa_Start.wav"},
 }
 
 new hero[33]
 new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
 new LastUseModel[MAX_PLAYERS +1 ][LastUseModelData]
-
+new VipModelSize
 public plugin_init(){
     register_plugin("设置玩家模型", "1.0", "Bing")
     RegisterHookChain(RG_CBasePlayer_Spawn,"PlayerSpawn_Post",true)
@@ -110,6 +102,15 @@ public plugin_init(){
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
     register_clcmd("say /changemodle" , "CreateMoudleMenu")
+
+    GetVipModelSize()
+}
+
+public GetVipModelSize(){
+    for(new i = 0 ; i < sizeof g_ModelData; i++){
+        if(g_ModelData[i][IsVip] > 0)
+            VipModelSize++
+    }
 }
 
 public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
@@ -153,6 +154,9 @@ public plugin_precache(){
     for(new i = 0 ; i < sizeof BgmStart ; i++){
         UTIL_Precache_Sound(BgmStart[StartBgm:i])
     }   
+    for(new i = 0 ; i < sizeof ModelSounds ; i++){
+        UTIL_Precache_Sound(ModelSounds[i][SoundName_Sound])
+    }   
 }
 
 public plugin_natives(){
@@ -193,7 +197,7 @@ public native_MakeHero(id, nums){
 
 public MakeHeroSpr(id){
     new spr = rg_create_entity("env_sprite")
-    if(is_nullent(spr) && spr <= 0)
+    if(is_nullent(spr) || spr <= 0)
         return -1
     set_entvar(spr , var_classname , "HeroSpr")
     set_entvar(spr, var_renderamt, 255.0)
@@ -241,7 +245,7 @@ public SetModuleByLv(this , bool:playsound){
     new lv = GetLv(this)
     new setlv = (lv / 50) + 1
     new team = get_user_team(this)
-    new const maxDiv = sizeof modelNames
+    new const maxDiv = sizeof g_ModelData
     switch(team){
         case CS_TEAM_T:{
             if(setlv < 14){
@@ -256,14 +260,13 @@ public SetModuleByLv(this , bool:playsound){
                 }
                 return
             }
-            min(setlv , maxDiv)
+            setlv = min(setlv , maxDiv - VipModelSize)
             SetOtherModule(this , setlv, playsound)
         }
         case CS_TEAM_CT:{
-            setlv = min(setlv, 14)
-            setlv = max(setlv, 1)
+            setlv = clamp(setlv , 1 , 14)
             setlv += 14
-            min(setlv, 19)
+            setlv = min(setlv, 19)
             rg_set_user_model(this, "rainych_krall1")
             set_entvar(this, var_body , setlv)
         }
@@ -283,33 +286,76 @@ public PlayBgm(this){
 
 public SetOtherModule(this , divlv , bool:PlayerSound){
     new lv = GetLv(this)
-    new modellv = GetModeleLv(divlv - 1)
-    if(divlv >= 15){
-        rg_set_user_model(this, "linghu_yellow")
-    }
-    if(divlv >= 16){
-        rg_set_user_model(this, "pujing")
-    }
-    if(modellv == 1000 && lv >= 1000){
-        rg_set_user_model(this, "jinzhengen")
-    }
-    if(modellv == 0 && is_user_admin(this)){
-        rg_set_user_model(this, "NecoArc")
-    }
+    new model_inx = divlv - 1
+    new SetName[32]
+    new modellv = GetModeleLv(model_inx)
 
+    if(lv < modellv)
+        return false
+    if(!CanSetThisModel(model_inx , this)){
+        m_print_color(this , "你不能使用此模型")
+        return false
+    }
+    GetModeleSetName(model_inx , SetName , charsmax(SetName))
+    rg_set_user_model(this , SetName)
     if(PlayerSound == true){
         PlayBgm(this)
-    }   
+    } 
+    return true
+    // if(divlv >= 15){
+    //     rg_set_user_model(this, "linghu_yellow")
+    // }
+    // if(divlv >= 16){
+    //     rg_set_user_model(this, "pujing")
+    // }
+    // if(modellv == 1000 && lv >= 1000){
+    //     rg_set_user_model(this, "jinzhengen")
+    // }
+    // if(modellv == 850 && lv >= 850){
+    //     rg_set_user_model(this, "kobelaoda")
+    // }
+    // if(modellv == 0 && is_user_admin(this)){
+    //     rg_set_user_model(this, "NecoArc")
+    // }  
+}
+
+public bool:CanSetThisModel(index , userid){
+    if(g_ModelData[index][IsVip] == 0)
+        return true
+    if(g_ModelData[index][IsVip] == 1){ // vip admin
+        if(is_user_admin(userid))
+            return true
+        new __flags = get_user_flags(userid);
+        if(__flags & ADMIN_RESERVATION){
+            return true
+        }
+    }else if(g_ModelData[index][IsVip] == 2){
+        if(is_user_admin(userid))
+            return true
+    }
+    return false
 }
 
 public GetModeleLv(modinx){
-    if(modinx > sizeof modelLv){
-        return modelLv[sizeof modelLv - 1 ]
+    if(modinx >= sizeof g_ModelData){
+        return g_ModelData[sizeof g_ModelData - 1 ][Lv]
     }
     if(modinx >= 0){
-        return modelLv[modinx]
+        return g_ModelData[modinx][Lv]
     }
     return 99999
+}
+
+public GetModeleSetName(modinx , ModelBuff[] , len){
+    if(modinx >= sizeof g_ModelData){
+        copy(ModelBuff , len , g_ModelData[sizeof g_ModelData - 1 ][SetModelName])
+        return
+    }
+    if(modinx >= 0){
+        copy(ModelBuff , len , g_ModelData[modinx][SetModelName])
+        return
+    }
+    return
 }
 
 public CreateMoudleMenu(id){
@@ -319,13 +365,13 @@ public CreateMoudleMenu(id){
     }
     new menu = menu_create("更改模型", "moduleHandle")
     new player_lv = GetLv(id)
-    for(new i = 0 ; i < sizeof modelNames; i++){
+    for(new i = 0 ; i < sizeof g_ModelData; i++){
         new buff[50],info[10]
         new module_lv = GetModeleLv(i)
         if(player_lv < module_lv){
-            formatex(buff, charsmax(buff), "\d%s\r(%d级)", modelNames[i], module_lv)
+            formatex(buff, charsmax(buff), "\d%s\r(%d级)", g_ModelData[i][ModelNames], module_lv)
         }else{
-            formatex(buff, charsmax(buff), "\y%s\r(%d级)", modelNames[i], module_lv)
+            formatex(buff, charsmax(buff), "\y%s\r(%d级)", g_ModelData[i][ModelNames], module_lv)
         }
         
         num_to_str(i, info , charsmax(info))
@@ -357,7 +403,9 @@ public SelMenuByid(id, selid){
         rg_set_user_model(id, "rainych_krall1")
         set_entvar(id, var_body , selid + 1)
     }else{
-        SetOtherModule(id , selid + 1 , true)
+        if(!SetOtherModule(id , selid + 1 , true)){
+            return
+        }
         get_user_info(id, "model", LastUseModel[id][Use_Model], 31)
         LastUseModel[id][Use_ed] = true
     }

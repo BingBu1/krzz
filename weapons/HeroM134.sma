@@ -233,7 +233,8 @@ public m_PrimaryAttack_Post(this){
     if(!Get_BitVar(HasWaepon , Player))
         return HAM_IGNORED
     new Float:NextAttackTime = get_member(this , m_Weapon_flNextPrimaryAttack)
-    if(NextAttackTime > 0.0){
+    new Cilp = get_member(this , m_Weapon_iClip)
+    if(NextAttackTime > 0.0 && Cilp){
         set_member(this , m_Weapon_flNextPrimaryAttack , FireCoolDown)
         set_member(this , m_Weapon_flNextSecondaryAttack , FireCoolDown)
         set_member(this , m_Weapon_flTimeWeaponIdle , FireCoolDown)
@@ -245,7 +246,6 @@ public m_PrimaryAttack_Post(this){
         CreateExp(Player , EndOrigin)
         UTIL_EmitSound_ByCmd(Player , Sounds[2])
     }
-    new Cilp = get_member(this , m_Weapon_iClip)
     if(Cilp){
         FireKickBack = false
         rg_weapon_kickback(this, 0.02 ,0.02,0.1,0.025,0.35,0.5,9)
@@ -300,19 +300,20 @@ public m_FireBullets3(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:v
     return HC_CONTINUE
 }
 
-stock CreateExp(const id , const Float:Origin[3]){
+stock CreateExp(const id , Float:Origin[3]){
     message_begin(MSG_BROADCAST ,SVC_TEMPENTITY)
-	write_byte(TE_EXPLOSION)
-	engfunc(EngFunc_WriteCoord, Origin[0])
-	engfunc(EngFunc_WriteCoord, Origin[1])
-	engfunc(EngFunc_WriteCoord, Origin[2])
-	write_short(ExpSprId)	// sprite index
-	write_byte(20)	// scale in 0.1's
-	write_byte(10)	// framerate
-	write_byte(TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NODLIGHTS)	// flags
-	message_end()
-
-    rg_radius_damage(Origin, id, id, ExpDamage, 350.0, DMG_BULLET)
+    write_byte(TE_EXPLOSION)
+    engfunc(EngFunc_WriteCoord, Origin[0])
+    engfunc(EngFunc_WriteCoord, Origin[1])
+    engfunc(EngFunc_WriteCoord, Origin[2])
+    write_short(ExpSprId)	// sprite index
+    write_byte(20)	// scale in 0.1's
+    write_byte(10)	// framerate
+    write_byte(TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NODLIGHTS)	// flags
+    message_end()   
+    
+    rg_dmg_radius(Origin , id , id , ExpDamage , 350.0 , CLASS_PLAYER , DMG_BULLET)
+    // rg_radius_damage(Origin, id, id, ExpDamage, 350.0, DMG_BULLET)
 }
 
 stock GetWatchEnd(player , Float:OutEndOrigin[3]){
@@ -335,41 +336,36 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
 {
     new ent = -1
     new Float:target_origin[3]
-    new Float:distance
-    new Float:final_damage
-	new Float:Origin_[3]
-	new Float:Heal;
-	//server_print("%f %f %f rg_radius_damage in put" , origin[0],origin[1],origin[2]);
-	// get_entvar(inflictor, var_origin, Origin_)
+    new Float:distance, Float:final_damage
 
     while ((ent = find_ent_in_sphere(ent, origin, radius)) != 0)
     {
-        if (!is_valid_ent(ent)) continue
-		if(pev(ent,pev_takedamage) == DAMAGE_NO) continue
+        if(ent == attacker) continue
+        if(!is_valid_ent(ent)) continue
+        if(get_entvar(ent, var_takedamage) == DAMAGE_NO) continue
 
-		new deadflag
-		pev(ent , pev_deadflag,deadflag)
-		
-		if(deadflag != DEAD_NO) continue
+        new deadflag
+        get_entvar(ent, var_deadflag, deadflag)
+        if(deadflag != DEAD_NO) continue
+
+        // 如果有自定义 NPC 阵营，最好也在这里屏蔽友军
+        if(is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))
+            continue
 
         get_entvar(ent, var_origin, target_origin)
         distance = vector_distance(origin, target_origin)
 
-        // ���Եݼ��˺���ԽԶԽ�ͣ�
+        // 距离越远伤害越低
         final_damage = damage * (1.0 - (distance / radius))
-        if (final_damage <= 0.0) continue;
+        if(final_damage <= 0.0) continue
 
-		if(ent == attacker) continue;
+        // 设置 inflictor 正确归属
+        set_entvar(ent, var_dmg_inflictor, inflictor)
 
-		if(is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
-
-		get_entvar(ent , var_health , Heal);
-
-		new kill = Heal - final_damage;
-		set_pev(ent, pev_dmg_inflictor, attacker)
-		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
+        ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
     }
 }
+
 
 stock Stock_SendWeaponAnim(id, iWpn, iAnim) 
 {

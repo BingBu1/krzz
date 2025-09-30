@@ -62,6 +62,8 @@ new  jp_beAttack_anim[] = {
 	1,19,23,123,114
 }
 
+new Modelid[sizeof Jp_Model]
+
 new FakeClient
 
 new Jpnpc_forwards[Jp_FOWARD]
@@ -129,7 +131,7 @@ public plugin_end(){
 public plugin_precache()
 {
 	for(new i = 0; i < sizeof(Jp_Model); i++)
-		precache_model(Jp_Model[i])
+		Modelid[i] = precache_model(Jp_Model[i])
 	
 	for (new i = 0; i < sizeof Jp_Attacksound; i++)
 		UTIL_Precache_Sound(Jp_Attacksound[i])
@@ -339,11 +341,11 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		AttackEndHeal = 50.0
 	}
 	if(AttackEndHeal <= 0.0){
-		if(UTIL_RandFloatEvents(0.02)){
-			new head_gib = rg_spawn_head_gib(this)
-			SetThink(head_gib , "RemoveGib")
-			set_entvar(head_gib, var_nextthink , get_gametime() + 2.0)
-		}
+		// if(UTIL_RandFloatEvents(0.02)){
+		// 	new head_gib = rg_spawn_head_gib(this)
+		// 	SetThink(head_gib , "RemoveGib")
+		// 	set_entvar(head_gib, var_nextthink , get_gametime() + 2.0)
+		// }
 		set_entvar(this , var_iuser4 , 0)
 		OnKill(this)
 		// ExecuteHam(Ham_TakeDamage, this , 0,  0 , 0, damagebits)
@@ -390,7 +392,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 
 public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, damagebits){
 	if(ExecuteHam(Ham_IsPlayer , idattacker) && get_member(idattacker , m_iTeam) != TEAM_CT){
-		ExecuteForward(Jpnpc_forwards[Jp_NpcOnDamagePost],_, this, idattacker, damage)
+		ExecuteForward(Jpnpc_forwards[Jp_NpcOnDamagePost], _ , this, idattacker, damage)
 	}
 	new Float:Hp
 	Hp = get_entvar(this,var_health)
@@ -509,7 +511,7 @@ public OnKill(id){
 	new hit = get_member(id , m_LastHitGroup)
 	SetDeadAct(id , hit)
 	set_entvar(id , var_deadflag , DEAD_DEAD)
-	set_entvar(id , var_nextthink , -1)
+	set_entvar(id , var_nextthink , -1.0)
 	set_entvar(id , var_movetype , MOVETYPE_NONE)
 	set_entvar(id , var_solid , SOLID_NOT)
 	set_entvar(id , var_takedamage , DAMAGE_NO)
@@ -593,6 +595,7 @@ public native_ReSpawn(id , nums){
 	new Float:val[3] = {0.0, 0.0, -200.0}
 	set_entvar(Jpid, var_velocity, val)
 	set_entvar(Jpid, var_origin, fOrigin)
+	set_entvar(Jpid , var_modelindex , Modelid[0])
 	set_entvar(Jpid, var_max_health, CurrentLeavelHeal)
 	set_entvar(Jpid, var_health, CurrentLeavelHeal)
 	set_entvar(Jpid , var_movetype , MOVETYPE_STEP)
@@ -612,7 +615,7 @@ public native_ReSpawn(id , nums){
 
 	SetActivity(Jpid , ACT_IDLE)
 
-	engfunc(EngFunc_SetModel , Jpid , Jp_Model[0])
+	// engfunc(EngFunc_SetModel , Jpid , Jp_Model[0])
 	engfunc(EngFunc_SetSize , Jpid , HULL_MIN , HULL_MAX)
 	// engfunc(EngFunc_SetOrigin , Jpid , fOrigin)
 	ExecuteForward(Jpnpc_forwards[JP_NpcCreatePost] , _ , Jpid)
@@ -912,7 +915,7 @@ public RibenNormlAttack(this ,beattack){
 	get_entvar(this, var_origin, origin)
 	get_entvar(beattack, var_origin, Playerorigin)
 	new Float:distance = vector_distance(origin, Playerorigin)
-	new const Float:AttackDisance = GetRiJunRule() != JAP_RULE_Blade_Enhancement ?  90.0 : 100.0
+	new const Float:AttackDisance = GetRiJunRule() != JAP_RULE_Blade_Enhancement ?  100.0 : 110.0
 	if(distance >= AttackDisance){
 		if((distance - AttackDisance) < 5.0){
 			//空了

@@ -209,7 +209,7 @@ public NpcBuyMenu(id, menu, item){
 
 public NPC_Killed(this , killer){
     new Team = GetNpcFakeTeam(this)
-    if(Team == _:CS_TEAM_CT)
+    if(Team == _:CS_TEAM_CT || !prop_exists(this , var_npcid))
         return
     new Npcid = get_prop_int(this , var_npcid)
     set_entvar(this, var_sequence ,  Kr_Npc[Npcid][Npc_Death_seqid])
@@ -229,6 +229,8 @@ public Ai_DamgePost(this, idinflictor, idattacker, Float:damage, damagebits){
         set_prop_float(this , var_deadtime ,  RemoveTime)
         SetThink(this , "Ai_Think")
         set_entvar(this , var_nextthink , get_gametime() + 0.2)
+    }else{
+        SendAnim(this , 0 , 0)
     }
     return
 }
@@ -424,7 +426,7 @@ public Ai_Think(npc_id){
             NewAngle[0] = 0.0
             set_entvar(npc_id , var_angles , NewAngle)
             ExecuteForward(Kr_NpcDoAttack , _ , npc_id , m_AttackEnt)
-            SendAnim(npc_id , Kr_Npc[npc_regid][Npc_Attack_seqid] , _:ACT_RANGE_ATTACK1)
+            SendAnim(npc_id , Kr_Npc[npc_regid][Npc_Attack_seqid] , _:ACT_SPECIAL_ATTACK1)
             set_member(npc_id , m_fSequenceFinished , 0)
             set_prop_int(npc_id , var_seqanim , _:Npc_Attack)
             set_prop_float(npc_id , var_lastattack ,NextAttackTime)
@@ -728,6 +730,10 @@ public SendAnim(iEntity, iAnim , ACT)
 {
     if(get_member(iEntity , m_Activity) == ACT)
         return
+    if(get_prop_int(iEntity , var_seqanim) == Npc_FLINCH && get_gametime() < get_prop_float(iEntity , var_flFlinchTime)){
+        set_prop_int(iEntity, var_seqanim , Npc_FLINCH)
+        return //播放受击
+    }
     new seq = get_entvar(iEntity , var_sequence)
     if(seq != iAnim){
         new is_loop = GetSeqFlags(iEntity) & STUDIO_LOOPING

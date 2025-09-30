@@ -33,7 +33,6 @@ public Check(id){
 
 
 public OnLevelChange_Post(Lv){
-    RoundNums = 0
     if(Lv > 100)
         IsNeedCheck = true
     else
