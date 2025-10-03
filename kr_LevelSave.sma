@@ -116,7 +116,7 @@ stock LevelSubGet(){
     else if(lv >= 500 && lv < 800){
         return 300
     }
-    else if(lv >= 800 && lv < 1300){
+    else if(lv >= 800 && lv <= 1300){
         return 400
     }
     return 0

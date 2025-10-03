@@ -79,7 +79,7 @@ new Weaponid
 #define WEAPON_ANIM_DRAW 2
 #define WEAPON_ANIM_SHOOT random_num(3,5)
 
-#define Cost 21.0
+#define Cost 35.0
 
 /* ~ [ Params ] ~ */
 new gl_iszAllocString_Weapon,
@@ -214,6 +214,17 @@ public plugin_precache()
 
 public ItemSel_Post(id, items, Float:cost1){
     if(items == Weaponid){
+		new bool:CanBuy
+	#if defined Usedecimal
+		CanBuy = Dec_cmp(id , cost1 , ">=")
+	#else
+		new Float:ammopak = GetAmmoPak(id)
+		CanBuy = (ammopak >= cost1)
+	#endif
+    	if(!CanBuy){
+        	m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
+        	return
+    	}
         SubAmmoPak(id , cost1)
 		Command_GiveWeapon(id)
     }
@@ -416,11 +427,12 @@ public CWeapon__PrimaryAttack_Pre(const pItem)
 {
 	if(!IsValidEntity(pItem) || !IsCustomItem(pItem)) return HAM_IGNORED;
 
-	static iClip; iClip = get_pdata_int(pItem, m_iClip, linux_diff_weapon);
+	static iClip; iClip = get_member(pItem , m_Weapon_iClip);//get_pdata_int(pItem, m_iClip, linux_diff_weapon);
 	if(!iClip)
 	{
 		ExecuteHam(Ham_Weapon_PlayEmptySound, pItem);
-		set_pdata_float(pItem, m_flNextPrimaryAttack, 0.2, linux_diff_weapon);
+		set_member(pItem , m_Weapon_flNextPrimaryAttack , 0.2);
+		// set_pdata_float(pItem, m_flNextPrimaryAttack, 0.2, linux_diff_weapon);
 
 		return HAM_SUPERCEDE;
 	}
@@ -443,7 +455,7 @@ public CWeapon__PrimaryAttack_Pre(const pItem)
 	else
 		UTIL_WeaponKickBack(pItem, pPlayer, 1.0, 0.375, 0.175, 0.0375, 5.75, 1.75, 8);
 
-	set_pdata_int(pItem, m_iClip, iClip - 1, linux_diff_weapon);
+	set_member(pItem , m_Weapon_iClip , iClip - 1);
 	WeaponTiming_Set(pItem, WEAPON_RATE, WEAPON_ANIM_SHOOT_TIME);
 
 	return HAM_SUPERCEDE;
@@ -572,7 +584,7 @@ public CWeapon__Create_PlasmaBall(const pPlayer)
 	set_pev(pEntity, pev_velocity, vecVelocity);
 
 	engfunc(EngFunc_SetOrigin, pEntity, vecOrigin);
-	engfunc(EngFunc_SetSize, pEntity, Float: {-3.0, -3.0, -3.0}, Float: {3.0, 3.0, 3.0});
+	engfunc(EngFunc_SetSize, pEntity, Float: {-1.0, -1.0, -1.0}, Float: {1.0, 1.0, 1.0});
 
 	return pEntity;
 }

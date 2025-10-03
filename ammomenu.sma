@@ -19,7 +19,7 @@ public plugin_init(){
 }
 
 public CreateMenu(id){
-    new Menus = menu_create("大洋兑换系统\r(5w = 1大洋 兑换有20%手续费)","AmmoHandle")
+    new Menus = menu_create("大洋兑换系统\r(5w = 1大洋 兑换有50%手续费)","AmmoHandle")
     menu_additem(Menus,"金钱兑换大洋")
     menu_additem(Menus,"将当前金钱全部兑换")
     menu_additem(Menus,"大洋转账")
@@ -27,7 +27,7 @@ public CreateMenu(id){
 }
 
 public CreateGiveAmmoMenu(id){
-    new Menus = menu_create("大洋转账系统\r(有10%手续费)","GiveAmmo")
+    new Menus = menu_create("大洋转账系统\r(有20%手续费)","GiveAmmo")
     new players = get_maxplayers()
     new info[8]
     for(new i = 1 ; i < players ; i++){
@@ -47,7 +47,7 @@ public GiveAmmo(id,menu,item){
         return
     }
     new bool:IsHasAmmo
-    const MIN_TRANSFER = 2100.0
+    const Float:MIN_TRANSFER = 2100.0
 #if defined Usedecimal
     IsHasAmmo = Dec_cmp(id , MIN_TRANSFER , ">")
 #else
@@ -64,7 +64,7 @@ public GiveAmmo(id,menu,item){
     playerid = str_to_num(info)
 
     client_cmd(id, "messagemode GiveMoney")
-    m_print_color(id, "!g[冰布提示]请输入你要给予%s的数量!t(10%%手续费)" , name)
+    m_print_color(id, "!g[冰布提示]请输入你要给予%s的数量!t(20%%手续费)" , name)
 
     
     set_prop_int(id , "gv" , playerid)
@@ -97,7 +97,7 @@ public GivePlayerMoney(id){
         return
     }
     new name[32],name2[32],Float:EndGive
-    EndGive = giveammo * 0.9
+    EndGive = giveammo * 0.8
     SubAmmoPak(id , giveammo)
     AddAmmoPak(giveid , EndGive)
     
@@ -140,7 +140,7 @@ public MoneyCallback(id){
     new money[32]
     read_argv(1,money,charsmax(money))
     new cost = str_to_num(money)
-    cost = floatround(float(cost) * 0.8)
+    cost = floatround(float(cost) * 0.5)
     new m_money = cs_get_user_money(id)
     if(m_money < 50000 || m_money < cost){
         m_print_color(id, "!g[冰布提示]您无法兑换可能是金钱不足或不足5w")
@@ -149,7 +149,7 @@ public MoneyCallback(id){
     new Float:get = float(cost) / 50000.0
     AddAmmoPak(id, get)
     cs_set_user_money(id, m_money - cost)
-    m_print_color(id, "!g[冰布提示]您兑换了%f块大洋", get)
+    m_print_color(id, "!g[冰布提示]您兑换了%.2f块大洋", get)
 }
 
 public AllMoneyToAmmo(id){
@@ -158,9 +158,9 @@ public AllMoneyToAmmo(id){
         m_print_color(id, "!g[冰布提示]兑换大洋最低需要5w金钱")
         return
     }
-    m_money = floatround(float(m_money) * 0.8)
+    m_money = floatround(float(m_money) * 0.5)
     new Float:get = float(m_money) / 50000.0
     AddAmmoPak(id, get)
     cs_set_user_money(id, 0)
-    m_print_color(id, "!g[冰布提示]您兑换了%f块大洋", get)
+    m_print_color(id, "!g[冰布提示]您兑换了%.2f块大洋", get)
 }

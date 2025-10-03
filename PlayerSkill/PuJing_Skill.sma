@@ -267,11 +267,44 @@
                 break
             }
         }
-        set_entvar(this ,var_nextthink, get_gametime() + 0.01)
+        set_entvar(this ,var_nextthink, get_gametime() + random_float(0.1,0.3))
+        new Attack = FindNearNpc(this)
+        if(Attack > 0){
+            lerp(this , Attack)
+        }
         if(get_gametime() > get_entvar(this , var_fuser1)){
             rg_remove_entity(this)
             return
         }
+    }
+
+    public lerp(ent , target){
+        new Float:vel[3],Float:org[3],Float:targetorg[3],Float:dir[3]
+	    get_entvar(ent, var_velocity, vel)
+	    get_entvar(ent, var_origin, org)
+	    get_entvar(target, var_origin, targetorg)
+	    targetorg[2] += 30.0
+	    xs_vec_sub(targetorg, org, dir)
+	    xs_vec_normalize(dir, dir)
+
+	    // 当前速度转为单位方向
+        new Float:curdir[3]
+        xs_vec_normalize(vel, curdir)
+
+	    new Float:newdir[3]
+	    xs_vec_lerp(curdir, dir, 1.0, newdir)
+	    xs_vec_normalize(newdir, newdir)
+
+	    new Float:new_angles[3]
+	    vector_to_angle(newdir, new_angles)   // 把方向向量转换成角度 (pitch, yaw, roll)
+	    set_entvar(ent, var_angles, new_angles)
+    
+
+	    new Float:new_vel[3]
+	    xs_vec_mul_scalar(newdir, 1000.0, new_vel)
+	    set_entvar(ent, var_velocity, new_vel)
+
+	    set_entvar(ent, var_nextthink, get_gametime() + 0.15)
     }
 
     public tk_Touch(this , other){
@@ -302,3 +335,9 @@
         write_byte(0)
         message_end()
     }
+
+    stock xs_vec_lerp(const Float:a[3], const Float:b[3], Float:factor, Float:out[3]) {
+    for (new i = 0; i < 3; i++) {
+        out[i] = a[i] + (b[i] - a[i]) * factor
+    }
+}

@@ -12,6 +12,7 @@
 #include <reapi>
 #include <ini_file> // https://forums.alliedmods.net/showthread.php?t=315031
 #include <props>
+#include <kr_core>
 
 // Choose one
 #define LIBRARY_ZP "zp50_core"
@@ -88,6 +89,8 @@ new ExpB
 native ccx_custom_pmodel(id, cswpnid, const name[]);
 native ccx_custom_cswpn(id, cswpnid);
 
+new Wpnid
+
 /* =========================================
 ----- End of Plugin Datas and Headers ------
 ========================================= */
@@ -133,6 +136,35 @@ public plugin_init()
 	register_clcmd("fv", "GiveWeapon")
 	
 	register_clcmd(weapon_spr, "hook_weapon")
+
+	Wpnid = BulidWeaponMenu("冰璃寒蟒(VIP)" , 210.0)
+}
+
+public ItemSel_Post(id , item , Float:cost){
+	if(item == Wpnid){
+		new flags = get_user_flags(id)
+		if(flags > 0 && flags & ADMIN_RESERVATION){
+			BuyWeapon(id ,cost)
+			return
+		}
+		m_print_color(id , "你没有权限购买此道具。")
+	}
+}
+
+BuyWeapon(id , Float:cost){
+	new bool:CanBuy
+	#if defined Usedecimal
+		CanBuy = Dec_cmp(id , cost , ">=")
+	#else
+		new Float:ammopak = GetAmmoPak(id)
+		CanBuy = (ammopak >= cost)
+	#endif
+    if(!CanBuy){
+    	m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
+    	return
+    }
+	GiveWeapon(id)
+	SubAmmoPak(id , cost)
 }
 
 public hook_weapon(id) {engclient_cmd(id, weapon_frostbite); }

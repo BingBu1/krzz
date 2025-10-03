@@ -35,7 +35,7 @@
 #define Expspr "sprites/thanatos5_explode2.spr"
 
 #define FireDamage 50
-#define ExpDamage 1000.0
+#define ExpDamage 1500.0
 
 new HasWaepon
 

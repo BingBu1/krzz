@@ -15,14 +15,14 @@ enum MarkData{
 }
 
 new KillMarkModel[][] = {
-    "sprites/KillMark/killmark_25s2TR.spr",
+    "sprites/KillMark/killmark_22s4CT.spr",
     "sprites/KillMark/killmark_25s1TR.spr",
     "sprites/KillMark/killmark_24s1CT.spr"
 }
 
 new MarkName[][MarkData] = {
     {
-        "管理专用-非售品",99999.0
+        "冰魂雪魄(Vip)",99999.0
     },
     {
         "小熊记录" , 2000.0
@@ -114,7 +114,7 @@ public BuyKillMark(id , item , bool:IsHave){
     new Float:HasCost = GetAmmoPak(id)
     HasAmmoToBuy = (HasCost > BuyCost)
 #endif
-    if(HasAmmoToBuy){
+    if(!HasAmmoToBuy){
         m_print_color(id , "!g[冰布提示]!y你的大洋不足以购买")
         return
     }

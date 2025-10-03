@@ -268,7 +268,8 @@ public reg_forward(){
 }
 
 public NPC_KillPlayer(this , killer){
-	CreateHanJianMenu(this)
+    if(ExecuteHam(Ham_IsPlayer , this))
+	    CreateHanJianMenu(this)
 }
 
 CreateHanJianMenu(id){
@@ -884,7 +885,8 @@ public CanSpawn(){
 }
 
 public NPC_Killed(this , killer){
-    if(KrGetFakeTeam(this) != CS_TEAM_T && ExecuteHam(Ham_IsPlayer , killer)){
+    new IsPlayerKilled = ExecuteHam(Ham_IsPlayer , killer)
+    if(KrGetFakeTeam(this) != CS_TEAM_T && IsPlayerKilled){
         PlayerKilled[killer]++
         if(PlayerKilled[killer] >= 5){
             AddAmmoPak(killer , 0.01)
@@ -903,6 +905,17 @@ public NPC_Killed(this , killer){
             case 8 : if(!is_tank(this))AddKillRiBenJunGuan(killer)
         }
     }
+    // else if(!IsPlayerKilled){
+    //     new classname[32]
+    //     get_entvar(killer , var_classname , classname , charsmax(classname))
+    //     log_amx("日军被错误的击杀，击杀类名为%s" , classname)
+    //     new Judian = GetJuDianNum()
+    //     ReSpawnEnt(this)
+    //     CurrentNpcs--
+    //     if(CurrentNpcs <= 0){
+    //         set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
+    //     }
+    // }
 }
 
 public ChangeJudian(){
@@ -914,8 +927,9 @@ public ChangeJudian(){
             rg_remove_entity(iEntity)
     }//移除上个据点npc
     set_hudmessage(255,255,0,-1.0,-1.0,2,3.0,6.0)
+    log_amx("攻略据点新据点为%d" , GetJuDianNum())
     switch(GetJuDianNum()){
-        case 1 .. 7:{
+        case 0 .. 7:{
             CurrentNpcs = GetCurrentJuDianMaxSpawn()
             CanSpawnNum = CurrentNpcs
             GiveMoney(3000)
@@ -935,9 +949,8 @@ public ChangeJudian(){
             HanJianSpawn()
             return
         }
+        default : server_cmd("endround 1") //据点全部攻破结算
     }
-    //据点全部攻破结算
-    server_cmd("endround 1")
 }
 
 public HanJianSpawn(){

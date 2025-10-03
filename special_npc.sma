@@ -422,6 +422,14 @@ public NPC_Killed(this , killer){
         rg_remove_entity(spr)
     }
     if(get_entvar(this,var_iuser1) >= Elite_White){
+        BossNpc--
+        if(!ExecuteHam(Ham_IsPlayer , killer)){
+            set_entvar(this, var_iuser1, 0)
+            set_entvar(this, var_renderfx, kRenderFxNone)
+            set_entvar(this, var_rendercolor, Float:{0.0,0.0,0.0})
+            set_entvar(this ,var_renderamt , 1.0)
+            return
+        }
         new MonsterLv = get_entvar(this, var_iuser1)
         new lv = Getleavel()
         new Lastmoney , money = cs_get_user_money(killer)
@@ -462,7 +470,6 @@ public NPC_Killed(this , killer){
         set_entvar(this, var_renderfx, kRenderFxNone)
         set_entvar(this, var_rendercolor, Float:{0.0,0.0,0.0})
         set_entvar(this ,var_renderamt , 1.0)
-        BossNpc--
     }
     new origin[3]
     get_entvar(this, var_origin,origin)

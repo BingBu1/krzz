@@ -35,7 +35,14 @@ public AddAmmoAdmin(id, level, cid){
     }
     new pl_id = read_argv_int(1)
     new Float:addammo = read_argv_float(2)
+    if(!is_user_connected(pl_id)){
+        log_amx("不存在的玩家")
+        return
+    }
+    new name[32]
+    get_user_name(pl_id , name , charsmax(name))
     AddAmmoPak(pl_id , addammo)
+    log_amx("%s已添加%f大洋" , name , addammo)
 }
 public SetAmmoAdmin(id, level, cid){
     if (read_argc() < 3){

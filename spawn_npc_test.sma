@@ -49,13 +49,14 @@ enum swn_MenuId{
     swn_Swapn_TestWall,
     swn_Swapn_Npc,
     swn_Save_Wall,
-    swn_LoadTest
+    swn_LoadTest,
+    swn_fzLoot
 };
 
 public plugin_init(){
     register_plugin("npcTest", AMXX_VERSION_STR, "Bing")
     NpcMenu = menu_create("Npc生成Test Bing","MenuHander")
-    register_clcmd("use", "OnMenuShow")
+    register_clcmd("use", "OnMenuShow" , ADMIN_RCON)
 
     register_forward(FM_PlayerPreThink, "on_PreThink")
     Lastwall = CreateStack()
@@ -95,6 +96,7 @@ public CreateSwaponMenu(){
 
     menu_additem(NpcMenu, "保存当前存储设置","6")
     menu_additem(NpcMenu, "加载测试","7")
+    menu_additem(NpcMenu, "爆金币","8")
     menu_setprop(NpcMenu,MPROP_EXITNAME,"退出")
     menu_setprop(NpcMenu,MPROP_NEXTNAME,"下一页")
 }
@@ -192,6 +194,11 @@ public MenuHander(id, menu, item)
             SaveAll();
         case swn_LoadTest:
             LoadJsonTest();
+        case swn_fzLoot: {
+            new Float:fOrigin[3]; get_entvar(id , var_origin,fOrigin) , 
+            fOrigin[2] -= 20.0 ,CreateLoot_Cso(fOrigin)
+            client_print(0 , print_center , "国庆腐竹因不玩原神被爆金币啦快来捡")
+        }
     }
     return PLUGIN_HANDLED;
 }

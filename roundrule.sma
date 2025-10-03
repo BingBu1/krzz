@@ -24,7 +24,7 @@ new const HumanRule[][] = {
     "最后一发",
     "吸血",
     "火焰净化",
-    "无限火力",
+    "后勤充备",
     "幸运儿",
     "贫铀弹头",
     "尖刺护甲",
@@ -58,7 +58,7 @@ new const HUNMAN_RULE_Text[][]= {
     "最后一发子弹打出核弹轰炸",
     "血量低于150时攻击可以吸血伤害的1%",
     "投掷手雷时将投掷出燃烧瓶",
-    "武器无限弹夹无需换单",
+    "武器获得无限后备弹夹",
     "砸枪生成枪械概率大幅度提升",
     "伤害无视防御10%,并可穿透9层墙体",
     "受到伤害时向周围造成伤害",
@@ -141,7 +141,7 @@ public event_roundstart(){
 
 stock SpelicRule(const any:Rule){
     switch(Rule){
-        case HUMAN_RULE_InfAmmo : server_cmd("mp_infinite_ammo 1")
+        case HUMAN_RULE_InfAmmo : server_cmd("mp_infinite_ammo 2")
     }
 }
 

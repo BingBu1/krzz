@@ -13,21 +13,38 @@
 #define Set_BitVar(%1,%2)		(%1 |= (1 << (%2 & 31)));
 #define UnSet_BitVar(%1,%2)		(%1 &= ~(1 << (%2 & 31)));
 
-#define CLIP 10
-#define Max_bpammo 90
-#define WaeponIDs 10000 + 2 
-#define cost 8.5
+#define CLIP 50
+#define Max_bpammo 300
+#define WaeponIDs 10000 + 6
+#define cost 12.5
 #define DamageBase 400.0
 
-#define V_MODEL "models/v_scout_2_2.mdl"
-#define W_MODEL "models/w_scout_2_2.mdl"
-#define P_MODEL "models/p_scout_3_2.mdl"
-#define DefWModule "models/w_scout.mdl"
+#define V_MODEL "models/v_m4a1_a1.mdl"
+#define W_MODEL "models/w_m4a1_a1.mdl"
+#define P_MODEL "models/p_m4a1_a1.mdl"
+#define DefWModule "models/w_m4a1.mdl"
 
-#define FlySound "nuke_fly.wav"
-#define FlyModule "models/hvr.mdl"
+#define FlyModule "models/Onions.mdl"
 
-#define cznh "weapon_scout"
+#define cznh "weapon_m4a1"
+
+new WEAPON_SOUNDS[][]={
+    "weapons/cart_ldraw.wav",
+    "weapons/cart_lclipout.wav",
+    "weapons/cart_lclipin.wav",
+    "weapons/cart_hclipout.wav",
+    "weapons/cart_hhit.wav",
+    "weapons/cart_spindown.wav",
+    "weapons/cart_hdraw.wav",
+    "weapons/cart_turn.wav",
+    "weapons/cart_yaho.wav",
+    "weapons/cart_jump.wav",
+    "weapons/cart_foley5.wav",
+    "weapons/cart_foley4.wav",
+    "weapons/cart_foley3.wav",
+    "weapons/cart_foley2.wav",
+    "weapons/cart_foley1.wav",
+}
 
 new HasWaepon,Has_ZWaepon//紫N
 
@@ -37,9 +54,10 @@ new g_Trail, g_Explosion,g_Explosion_Z
 
 new waeponid
 public plugin_init(){
-    new plid = register_plugin("幽冥长征", "1.0", "Bing")
+    new plid = register_plugin("初音甩葱枪", "1.0", "Bing")
     RegisterHookChain(RG_CreateWeaponBox , "m_CreateWaeponBox_Post" , true)
     RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
+    RegisterHookChain(RG_CBasePlayerWeapon_DefaultReload , "m_Reload")
     RegisterHookChain(RG_CBasePlayer_AddPlayerItem, "m_AddPlayerItem")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
     
@@ -47,9 +65,9 @@ public plugin_init(){
     
     RegisterHam(Ham_TraceAttack,"player","m_TraceAttack")
     RegisterHam(Ham_TraceAttack,"hostage_entity","m_TraceAttack")
-    // register_clcmd("say /buy_cznh", "Buycznh")
-    waeponid = BulidWeaponMenu("幽冥长征", cost)
-    BulidCrashGunWeapon("奇特武器 幽冥长征", W_MODEL , "FreeGive", plid)
+    register_clcmd("gvcygun", "FreeGive" , ADMIN_RCON)
+    // waeponid = BulidWeaponMenu("灭灵邪骨", cost)
+    BulidCrashGunWeapon("初音甩葱枪", W_MODEL , "FreeGive", plid)
 }
 
 public plugin_precache(){
@@ -58,16 +76,19 @@ public plugin_precache(){
     precache_model(P_MODEL)
     precache_model(FlyModule)
 
-    g_Trail = precache_model("sprites/zbeam1.spr")
-	// g_Explosion = precache_model("sprites/zerogxplode.spr")
-	g_Explosion_Z = precache_model("sprites/portal.spr")
+    for(new i = 0 ; i < sizeof WEAPON_SOUNDS ; i++){
+        UTIL_Precache_Sound(WEAPON_SOUNDS[i])
+    }
 
-    precache_sound(FlySound)
+    g_Trail = precache_model("sprites/laserbeam.spr")
+	g_Explosion = precache_model("sprites/zerogxplode.spr")
+
+    // precache_sound(FlySound)
 }
 
 public ItemSel_Post(id , items, Float:cost1){
     if(items == waeponid){
-        Buycznh(id)
+        Buymlxg(id)
     }
 }
 
@@ -79,6 +100,14 @@ public client_disconnected(id){
     UnSet_BitVar(HasWaepon, id)
 }
 
+public m_Reload(const this, iClipSize, iAnim, Float:fDelay){
+    new Player = get_member(this, m_pPlayer)
+    if(is_entity(this) && is_user_alive(Player) && Get_BitVar(HasWaepon, Player)){
+        // UTIL_EmitSound_ByCmd(Player , WEAPON_SOUNDS[1])
+    }
+    return HC_CONTINUE
+}
+
 public Attack_post(const this){
     new playerid = get_member(this, m_pPlayer)
     new m_clips = get_member(this, m_Weapon_iClip)
@@ -87,48 +116,49 @@ public Attack_post(const this){
     }
     if(m_clips <= 0)
         return HAM_IGNORED
-    CreateFly(playerid)
-    // new Float:flNextAttack = get_member(this , m_Weapon_flNextPrimaryAttack)
-    // flNextAttack /= 2.0
-    // set_member(this , m_Weapon_flNextPrimaryAttack , flNextAttack)
+    new Float:fOrigin[3]
+    get_position(playerid, 20.0, -15.0, 0.0, fOrigin)
+    CreateFly(playerid , fOrigin)
+    get_position(playerid, 20.0, 15.0, 0.0, fOrigin)
+    CreateFly(playerid , fOrigin)
 }
 
-public CreateFly(id){
+public CreateFly(id , Float:Origin[3]){
     if(is_nullent(id))return 0
     new ent = rg_create_entity("info_target")
     if(!ent)return ent
     SetTouch(ent, "TouchFly")
     new Float:fAngles[3], Float:fOrigin[3]
-    new const flyspeed = 1000
-    set_entvar(ent, var_classname, "cznh_fly")
-    set_entvar(ent, var_movetype, MOVETYPE_FLY)
+    new const flyspeed = 2000
+    set_entvar(ent, var_classname, "mxlg_fly")
+    set_entvar(ent, var_movetype, MOVETYPE_TOSS)
     set_entvar(ent, var_solid, SOLID_BBOX)
     set_entvar(ent, var_owner, id)
 
     get_entvar(id, var_v_angle, fAngles)
     fAngles[0] *= -1.0
-    get_position(id, 20.0, 0.0, 0.0, fOrigin)
-    set_entvar(ent,var_origin, fOrigin)
+    set_entvar(ent,var_origin, Origin)
     set_entvar(ent,var_angles, fAngles)
     new Float:fVel[3]
 	velocity_by_aim(id, flyspeed, fVel)
-    set_entvar(ent, var_velocity, fVel)	
+    set_entvar(ent, var_velocity, fVel)
+    set_entvar(ent, var_gravity , 0.5)	
 
 	message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
 	write_byte(TE_BEAMFOLLOW)	// Temp entity type
 	write_short(ent)		// entity
 	write_short(g_Trail)	// sprite index
-	write_byte(25)	// life time in 0.1's
+	write_byte(2)	// life time in 0.1's
 	write_byte(5)	// line width in 0.1's
-	write_byte(224)	// red (RGB)
-	write_byte(224)	// green (RGB)
-	write_byte(255)	// blue (RGB)
+	write_byte(0)	// red (RGB)
+	write_byte(150)	// green (RGB)
+	write_byte(200)	// blue (RGB)
 	write_byte(255)	// brightness 0 invisible, 255 visible
 	message_end()
 
     engfunc(EngFunc_SetModel, ent , FlyModule)
-    engfunc(EngFunc_SetSize, ent, Float:{-1.0, -1.0, -1.0}, Float:{1.0, 1.0, 1.0})
-    emit_sound(ent, CHAN_AUTO, FlySound,1.0, ATTN_NORM, 0, PITCH_NORM)
+    engfunc(EngFunc_SetSize, ent, Float:{-2.0, -2.0, -2.0}, Float:{2.0, 2.0, 2.0})
+    // emit_sound(ent, CHAN_AUTO, FlySound,1.0, ATTN_NORM, 0, PITCH_NORM)
 }
 
 public TouchFly(const this, const other){
@@ -138,26 +168,7 @@ public TouchFly(const this, const other){
     set_entvar(this, var_flags, FL_KILLME)
     new findent = NULLENT
     new owner = get_entvar(this, var_owner)
-    while((findent = find_ent_in_sphere(findent, org, 300.0)) != 0){
-        new Float:targetOrigin[3]
-        if(get_entvar(findent, var_deadflag) == DEAD_DEAD|| get_entvar(findent , var_takedamage) == DAMAGE_NO)
-            continue
-        if(findent == owner)
-            continue
-        if(findent <= 32 && cs_get_user_team(findent) == cs_get_user_team(owner))
-            continue
-        get_entvar(findent, var_origin, targetOrigin)
-        new Float:distance = vector_distance(org, targetOrigin)
-        if(distance > 300.0)
-            continue
-        new DamageNew = DamageBase * (1.0 - distance / 300.0)
-        ExecuteHamB(Ham_TakeDamage, findent, owner, owner, DamageNew, DMG_GENERIC)
-        new Float:Heal = get_entvar(findent , var_health)
-        if(Heal <= 0.0){
-            MakeBoom(targetOrigin)
-            rg_dmg_radius(targetOrigin , owner, owner ,600.0 , 600.0,CLASS_PLAYER , DMG_GENERIC)
-        }
-    }
+    rg_dmg_radius(org , owner , owner , DamageBase , 380.0 , CLASS_PLAYER , DMG_GENERIC)
 }
 
 public m_TraceAttack(Victim, Attacker, Float:Damage, Float:Direction[3], Ptr, DamageBits){
@@ -166,7 +177,7 @@ public m_TraceAttack(Victim, Attacker, Float:Damage, Float:Direction[3], Ptr, Da
     }
     
     if(Get_BitVar(HasWaepon, Attacker) && get_user_weapon(Attacker) == CSW_MP5NAVY){
-        SetHamParamFloat(3, Damage * 4.0)
+        SetHamParamFloat(3, Damage * 3.0)
     }
 }
 
@@ -215,6 +226,7 @@ public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnim
     if(Get_BitVar(HasWaepon, playerid)){
         SetHookChainArg(2,ATYPE_STRING, V_MODEL)
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
+        // UTIL_EmitSound_ByCmd(playerid , WEAPON_SOUNDS[0])
     }
 }
 
@@ -236,10 +248,11 @@ public FreeGive(id){
     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
     rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
     set_member(wpn, m_Weapon_iClip, CLIP)
-    rg_set_user_bpammo(id,WEAPON_SCOUT,Max_bpammo)
+    new wpnid = rg_get_iteminfo(wpn , ItemInfo_iId)
+    rg_set_user_bpammo(id,wpnid,Max_bpammo)
 }
 
-public Buycznh(id){
+public Buymlxg(id){
     if(access(id ,ADMIN_KICK)){
         //管理员直接获取
         goto GetWpn
@@ -262,8 +275,9 @@ GetWpn:
     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
     rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
     set_member(wpn, m_Weapon_iClip, CLIP)
-    rg_set_user_bpammo(id,WEAPON_SCOUT,Max_bpammo)
-    client_print(id, print_center, "购买成功！攻击力+4.0倍")
+    new wpnid = rg_get_iteminfo(wpn , ItemInfo_iId)
+    rg_set_user_bpammo(id,wpnid,Max_bpammo)
+    client_print(id, print_center, "购买成功！攻击力+3.0倍")
 }
 
 stock get_position(id,Float:forw, Float:right, Float:up, Float:vStart[])
@@ -290,7 +304,7 @@ public MakeBoom(Float:iOrigin[3]){
 	write_coord_f(iOrigin[0])
 	write_coord_f(iOrigin[1])
 	write_coord_f(iOrigin[2])
-	write_short(g_Explosion_Z)
+	write_short(g_Explosion)
 	write_byte(30)
 	write_byte(15)
 	write_byte(0)

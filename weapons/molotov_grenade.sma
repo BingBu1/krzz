@@ -3,6 +3,7 @@
 #include <hamsandwich>
 #include <reapi>
 #include <xs>
+#include <kr_core>
 
 #define PLUGIN_NAME "Molotov Grenade"
 #define PLUGIN_VERSION "1.0.3"
@@ -105,6 +106,8 @@ new BuyLimit[MAX_PLAYERS + 1];
 new HookChain:HookChain_CBasePlayer_TakeDamage; 
 new HookChain:HookChain_deathNoticePostHook;
 
+new BuyWeaponid 
+
 public plugin_precache() {
 	precache_model(WEAPON_MODEL_VIEW_MOLOTOV);
 	precache_model(WEAPON_MODEL_PLAYER_MOLOTOV);
@@ -143,6 +146,8 @@ public plugin_precache() {
 	SpriteFireBall = precache_model(MOLOTOV_SPRITE_FIRE_BALL);
 	SpriteFireColumn = precache_model(MOLOTOV_SPRITE_FIRE_COLUMN);
 	SpriteFireExplode = precache_model(MOLOTOV_SPRITE_FIRE_EXPLODE);
+
+
 }
 
 public plugin_init() {
@@ -385,6 +390,27 @@ public plugin_init() {
 	}
 	unregister_message(MsgIdWeaponList, MsgHookWeaponList);
 #endif
+
+	BuyWeaponid = BulidWeaponMenu("莫托夫鸡尾酒" , 1.5)
+
+}
+
+public ItemSel_Post(id , item , Float:cost){
+	if(item == BuyWeaponid){
+		new bool:CanBuy
+	#if defined Usedecimal
+		CanBuy = Dec_cmp(id , cost , ">=")
+	#else
+		new Float:ammopak = GetAmmoPak(id)
+		CanBuy = (ammopak >= cost)
+	#endif
+	   if(!CanBuy){
+	       m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
+	       return
+	   }
+	   SubAmmoPak(id , cost)
+	   giveNade(id)
+	}
 }
 
 public m_cavr_def(){
@@ -888,7 +914,7 @@ public FireMolotov_Think_Post(iEntity)
 public giveNade(const id) {
 	new item = rg_get_player_item(id, ITEM_CLASSNAME, GRENADE_SLOT);
 	if (item != 0) {
-		giveAmmo(id, 1, AMMO_ID, 1);
+		giveAmmo(id, 1, AMMO_ID, 99);
 		return item;
 	}
 

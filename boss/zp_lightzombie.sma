@@ -410,11 +410,9 @@ public Remove_boss(Lightz)
 	PlaySound(0, ROUND_WIN)
 	engfunc(EngFunc_RemoveEntity, Lightz_Ent)
 	remove_entity(y_hpbar)		
-	// server_cmd("sv_restartround 20")	
+
 	Boss_Create_Fix = false
 	server_cmd("endround 1")
-
-	// set_task(20.0, "Restart_Map_antibug")
 
 	remove_task(Lightz+TASK_DEATH)
 }

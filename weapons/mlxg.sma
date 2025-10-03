@@ -16,8 +16,8 @@
 #define CLIP 15
 #define Max_bpammo 52
 #define WaeponIDs 10000 + 3
-#define cost 18.0
-#define DamageBase 280.0
+#define cost 12.5
+#define DamageBase 400.0
 
 #define V_MODEL "models/v_m3_a1.mdl"
 #define W_MODEL "models/w_m3_a1.mdl"
@@ -147,21 +147,7 @@ public TouchFly(const this, const other){
     set_entvar(this, var_flags, FL_KILLME)
     new findent = NULLENT
     new owner = get_entvar(this, var_owner)
-    while((findent = find_ent_in_sphere(findent, org, 300.0)) != 0){
-        new Float:targetOrigin[3]
-        if(get_entvar(findent, var_deadflag) == DEAD_DEAD|| get_entvar(findent , var_takedamage) == DAMAGE_NO)
-            continue
-        if(findent == owner)
-            continue
-        if(findent <= 32 && cs_get_user_team(findent) == cs_get_user_team(owner))
-            continue
-        get_entvar(findent, var_origin, targetOrigin)
-        new Float:distance = vector_distance(org, targetOrigin)
-        if(distance > 300.0)
-            continue
-        new DamageNew = DamageBase * (1.0 - distance / 300.0)
-        ExecuteHamB(Ham_TakeDamage, findent, owner, owner, DamageNew, DMG_GENERIC)
-    }
+    rg_dmg_radius(org , owner , owner , DamageBase , 380.0 , CLASS_PLAYER , DMG_GENERIC)
 }
 
 public m_TraceAttack(Victim, Attacker, Float:Damage, Float:Direction[3], Ptr, DamageBits){

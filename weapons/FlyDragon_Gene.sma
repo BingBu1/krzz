@@ -223,7 +223,7 @@ public Skill3(id){
     set_entvar(id , var_effects , EF_NODRAW)
     rg_spawn_random_gibs(id , 5 , false)
     MakeBoom(fOrigin)
-    rg_dmg_radius(fOrigin , id , id , 3000.0 , 500.0 , CLASS_PLAYER , DMG_SLASH | DMG_ALWAYSGIB)
+    rg_dmg_radius(fOrigin , id , id , 6000.0 , 800.0 , CLASS_PLAYER , DMG_SLASH | DMG_ALWAYSGIB)
     user_kill(id)
     return PLUGIN_HANDLED
 }

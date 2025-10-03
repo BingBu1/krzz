@@ -84,7 +84,8 @@ public ItemSel_Post(id, items, Float:cost1){
 }
 
 public FreeGive(id){
-	GiveWeaponByID(id, Waeponid)
+	new Wpn = GiveWeaponByID(id, Waeponid)
+	rg_set_iteminfo(Wpn , ItemInfo_iMaxClip , 1)
 }
 
 public Getrpg(id){
@@ -100,7 +101,7 @@ public Getrpg(id){
         return
     }
     SubAmmoPak(id , cost)
-	GiveWeaponByID(id, Waeponid)
+	FreeGive(id)
 }
 
 public OnPlayerPickupWeapon(id, item){
@@ -126,6 +127,7 @@ public CreateWeaponFunc(){
    BuildWeaponAmmunition(Waeponid, 1, ammo)
    BuildWeaponPrimaryAttack(Waeponid, 25.0/30.0, 0.0, 0.0, anim_fire)
    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPre, "PrimaryAttackPre")
+   RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPrePost, "PrimaryAttackPost")
    RegisterWeaponForward(Waeponid, WForward_DeployPost, "DeployPost")
 }
 
@@ -147,7 +149,8 @@ public plugin_precache(){
 
 public DeployPost(EntityID){
     new id = get_pdata_cbase(EntityID, m_pPlayer)
-    play_weapon_anim(id, anim_draw1)
+	play_weapon_anim(id, anim_draw1)
+	rg_set_iteminfo(EntityID , ItemInfo_iMaxClip , 1)
 }
 
 public m_Touch(toucher, touched){
@@ -196,6 +199,10 @@ public PrimaryAttackPre(EntityID){
 	new Float:origin[3]
 	get_position(id,20.0,0,0,origin)
 	CreateRpg(id,origin)
+}
+
+public PrimaryAttackPost(Wpn){
+	set_member(Wpn , m_Weapon_flNextPrimaryAttack , 0.8)
 }
 
 public CreateRpg(ids , Float:Sp_Origin[3]){
@@ -269,6 +276,7 @@ public Rockthink(ent){
 	get_entvar(ent, var_velocity, vel)
 	get_entvar(ent, var_origin, org)
 	get_entvar(target, var_origin, targetorg)
+	targetorg[2] += 30.0
 
 	xs_vec_sub(targetorg, org, dir)
 	xs_vec_normalize(dir, dir)

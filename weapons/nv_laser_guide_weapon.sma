@@ -182,7 +182,7 @@ public Register_Cvars()
 	register_cvar("nv_zp_cso_laser_guide", VERSION, FCVAR_SERVER | FCVAR_SPONLY);
 	g_iCvars[0] = register_cvar("nv_lg_dmg_per_second","1500.0");
 	g_iCvars[1] = register_cvar("nv_lg_reload_time","10.0");
-	g_iCvars[2] = register_cvar("nv_lg_max_use","8");
+	g_iCvars[2] = register_cvar("nv_lg_max_use","40");
 	g_iCvars[3] = register_cvar("nv_lg_cost","0");
 	g_iCvars[4] = register_cvar("nv_lg_time_attack","10.0");
 	
@@ -309,13 +309,13 @@ public logevent_round_end()
 // }
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
-    new playerid = get_member(this, m_pPlayer)
+	new playerid = get_member(this, m_pPlayer)
 	new iWpn = get_member(playerid , m_pActiveItem)
 	new slot = rg_get_iteminfo(iWpn , ItemInfo:ItemInfo_iSlot)
-    if(Get_BitVar(g_has_laser, playerid) && slot == 0){
-        SetHookChainArg(3,ATYPE_STRING, P_MODEL)
-        SetHookChainArg(3,ATYPE_STRING, V_MODEL)
-    }
+	if(Get_BitVar(g_has_laser, playerid) && slot == 0){
+	    SetHookChainArg(3,ATYPE_STRING, P_MODEL)
+	    SetHookChainArg(2,ATYPE_STRING, V_MODEL)
+	}
 }
 
 
@@ -497,7 +497,7 @@ public Remove_Laser(id)
 	UnSet_BitVar(g_has_laser,id);
 	UnSet_BitVar(g_has_used,id);
 	g_Used[id] = 0;
-	Wpnlist(id,0);
+	Wpnlist(id , 0);
 }
 
 public Call_Attack(id)
@@ -519,6 +519,7 @@ public Call_Attack(id)
 			Create_Ground_Sprite(id,Origin);
 			Create_Beam(id,0,128,0);
 			emit_sound(id, CHAN_WEAPON, szSounds[0], 1.0, ATTN_NORM, 0, PITCH_NORM);
+			client_print(id , print_center , "当前核武剩余库存%d" , g_Used[id])
 		}
 		else
 		{
@@ -553,7 +554,7 @@ public Create_Ground_Sprite_2(id,Float:origin[3] , ShootNum , Float:Time){
 	set_pev( ent, pev_frame,0.0);
 	set_pev( ent, pev_scale , 7.0);
 	set_pev( ent, pev_spawnflags, SF_SPRITE_STARTON );
-	set_pev( ent, pev_iuser3, id);
+	set_pev( ent, pev_owner, id);
 	
 	Angle[0] += 90.0;
 	
@@ -580,7 +581,7 @@ public Create_Ground_Sprite(id,Float:origin[3])
 	set_pev( ent, pev_frame,0.0);
 	set_pev( ent, pev_scale , 7.0);
 	set_pev( ent, pev_spawnflags, SF_SPRITE_STARTON );
-	set_pev( ent, pev_iuser3, id);
+	set_pev( ent, pev_owner, id);
 	
 	Angle[0] += 90.0;
 	
@@ -610,25 +611,27 @@ public Show_Sky_Sprite(taskid)
 		message_end();
 		
 		new Float:fOrigin[3];
-		new iVictim = -1;
-		new iOwner = pev(ent,pev_iuser3);
+		// new iVictim = -1;
+		new iOwner = pev(ent,pev_owner);
 		
 		pev(ent,pev_origin,fOrigin);
+
+		rg_dmg_radius(fOrigin , iOwner , iOwner , get_pcvar_float(g_iCvars[0]) , 500.0 , CLASS_PLAYER , DMG_BURN)
 		
-		while((iVictim = find_ent_in_sphere(iVictim, fOrigin, 500.0)))
-		{
-			if(pev(iVictim , pev_flags) & FL_MONSTER &&  pev(iVictim,pev_deadflag) != DEAD_DEAD){
-				ExecuteHamB(Ham_TakeDamage, iVictim, ent, iOwner, get_pcvar_float(g_iCvars[0]), DMG_BURN);
-			}
-			if(is_target_capable(iOwner,iVictim))
-			{
-				if(cs_get_user_team(iVictim) != cs_get_user_team(iOwner))
-				{
-					ExecuteHamB(Ham_TakeDamage, iVictim, ent, iOwner, get_pcvar_float(g_iCvars[0]), DMG_BURN);
-				}
-			}
-		}
-soundplay:
+		// while((iVictim = find_ent_in_sphere(iVictim, fOrigin, 500.0)))
+		// {
+		// 	if(pev(iVictim , pev_flags) & FL_MONSTER &&  pev(iVictim,pev_deadflag) != DEAD_DEAD){
+		// 		ExecuteHamB(Ham_TakeDamage, iVictim, ent, iOwner, get_pcvar_float(g_iCvars[0]), DMG_BURN);
+		// 	}
+		// 	if(is_target_capable(iOwner,iVictim))
+		// 	{
+		// 		if(cs_get_user_team(iVictim) != cs_get_user_team(iOwner))
+		// 		{
+		// 			ExecuteHamB(Ham_TakeDamage, iVictim, ent, iOwner, get_pcvar_float(g_iCvars[0]), DMG_BURN);
+		// 		}
+		// 	}
+		// }
+
 		for(new i=1;i<= g_max_players;i++)
 		{
 			// Util_ScreenShake(i);
@@ -805,6 +808,7 @@ Send_BarTime(player,Float:duration)
 
 ammo_hud(id, sw)
 {
+	return
 	if(is_user_bot(id)||!is_user_alive(id)||!is_user_connected(id)) 
 			return;
 
@@ -862,13 +866,13 @@ public Wpnlist(id,type)
 		if(type && !Get_BitVar(g_has_laser,id)){
 			return
 		}
-		message_begin(MSG_ONE_UNRELIABLE, get_user_msgid("WeaponList"), _, id);
-		write_string(type?"weapon_laser_guide":"weapon_aug");
-		write_byte(type? -1:3); // not Sure about it
+		message_begin(MSG_ONE, get_user_msgid("WeaponList"), _, id);
+		write_string(type ? "weapon_laser_guide" : "weapon_aug");
+		write_byte(type ? -1 : 4); // not Sure about it
 		write_byte(-1);
 		write_byte(-1);
 		write_byte(-1);
-		write_byte(0);
+		write_byte(type ? 0 : 3);
 		write_byte(1);
 		write_byte(CSW_LASER);
 		write_byte(0);

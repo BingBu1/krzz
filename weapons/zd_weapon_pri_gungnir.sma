@@ -622,11 +622,15 @@ public WE_GUNGNIR(id,iEnt,iClip, bpammo,iButton)
 			write_byte(255)	// brightness
 			write_byte(255)	// speed
 			message_end()
-			
+			new CsTeams:m_team = cs_get_user_team(id)
 			new k , Float:NearDis, Float:TmpDis , bool:NeedContinue
 			for(k = 0 ; k < 5 ; k++){
 				while((pEntity = engfunc(EngFunc_FindEntityInSphere, pEntity, fOrigin, ELECTRO_RANGE)) != 0){
 					if(get_entvar(pEntity , var_takedamage) == DAMAGE_NO || get_entvar(pEntity , var_deadflag) == DEAD_DEAD)
+						continue
+					if(ExecuteHam(Ham_IsPlayer , pEntity) && cs_get_user_team(pEntity) == m_team)
+						continue
+					if(GetIsNpc(pEntity) == true && KrGetFakeTeam(pEntity) == m_team)
 						continue
 					if(pEntity == id)
 						continue
@@ -690,7 +694,7 @@ public WE_GUNGNIR(id,iEnt,iClip, bpammo,iButton)
 					write_byte(10)		// byte (scroll speed in 0.1's)
 					message_end()
 					
-					ExecuteHamB(Ham_TakeDamage, g_iVic[k], id, id, ELECTRO_DAMAGE, DMG_SHOCK)
+					ExecuteHamB(Ham_TakeDamage, nowent, id, id, ELECTRO_DAMAGE, DMG_SHOCK)
 				}
 			}
 		}

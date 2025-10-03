@@ -155,10 +155,15 @@ public plugin_natives(){
 	register_native("KrGetFakeTeam" , "getnpc_FakeTeam" , 1)
 	register_native("GetNpcList" , "KrGetNpcList" , 1)
 	register_native("ExecNpcKillCallBack" , "native_ExecNpcKillCallBack")
+	register_native("GetLvDamageReduction" , "native_GetLvDamageReduction")
 }
 
 public native_ExecNpcKillCallBack(){
 	ExecuteForward(Jpnpc_forwards[Jp_NpcKillPlayer] , _ , get_param(1) , get_param(2))
+}
+
+public Float:native_GetLvDamageReduction(){
+	return ClacLvDamageReduction()
 }
 
 Float:ClacLvDamageReduction(){
@@ -398,7 +403,7 @@ public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, dama
 	Hp = get_entvar(this,var_health)
 	if(Hp <= 0.0 || get_entvar(this , var_deadflag)){
 		ExecuteForward(Jpnpc_forwards[Jp_NpcKilled], _ , this, idattacker)
-		if(ExecuteHam(Ham_IsPlayer , idattacker)){
+		if(ExecuteHam(Ham_IsPlayer , idattacker) && !is_user_bot(idattacker)){
 			cs_set_user_money(idattacker, cs_get_user_money(idattacker) + KillMoney)
 			new frag = get_entvar(idattacker , var_frags)
 			set_entvar(idattacker , var_frags , frag + 5)

@@ -22,9 +22,9 @@ new const DAMAGE_ENTITY_NAME[] = "trigger_hurt"
 // Rocket information
 #define ROCKET_SPEED	1000		// Rocket fly speed
 #define ROCKET_RADIUS	300.0	// Rocket explosion radius
-#define ROCKET_DAMAGE	1500.0	// Rocket explosion damage (in center)
+#define ROCKET_DAMAGE	650.0	// Rocket explosion damage (in center)
 #define REACTION_SPEED	0.0		// How fast the rocket should react
-#define TRACK_SMOOTH 0.35       // 趋向目标的平滑程度
+#define TRACK_SMOOTH 1.0       // 趋向目标的平滑程度
 
 // Entity data
 new ENTITY_NAME[] = "wpn_rpgrocket"
@@ -47,6 +47,8 @@ new ishaveprg[33]
 new weaponidmenu
 
 #define cost 150.0
+
+#define MaxClip 3
 
 enum Rpg
 {
@@ -84,7 +86,7 @@ public ItemSel_Post(id, items, Float:cost1){
 }
 
 public FreeGive(id){
-	GiveWeaponByID(id, Waeponid)
+	new Wpn = GiveWeaponByID(id, Waeponid)
 }
 
 public Getrpg(id){
@@ -100,7 +102,7 @@ public Getrpg(id){
         return
     }
     SubAmmoPak(id , cost)
-	GiveWeaponByID(id, Waeponid)
+	FreeGive(id)
 }
 
 public OnPlayerPickupWeapon(id, item){
@@ -123,9 +125,10 @@ public CreateWeaponFunc(){
    BuildWeaponFlags(Waeponid, WFlag_NoHUD)
    BuildWeaponReload(Waeponid, anim_reload, 61.0 / 30.0)
    BuildWeaponFireSound(Waeponid, ROCKET_SOUND)
-   BuildWeaponAmmunition(Waeponid, 5, ammo)
-   BuildWeaponPrimaryAttack(Waeponid, 25.0/30.0, 0.0, 0.0, anim_fire)
+   BuildWeaponAmmunition(Waeponid, MaxClip , ammo)
+   BuildWeaponPrimaryAttack(Waeponid, 1.5, 0.0, 0.0, anim_fire)
    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPre, "PrimaryAttackPre")
+   RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPrePost, "PrimaryAttackPost")
    RegisterWeaponForward(Waeponid, WForward_DeployPost, "DeployPost")
 }
 
@@ -148,6 +151,7 @@ public plugin_precache(){
 public DeployPost(EntityID){
     new id = get_pdata_cbase(EntityID, m_pPlayer)
     play_weapon_anim(id, anim_draw1)
+	rg_set_iteminfo(EntityID , ItemInfo_iMaxClip , MaxClip)
 }
 
 public m_Touch(toucher, touched){
@@ -201,6 +205,10 @@ public PrimaryAttackPre(EntityID){
 	get_position(id,20.0,0.0,30.0,origin)
 	CreateRpg(id,origin)
 
+}
+
+public PrimaryAttackPost(Wpn){
+	set_member(Wpn , m_Weapon_flNextPrimaryAttack , 0.8)
 }
 
 public CreateRpg(ids , Float:Sp_Origin[3]){
@@ -274,6 +282,7 @@ public Rockthink(ent){
 	get_entvar(ent, var_velocity, vel)
 	get_entvar(ent, var_origin, org)
 	get_entvar(target, var_origin, targetorg)
+	targetorg[2] += 30.0
 
 	xs_vec_sub(targetorg, org, dir)
 	xs_vec_normalize(dir, dir)
@@ -292,7 +301,7 @@ public Rockthink(ent){
 	xs_vec_mul_scalar(newdir, float(ROCKET_SPEED), new_vel)
 	set_entvar(ent, var_velocity, new_vel)
 
-	set_entvar(ent, var_nextthink, get_gametime() + 0.05)
+	set_entvar(ent, var_nextthink, get_gametime() + floatround(0.1,0.3))
 }
 
 public Find_near_ent(id){

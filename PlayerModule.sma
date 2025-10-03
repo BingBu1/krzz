@@ -54,26 +54,26 @@ new PreModules [][]= {
 }
 
 new g_ModelData[][ModelLvNames] = {
-    {   0, "小八路"        },
-    {  50, "老八路"        },
-    { 100, "士兵"          },
-    { 150, "男军官"        },
-    { 200, "女军官"        },
-    { 250, "黄皮八路"      },
-    { 300, "黄皮男军官"    },
-    { 350, "黄皮女军官"    },
-    { 400, "特警"          },
-    { 450, "黑皮男军官"    },
-    { 500, "黑皮女军官"    },
-    { 550, "海军"          },
-    { 600, "老蒋"          },
-    { 650, "毛爷爷"        },
-    { 700, "灵狐者"  ,"linghu_yellow" },
-    { 750, "普京"    ,"pujing"      },
-    { 850, "kobe牢大","kobelaoda"      },
-    {1000, "金正恩"   ,"jinzhengen"     },
-    {   0, "猫姬-管理模型" , "NecoArc" ,2},
-    {   0, "红豆(Vip或管理)" , "hongdou" ,1},
+    {   0, "小八路"        },//1
+    {  50, "老八路"        },//2
+    { 100, "士兵"          },//3
+    { 150, "男军官"        },//4
+    { 200, "女军官"        },//5
+    { 250, "黄皮八路"      }, // 6
+    { 300, "黄皮男军官"    }, //7
+    { 350, "黄皮女军官"    }, //8
+    { 400, "特警"          }, //9
+    { 450, "黑皮男军官"    }, //10
+    { 500, "黑皮女军官"    }, //11
+    { 550, "海军"          }, //12
+    { 600, "老蒋"          }, //13
+    { 650, "毛爷爷"        },//14
+    { 700, "灵狐者"  ,"linghu_yellow" },//15
+    { 750, "普京"    ,"pujing"      },//16
+    { 850, "kobe牢大","kobelaoda"      },//17
+    {1000, "金正恩"   ,"jinzhengen"     },//18
+    {   0, "猫姬-管理模型" , "NecoArc" ,2},//19
+    {   0, "红豆(Vip或管理)" , "hongdou" ,1},//20
 };
 
 //设置模型开场音乐
@@ -111,6 +111,14 @@ public GetVipModelSize(){
         if(g_ModelData[i][IsVip] > 0)
             VipModelSize++
     }
+}
+
+public client_putinserver(id){
+    LastUseModel[id][Use_ed] = false
+}
+
+public client_disconnected(id){
+    LastUseModel[id][Use_ed] = false
 }
 
 public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
@@ -169,7 +177,7 @@ public event_roundstart(){
 }
 
 public PlayerSpawn_Post(this){
-    if(!is_nullent(this) && !is_user_alive(this)){
+    if(is_nullent(this) || !is_user_alive(this)){
         return HC_CONTINUE
     }
     if(!is_user_bot(this) && !hero[this]){
@@ -218,7 +226,7 @@ public MakeHero(const id){
 }
 
 public GiveHeroWeapon(id){
-    if(!is_user_connected(id))
+    if(!is_user_connected(id) || !is_user_alive(id))
         return
     new Rand = random_num(0,1)
     if(!Rand){
@@ -248,7 +256,7 @@ public SetModuleByLv(this , bool:playsound){
     new const maxDiv = sizeof g_ModelData
     switch(team){
         case CS_TEAM_T:{
-            if(setlv < 14){
+            if(setlv <= 14){
                 rg_set_user_model(this, "rainych_krall1")
                 set_entvar(this, var_body , setlv)
                 return
@@ -297,6 +305,7 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
         return false
     }
     GetModeleSetName(model_inx , SetName , charsmax(SetName))
+    log_amx("Index %d , Name %s" , model_inx , SetName)
     rg_set_user_model(this , SetName)
     if(PlayerSound == true){
         PlayBgm(this)
@@ -322,15 +331,16 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
 public bool:CanSetThisModel(index , userid){
     if(g_ModelData[index][IsVip] == 0)
         return true
+    new __flags = get_user_flags(userid);
     if(g_ModelData[index][IsVip] == 1){ // vip admin
-        if(is_user_admin(userid))
+        if(access(userid , ADMIN_KICK))
             return true
-        new __flags = get_user_flags(userid);
+        
         if(__flags & ADMIN_RESERVATION){
             return true
         }
     }else if(g_ModelData[index][IsVip] == 2){
-        if(is_user_admin(userid))
+        if(access(userid , ADMIN_KICK))
             return true
     }
     return false
@@ -395,11 +405,12 @@ public moduleHandle(id, menu, item){
 public SelMenuByid(id, selid){
     new lv = GetLv(id)
     new modelLv = GetModeleLv(selid)
+    const MAX_STANDARD_MODEL_ID = 13
     if(modelLv > lv){
         m_print_color(id, "!g[冰布提示]!y您的等级不足以切换模型")
         return
     }
-    if(selid <= 13 && modelLv < lv){
+    if(selid <= MAX_STANDARD_MODEL_ID){
         rg_set_user_model(id, "rainych_krall1")
         set_entvar(id, var_body , selid + 1)
     }else{

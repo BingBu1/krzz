@@ -38,6 +38,7 @@ public plugin_init(){
     RegisterHam(Ham_Think, "hostage_entity", "Ai_Think_Post" , true)
 
     RegisterHam(Ham_TakeDamage, "hostage_entity", "Ai_DamgePost", 1)
+    RegisterHam(Ham_TakeDamage, "hostage_entity", "Ai_DamgePre")
 
     register_logevent("EventRoundEnd", 2, "1=Round_End")
 
@@ -233,6 +234,17 @@ public Ai_DamgePost(this, idinflictor, idattacker, Float:damage, damagebits){
         SendAnim(this , 0 , 0)
     }
     return
+}
+
+public Ai_DamgePre(this, idinflictor, idattacker, Float:damage, damagebits){
+    if(GetNpcFakeTeam(this) == _:CS_TEAM_CT)
+        return
+    new Npcid = get_prop_int(this , var_npcid)
+    new Npc_Mode:NpcLoadMode = Npc_Mode:Kr_Npc[Npcid][NpcMode]
+    if(NpcLoadMode == NpcMode_Warrior){
+        new Float:newdamge = damage * (1.0 - GetLvDamageReduction())
+        SetHamParamFloat(4 , newdamge)
+    }
 }
 
 public native_CreateNpcByTeam(nums , id){
@@ -756,10 +768,8 @@ public SendAnim(iEntity, iAnim , ACT)
 }
 
 stock StopAllNpc(id){
-    new Array:NpcHandle = GetNpcList()
-    new size = ArraySize(NpcHandle)
-    for(new i = 0 ; i < size ; i++){
-        new ent = ArrayGetCell(NpcHandle , i)
+    new ent = -1
+    while((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
         if(is_nullent(ent))continue
         if(KrGetFakeTeam(ent) == _:CS_TEAM_CT)continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
@@ -769,10 +779,8 @@ stock StopAllNpc(id){
 }
 
 stock FollowAllNpc(id){
-    new Array:NpcHandle = GetNpcList()
-    new size = ArraySize(NpcHandle)
-    for(new i = 0 ; i < size ; i++){
-        new ent = ArrayGetCell(NpcHandle , i)
+    new ent = -1
+    while((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
         if(is_nullent(ent))continue
         if(KrGetFakeTeam(ent) == _:CS_TEAM_CT)continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue

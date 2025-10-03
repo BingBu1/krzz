@@ -24,7 +24,9 @@ public plugin_init(){
 
 public plugin_natives(){
     register_native("RegPlayerSkill" , "native_RegPlayerSkill")
+    register_native("SetSkillCd" , "native_SetSkillCd")
 }
+
 
 public round_start_event(){
     arrayset(SkillCd , 0 , sizeof SkillCd)
@@ -89,6 +91,12 @@ public native_RegPlayerSkill(id , nums){
     TrieSetArray(SkillReg , key , SKillData , sizeof SKillData)
     SkillId++
     return SkillId
+}
+
+public native_SetSkillCd(id , nums){
+    new Playerid = get_param(1)
+    new Float:NewCd = get_param_f(2)
+    SkillCd[Playerid] = get_gametime() + NewCd
 }
 
 public GetPlayerSkillFun(SkillId:skillid , output[] , len){

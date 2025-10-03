@@ -26,7 +26,10 @@
 #define GetLastbutton(%1) get_prop_int(%1,var_lastbutton)
 #define SetLastbutton(%1,%2) set_prop_int(%1,var_lastbutton,%2)
 
-#define knf_cost 200.0
+#define GetBigWindAttackCd(%1) get_prop_float(%1 , "BWC")
+#define SetBigWindAttackCd(%1,%2) set_prop_float(%1 , "BWC" , %2)
+
+#define knf_cost 265.0
 
 new ResModel [][]={
     "models/v_divinespear_new.mdl",
@@ -534,7 +537,7 @@ public Throwthink(ent){
 	get_entvar(ent, var_velocity, vel)
 	get_entvar(ent, var_origin, org)
 	get_entvar(target, var_origin, targetorg)
-
+	targetorg[2] += 30.0
 	xs_vec_sub(targetorg, org, dir)
 	xs_vec_normalize(dir, dir)
 
@@ -563,7 +566,7 @@ public cyclone_think(this){
 	new Float:fVel[3]
 	get_entvar(this , var_origin , fOrigin)
 	new owner = get_entvar(this , var_owner)
-	if(get_gametime() > get_entvar(this , var_fuser1)){
+	if(get_gametime() > get_entvar(this , var_fuser1) || !is_user_alive(owner)){
 		rg_remove_entity(this)
 		return
 	}
@@ -574,6 +577,7 @@ public cyclone_think(this){
 		if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
 		if(ent == owner || ent == this)continue
 		if(get_entvar(ent , var_effects) & EF_NODRAW)continue
+		if(GetIsNpc(ent) && KrGetFakeTeam(ent) == CsTeams:owner_team) continue
 		if(ExecuteHam(Ham_IsPlayer , ent) && get_member(ent , m_iTeam) == owner_team)continue
 		new Flag = get_entvar(ent , var_flags)
 		if(Flag & FL_MONSTER || Flag & FL_CLIENT){
@@ -595,21 +599,25 @@ public cycloneBig_think(this){
 	new Float:fVel[3]
 	get_entvar(this , var_origin , fOrigin)
 	new owner = get_entvar(this , var_owner)
-	if(get_gametime() > get_entvar(this , var_fuser1)){
+	if(get_gametime() > get_entvar(this , var_fuser1) || !is_user_alive(owner)){
 		rg_remove_entity(this)
 		return
 	}
 	new owner_team = get_member(owner , m_iTeam)
+	if(get_gametime() < GetBigWindAttackCd(this))
+		return
+	SetBigWindAttackCd(this , get_gametime() + 0.2)
 	while((ent = find_ent_in_sphere(ent , fOrigin , 300.0)) > 0){
 		if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
 		if(ent == owner || ent == this)continue
 		if(get_entvar(ent , var_effects) & EF_NODRAW)continue
 		if(get_entvar(ent , var_owner) == owner)continue
 		if(ExecuteHam(Ham_IsPlayer , ent) && get_member(ent , m_iTeam) == owner_team)continue
+		if(GetIsNpc(ent) && KrGetFakeTeam(ent) == CsTeams:owner_team) continue
 		get_entvar(ent , var_velocity , fVel)
 		fVel[0] = 0.0
 		fVel[1] = 0.0
-		fVel[2] = 50.0
+		fVel[2] = 200.0
 		new Flag = get_entvar(ent , var_flags)
 		if(Flag & FL_MONSTER || Flag & FL_CLIENT){
 			if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) != this){
@@ -617,7 +625,7 @@ public cycloneBig_think(this){
 				set_entvar(ent , var_iuser2 , this)
 				set_entvar(ent , var_velocity , fVel)
 			}else if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) == this){
-				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 60.0 , DMG_BULLET)
+				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 200.0 , DMG_BULLET)
 				set_entvar(ent , var_velocity , fVel)
 			}
 		}
@@ -659,7 +667,9 @@ stock Create_cyclone(clientIndex , IsBig = false){
 	set_entvar(Throw, var_framerate, 1.0)
 
 	IsBig ? SetThink(Throw, "cycloneBig_think") : SetThink(Throw, "cyclone_think")
-
+	if(IsBig){
+		SetBigWindAttackCd(Throw , get_gametime())
+	}
 	set_entvar(Throw , var_nextthink , get_gametime() + 0.1)
 
 	new Float:fVel[3]
