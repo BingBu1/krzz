@@ -41,6 +41,11 @@ public plugin_init(){
 
     register_clcmd("say /killmark" , "KillMarkMenu")
     register_clcmd("say killmark" , "KillMarkMenu")
+    register_clcmd("say test" , "testmodel")
+}
+
+public testmodel(id){
+    rg_set_user_model(id , "fly_head")
 }
 
 public plugin_precache(){
@@ -48,6 +53,7 @@ public plugin_precache(){
     for(new i = 0 ; i < sizeof KillMarkModel ; i++){
         ArrayPushCell(KillMarkSpr , precache_model(KillMarkModel[i]))
     }
+    precache_model("models/player/fly_head/fly_head.mdl")
 }
 
 public client_putinserver(id){

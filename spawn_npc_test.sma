@@ -204,18 +204,9 @@ public MenuHander(id, menu, item)
 }
 
 public LoadPreClear(){
-    new ent = -1
-    while(ent = rg_find_ent_by_class(ent,"riben_wall")){
-        rg_remove_entity(ent)
-    }
-    ent = -1
-    while ((ent = rg_find_ent_by_class(ent,"riben_respawnponit")) > 0){
-        rg_remove_entity(ent)
-    }
-    ent = -1
-    while ((ent = rg_find_ent_by_class(ent,"PlayerSpawn")) > 0){
-        rg_remove_entity(ent)
-    }
+    remove_entity_name("riben_wall")
+    remove_entity_name("riben_respawnponit")
+    remove_entity_name("PlayerSpawn")
 }
 
 public LoadJsonTest(){
@@ -348,8 +339,8 @@ public SaveWall(JSON:root){
     while((wallent = rg_find_ent_by_class(wallent,"riben_wall")) > 0){
         new del = get_prop_int(wallent , "judian_remove")
         new JSON:wall = json_init_object()
-        new JSOM:origin_j = json_init_array()
-        new JSOM:angles_j = json_init_array()
+        new JSON:origin_j = json_init_array()
+        new JSON:angles_j = json_init_array()
         if(!GetIsTestEnt(wallent))
             continue
 
@@ -383,8 +374,8 @@ public SaveNpcs(JSON:root){
     new JSON:NpcSpawnPonits = json_init_array()
     while ((npc_spawner = rg_find_ent_by_class(npc_spawner,"riben_respawnponit")) > 0){
         new JSON:Ponint = json_init_object()
-        new JSOM:origin_j = json_init_array()
-        new JSOM:angles_j = json_init_array()
+        new JSON:origin_j = json_init_array()
+        new JSON:angles_j = json_init_array()
         new Float:origin[3],Float:angles[3]
         new body
         get_entvar(npc_spawner,var_origin,origin)
@@ -419,8 +410,8 @@ public SavePlayerSpawn(JSON:root){
     while((PlayerSpawn = rg_find_ent_by_class(PlayerSpawn,"PlayerSpawn"))>0){
         new JSON:Ponint = json_init_object()
         new Float:origin[3],Float:angles[3]
-        new JSOM:origin_j = json_init_array()
-        new JSOM:angles_j = json_init_array()
+        new JSON:origin_j = json_init_array()
+        new JSON:angles_j = json_init_array()
         get_entvar(PlayerSpawn,var_origin,origin)
         get_entvar(PlayerSpawn,var_angles,angles)
 
@@ -493,13 +484,13 @@ public CreateFakeWall(id){
         return
     if(!is_user_alive(id))
         return 
-    new Float:Color[] = {100, 200, 255}
+    new Float:Color[] = {100.0, 100.0, 100.0}
     set_entvar(ent , var_classname , "riben_wall")
     set_entvar(ent, var_solid, SOLID_BBOX)
     set_entvar(ent , var_movetype, MOVETYPE_FLY)
     set_entvar(ent , var_rendermode , kRenderTransColor)
     set_entvar(ent , var_renderamt , 180.0)
-    // set_entvar(ent , var_rendercolor , Color)
+    set_entvar(ent , var_rendercolor , Color)
     set_entvar(ent, var_body, 1)
     set_entvar(ent , var_angles , Float:{0.0,0.0,0.0})
 
@@ -585,7 +576,7 @@ public BulidNpcList(ent , count,id){
         new newent = rg_create_entity("info_target")
         if(!newent || !is_valid_ent(newent))
             break
-         set_prop_int(newent,"TestEnt",1)
+        set_prop_int(newent,"TestEnt",1)
         set_entvar(newent , var_classname , "riben_respawnponit")
         set_entvar(newent,  var_solid, SOLID_NOT)
         set_entvar(newent , var_movetype, MOVETYPE_FLY)
@@ -672,7 +663,6 @@ public WallHandle(id, menu, item){
     if (item == MENU_EXIT || item < 0 || !is_user_alive(id))
     {
         remove_entity(CurrentBulidWall[id])
-    End:
         CurrentBulidWall[id] = 0
         building[id] = false
         menu_destroy(menu)
@@ -830,7 +820,7 @@ public on_PreThink(id){
     if(is_user_bot(id))
         return FMRES_IGNORED
     
-    new Float:origin[3], Float:angles[3], Float:forwards[3]
+    new Float:origin[3], Float:angles[3]
     get_entvar(id , var_origin,origin)
     get_entvar(id , var_v_angle,angles)
 

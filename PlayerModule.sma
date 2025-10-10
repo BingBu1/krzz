@@ -305,7 +305,7 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
         return false
     }
     GetModeleSetName(model_inx , SetName , charsmax(SetName))
-    log_amx("Index %d , Name %s" , model_inx , SetName)
+    server_print("Index %d , Name %s" , model_inx , SetName)
     rg_set_user_model(this , SetName)
     if(PlayerSound == true){
         PlayBgm(this)

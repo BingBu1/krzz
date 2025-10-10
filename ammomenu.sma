@@ -47,7 +47,7 @@ public GiveAmmo(id,menu,item){
         return
     }
     new bool:IsHasAmmo
-    const Float:MIN_TRANSFER = 2100.0
+    const Float:MIN_TRANSFER = 3000.0
 #if defined Usedecimal
     IsHasAmmo = Dec_cmp(id , MIN_TRANSFER , ">")
 #else
@@ -56,7 +56,7 @@ public GiveAmmo(id,menu,item){
 #endif
     if(!IsHasAmmo){
         menu_destroy(menu)
-        m_print_color(id, "!g[冰布提示]转账最少需要2100大洋。" )
+        m_print_color(id, "!g[冰布提示]转账最少需要%f大洋。"  , MIN_TRANSFER)
         return
     }
     new acces , info[8] , playerid, name[32]

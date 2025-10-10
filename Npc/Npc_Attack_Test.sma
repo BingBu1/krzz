@@ -35,7 +35,7 @@ public NpcDoAttack(Npcid , Target){
     new master = get_prop_int(Npcid , var_master)
     new Float:fOrigin[3]
     get_entvar(Npcid , var_origin , fOrigin)
-    NpcRadiusDamge(fOrigin , master, Npcid ,  random_float(300.0 , 600.0) , 200.0 , DMG_GENERIC)
+    NpcRadiusDamge(fOrigin , master, Npcid ,  random_float(300.0 , 600.0) , 200.0)
     if( Health < 500.0){
         Health += 5.0
         set_entvar(Npcid , var_health , Health)

@@ -20,7 +20,7 @@ new IsSqlLoad
 #define defaultXp 10
 #define MaxXp 10000
 public plugin_init(){
-	register_plugin("Xp系统抗日", "1.0", "Bing")
+    register_plugin("Xp系统抗日", "1.0", "Bing")
     register_concmd("AddLv" , "AddPlayerLv")
     //SqlInit()
 }
@@ -189,11 +189,11 @@ public native_IsSqlLoad(id,nums){
     return IsSqlLoad
 }
 
-public native_GetSqlConnection(id,nums){
+public Handle:native_GetSqlConnection(id,nums){
     return g_SqlConnection
 }
 
-public native_GetSqlHandle(id,nums){
+public Handle:native_GetSqlHandle(id,nums){
     return g_SqlTuple
 }
 

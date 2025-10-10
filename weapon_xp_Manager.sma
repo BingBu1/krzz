@@ -18,7 +18,7 @@ public plugin_natives(){
     register_native("GetPlayerMul","native_GetPlayerMul")
 }
 
-public native_GetWpnXpMul(id,nums){
+public Float:native_GetWpnXpMul(id,nums){
     new wpn = get_param(1)
     if (!prop_exists(wpn, "xpmul"))
         return 1.0
@@ -33,7 +33,7 @@ public native_SetWpnXpMul(id, nums){
     set_prop_float(wpn , "xpmul" , MulFloat)
 }
 
-public native_GetPlayerMul(id, nums){
+public Float:native_GetPlayerMul(id, nums){
     new Playerid = get_param(1)
     new Float:RetMul
     if(!is_user_alive(Playerid) || !is_user_connected(Playerid))

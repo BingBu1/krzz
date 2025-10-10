@@ -35,7 +35,7 @@ new blastspr
 
 new Has_KongFu[33],Float:KongFu_AttackMul[33]
 
-new const BookAttack[] = 
+new const Float:BookAttack[] = 
 {
     0.01,0.02,0.03,0.1
 }
@@ -55,7 +55,7 @@ new Array:GunNames,Array:GunCallBack,Array:GunWModule,Array:GunPlid
 new Float:Weapon_EventProbability
 
 public plugin_init(){
-	register_plugin("砸枪", "1.0", "Bing")
+    register_plugin("砸枪", "1.0", "Bing")
 
     RegisterHam(Ham_Touch, "weaponbox", "Touch_waepon")
     RegisterHam(Ham_TakeDamage, "player", "TakeDamge_Pre")
@@ -99,12 +99,12 @@ public TakeDamge_Pre(this, idinflictor, idattacker, Float:damage, damagebits){
 
 public event_roundstart(){
     new ent = NULLENT
-    while(ent = find_ent_by_class(ent,"mbox")){
+    while((ent = find_ent_by_class(ent,"mbox")) > 0){
         rg_remove_entity(ent)
     }
     arrayset(Has_KongFu,0,sizeof Has_KongFu)
     arrayset(KongFu_AttackMul,0.0,sizeof KongFu_AttackMul)
-    new Rule  = GetHunManRule()
+    new Human_Rules:Rule  = GetHunManRule()
     ChangWaeponProbility2(Weapon_EventProbability)
     if(Rule == HUMAN_RULE_Lucky){
         ChangWaeponProbility2(0.2)
@@ -152,6 +152,7 @@ public Touch_waepon(this, other){
         create_effect(Org)
         CreateItem(id, Org)
     }
+    return HAM_IGNORED
 }
 
 stock remove_weaponbox_pakitem(boxid){
@@ -167,7 +168,7 @@ public CheckWeaponBoxCanCrush(boxid){
     for(new i = 0 ; i < 6; i++){
         new Items = get_member(boxid, m_WeaponBox_rgpPlayerItems, i)
         if(Items != -1){
-            new wpnid = get_member(Items, m_iId)
+            new WeaponIdType:wpnid = get_member(Items, m_iId)
             if(wpnid == WEAPON_C4){
                 return false
             }
@@ -215,8 +216,8 @@ public CreateItem(ownerid , Float:org[3]){
     new ent = CreateTouchEnt(ownerid, org)
     if(ent == -1)
         return
-    new Float:rand = random_float(0.0, 1.0)
-    new Float:accumulator = 0.0;  // 概率累积器
+    // new Float:rand = random_float(0.0, 1.0)
+    // new Float:accumulator = 0.0;  // 概率累积器
     new Array:eventArray = ArrayCreate()
     new Array:PriSomeEvent = ArrayCreate()
     new bool:istrigger
@@ -424,7 +425,7 @@ public Touch_Boxs(this, other){
     new funcname[32]
     if(!prop_exists(this, "callback"))
         return
-    if(ExecuteHamB(Ham_IsPlayer,other) == false)
+    if(bool:ExecuteHamB(Ham_IsPlayer, other) == false)
         return
     if(cs_get_user_team(other) != CS_TEAM_T || !is_user_connected(other))
         return
@@ -456,14 +457,10 @@ public ShitTouch_Boxs(this, other){
     if(get_gametime() < picktime)
         return
     new shitid = get_prop_int(this, "shitid")
-    new Float:c_heal
     if(shitid == 0){
-        c_heal = get_entvar(other, var_health)
         user_slap(other,10)
     }else{
         new money = cs_get_user_money(other) + 100000
-        c_heal = get_entvar(other, var_health)
-        // set_entvar(other,var_health, c_heal - 10.0)
         user_slap(other,10)
         cs_set_user_money(other, money)
     }

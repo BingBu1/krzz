@@ -34,8 +34,8 @@ public HealthAll(id){
             continue
         new Float:Health = get_entvar(i , var_health)
         if(i == id){
-            Health += 5.0
-            m_print_color(id , "!t你治愈了你自己+5hp")
+            Health += 10.0
+            m_print_color(id , "!t你治愈了你自己+10hp")
         }else {
             Health += 10.0
             client_print(i , print_center , "牢大帮你治疗了10滴血快说谢谢牢大")

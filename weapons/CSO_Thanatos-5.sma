@@ -880,6 +880,8 @@ public Thanatos5_Damage(id, Team, Float:Origin[3])
 	{
 		if(!is_user_alive(id))
 			continue
+		if(get_entvar(i , var_takedamage) == DAMAGE_NO)
+			continue
 		if(get_user_team(i) == Team)
 			continue
 		if(id == i)

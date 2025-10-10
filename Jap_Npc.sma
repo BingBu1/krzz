@@ -203,9 +203,9 @@ public message_statusvalue(msg_id, msg_dest, id){
 				if (is_nullent(target))
 					return 0
 				if(GetIsNpc(target)){
-					new team = KrGetFakeTeam(target)
+					new CsTeams:team = KrGetFakeTeam(target)
 					new CsTeams:player_team = cs_get_user_team(id)
-					new bool:isSameTeam = (_:player_team == team)
+					new bool:isSameTeam = (player_team == team)
 					message_begin(MSG_ONE, msgid, .player = id)
 					write_byte(0) // 一般第一个参数是 style/color
 					switch(player_team){
@@ -304,11 +304,11 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		return HAM_SUPERCEDE
 	}
 
-	new CurTeam = KrGetFakeTeam(this)
+	new CsTeams:CurTeam = KrGetFakeTeam(this)
  	new bool:Attacker_IsPlayer = bool:ExecuteHam(Ham_IsPlayer , idattacker)
 	if(Attacker_IsPlayer && bool:is_user_alive(idattacker) == false)
 		return HAM_SUPERCEDE
-	if(Attacker_IsPlayer && _:cs_get_user_team(idattacker)== CurTeam){
+	if(Attacker_IsPlayer && cs_get_user_team(idattacker)== CurTeam){
 		//相同阵营不要伤害
 		return HAM_SUPERCEDE
 	}
@@ -316,7 +316,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 	new Float:newdamage = damage
 	new HumanRule = _:GetHunManRule()
 	new RiJunRule = _:GetRiJunRule()
-	if(CurTeam == _:CS_TEAM_CT){
+	if(CurTeam == CS_TEAM_CT){
 		new Float:vel[3]
 		get_entvar(this, var_velocity, vel)
 		newdamage = damage * (1.0 - CurrentLeavelDamageReduction)
@@ -333,7 +333,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		damage = newdamage
 	}
 	new Float:Hp , Currentsequence
-	new FakeTeam = CurTeam
+	new CsTeams:FakeTeam = CurTeam
 
 	get_entvar(this, var_health, Hp)
 	new Float:AttackEndHeal = Hp - newdamage
@@ -358,7 +358,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		return HAM_SUPERCEDE;
 	}
 
-	if(FakeTeam == _:CS_TEAM_CT){
+	if(FakeTeam == CS_TEAM_CT){
 		new bool:CanBeStop = bool:getnpc_CanBeStop(this)
 		new Float:vec[3]
 		if(RiJunRule == _:JAP_RULE_Stimulants && UTIL_RandFloatEvents(0.5)){
@@ -384,7 +384,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 		}
 		new foll = cs_get_hostage_foll(this)
 		new fool_isPlayer = ExecuteHam(Ham_IsPlayer , foll)
-		if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == _:CS_TEAM_T){
+		if(is_entity(idinflictor) && GetIsNpc(idinflictor) && KrGetFakeTeam(idinflictor) == CS_TEAM_T){
 			setnpc_Attacker(this, idinflictor)
 			PropagateHate(this , idinflictor)
 		}else if(fool_isPlayer && is_user_connected(idattacker) && is_user_alive(idattacker)){
@@ -415,7 +415,7 @@ public HOSTAGE_TakeDamage_Post(this, idinflictor, idattacker, Float:damage, dama
 }
 
 public fw_HostageThink_Post(id){
-	if(KrGetFakeTeam(id) == _:CS_TEAM_CT)	
+	if(KrGetFakeTeam(id) == CS_TEAM_CT)	
 		set_entvar(id , var_nextthink , get_gametime() + 0.1)
 }
 
@@ -457,10 +457,10 @@ public fw_HostageThink(id){
 		setnpc_BeAttackInThink(id, 0)
 		if(NpcHeal > 0.0){
 			new Attacker = getnpc_Attacker(id)
-			if(GetIsNpc(Attacker) && get_entvar(Attacker , var_deadflag) != DEAD_DEAD && KrGetFakeTeam(Attacker) == _:CS_TEAM_T){
+			if(GetIsNpc(Attacker) && get_entvar(Attacker , var_deadflag) != DEAD_DEAD && KrGetFakeTeam(Attacker) == CS_TEAM_T){
 				cs_set_hostage_foll(id, Attacker)
 			}
-			else if(Attacker && is_user_alive(Attacker) && is_user_connected(Attacker) && get_user_team(Attacker) == _:CS_TEAM_T){
+			else if(Attacker && is_user_alive(Attacker) && is_user_connected(Attacker) && cs_get_user_team(Attacker) == CS_TEAM_T){
 				cs_set_hostage_foll(id, Attacker)
 			}
 		}
@@ -785,11 +785,11 @@ public CreateFakeClient(){
 }
 
 public fw_HostageTouch(this , other){
-	new thisteam =  KrGetFakeTeam(this)
+	new CsTeams:thisteam =  KrGetFakeTeam(this)
 	new touch_IsPlayer = ExecuteHam(Ham_IsPlayer , other)
 	if(!touch_IsPlayer && KrGetFakeTeam(other) != thisteam && GetIsNpc(other)){
 		RibenNormlAttack(this , other)
-	}else if(touch_IsPlayer && _:cs_get_user_team(other) != thisteam){
+	}else if(touch_IsPlayer && cs_get_user_team(other) != thisteam){
 		RibenNormlAttack(this , other)
 	}
 	new Float:this_velocity[3]
@@ -869,7 +869,7 @@ public SendScoreInfo(id , frag){
 }
 
 public FindNearHuman(ent, CurrentFollow) {
-    new FakeTeam = KrGetFakeTeam(ent);
+    new CsTeams:FakeTeam = KrGetFakeTeam(ent);
     new Float:CurrentLen, Float:origin[3], Float:playerOrigin[3], Float:targetOrigin[3];
     new Float:MinDistance = 999999.0;
     new target = -1;
@@ -888,7 +888,7 @@ public FindNearHuman(ent, CurrentFollow) {
         if (!is_user_alive(i) || IsFakeClient(i))
             continue;
 
-        if (FakeTeam == get_user_team(i))
+        if (FakeTeam == cs_get_user_team(i))
             continue;
 
         get_entvar(i, var_origin, playerOrigin);
@@ -1097,9 +1097,9 @@ stock PropagateHate(const BeAttackNpc , const Attacker){
 	new ent = -1
 	new Float:m_Origin[3]
 	get_entvar(BeAttackNpc , var_origin , m_Origin)
-	new CurnpcTeam = KrGetFakeTeam(BeAttackNpc)
+	new CsTeams:CurnpcTeam = KrGetFakeTeam(BeAttackNpc)
 	while((ent = rg_find_ent_by_class(ent , "hostage_entity" , true)) > 0){
-		new Team = KrGetFakeTeam(ent)
+		new CsTeams:Team = KrGetFakeTeam(ent)
 		if(ent == BeAttackNpc || Team != CurnpcTeam)
 		    continue
 		if(get_entvar(ent , var_deadflag) == DEAD_DEAD || get_entvar(ent , var_solid) == SOLID_NOT)
@@ -1143,5 +1143,16 @@ stock SetActivity(this, Activity: act){
 		}
 		set_member(this , m_Activity , act)
 		ResetSequenceInfo(this)
+	}
+}
+
+stock UpdateHostagePos(){
+	new ent = -1
+	while((ent = rg_find_ent_by_class(ent , "player" , true))){
+		if(is_nullent(ent))
+			continue
+		if(!ExecuteHam(Ham_IsPlayer , ent))
+			continue
+			
 	}
 }

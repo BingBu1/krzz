@@ -144,7 +144,7 @@ public FreeGive(id){
 }
 
 public BuySSym(id){
-    if(access(id ,ADMIN_KICK)){
+    if(access(id ,ADMIN_RCON)){
         //管理员直接获取
         goto GetWpn
     }

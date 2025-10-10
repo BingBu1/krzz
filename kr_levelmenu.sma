@@ -1,4 +1,5 @@
 #include <amxmodx>
+#include <amxmisc>
 #include <fakemeta>
 #include <hamsandwich>
 #include <cstrike>
@@ -80,6 +81,10 @@ public FreeAddLv(id, add){
     m_print_color(id, "!g[冰布提醒] !y%s将当前难度提升了!g%d!y等级(%d当前等级)",username, add,Getleavel())
 }
 public ReLv(id){
+    if(!access(id , ADMIN_KICK)){
+        m_print_color(id , "!g[冰布提示]!t您无权重置难度")
+        return
+    }
     new playernum
     new maxplayer = get_maxplayers()
     for(new i = 0 ; i < maxplayer; i++){

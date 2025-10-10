@@ -35,7 +35,7 @@ public NpcDoAttack(Npcid , Target){
     new master = get_prop_int(Npcid , var_master)
     new Float:fOrigin[3]
     get_entvar(Npcid , var_origin , fOrigin)
-    NpcRadiusDamge(fOrigin , master, Npcid ,  700.0 , 200.0 , DMG_GENERIC)
+    NpcRadiusDamge(fOrigin , master, Npcid ,  700.0 , 200.0)
 }
 
 public NpcOnSkill(Npcid , target){

@@ -24,7 +24,7 @@ new const HumanRule[][] = {
     "最后一发",
     "吸血",
     "火焰净化",
-    "后勤充备",
+    "魔术子弹",
     "幸运儿",
     "贫铀弹头",
     "尖刺护甲",
@@ -58,7 +58,7 @@ new const HUNMAN_RULE_Text[][]= {
     "最后一发子弹打出核弹轰炸",
     "血量低于150时攻击可以吸血伤害的1%",
     "投掷手雷时将投掷出燃烧瓶",
-    "武器获得无限后备弹夹",
+    "武器有50%概率不消耗子弹",
     "砸枪生成枪械概率大幅度提升",
     "伤害无视防御10%,并可穿透9层墙体",
     "受到伤害时向周围造成伤害",
@@ -87,7 +87,7 @@ new RiJunText[64]
 
 new bool:RuleInitOk
 
-new HookChain:HOOK_ThrowHeGrenade
+new HookChain:HOOK_ThrowHeGrenade , HookChain:HOOK_FireBullets3
 
 new g_Explosion ,JpBoomSpr
 
@@ -103,7 +103,7 @@ public plugin_init(){
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
     HOOK_ThrowHeGrenade = RegisterHookChain(RG_ThrowHeGrenade , "m_ThrowHeGrenade")
     RegisterHookChain(RG_CBasePlayer_ThrowGrenade, "CBasePlayer_ThrowGrenade_Pre", _:false);
-    RegisterHookChain(RG_CBaseEntity_FireBullets3 , "m_FireBullets")
+    DisableHookChain(HOOK_FireBullets3 = RegisterHookChain(RG_CBaseEntity_FireBullets3 , "m_FireBullets"))
     RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed , "m_MaxSpeed")
     RegisterHam(Ham_TakeDamage, "hostage_entity" , "RULE_HostageTakeDamage")
     RegisterHam(Ham_TakeDamage, "player" , "RULE_PlayerTakeDamage")
@@ -127,7 +127,7 @@ public plugin_natives(){
 
 public event_roundstart(){
     RuleInitOk = false
-    server_cmd("mp_infinite_ammo 0")
+    // server_cmd("mp_infinite_ammo 0")
     RoundRule()
     new Human_Rules:Rule = GetHunManRule()
     if(Rule == HUMAN_RULE_Hero_Appearance){
@@ -140,14 +140,15 @@ public event_roundstart(){
 }
 
 stock SpelicRule(const any:Rule){
+    DisableHookChain(HOOK_FireBullets3)
     switch(Rule){
-        case HUMAN_RULE_InfAmmo : server_cmd("mp_infinite_ammo 2")
+        case HUMAN_RULE_InfAmmo , HUMAN_RULE_Explosive_Ammunition , HUMAN_RULE_Last_Shot,HUMAN_RULE_Depleted_Uranium : EnableHookChain(HOOK_FireBullets3)
     }
 }
 
 
 public NPC_Killed( this ,  killer){
-    new Rule = GetRiJunRule()
+    new Japanese_Army_Rules:Rule = GetRiJunRule()
     if(Rule == JAP_RULE_Boom){
         if(UTIL_RandFloatEvents(0.1)){
             JpBoom(this)
@@ -267,7 +268,7 @@ public RoundRule(){
 /**
  * 获取规则说明
  */
-public GetRuleText(RuleType , Name[] , len){
+public GetRuleText(RoundRuleType:RuleType , Name[] , len){
     if(RuleType == RULE_HUMAN){
         copy(Name, len , 
         HUNMAN_RULE_Text[CurrentHunManRule])
@@ -292,7 +293,7 @@ public native_GetRiJunRule(id, num){
 public native_GetRuleAllText(id, nums){
     if(!RuleInitOk)
         return
-    new RuleType = get_param(1)
+    new RoundRuleType:RuleType = RoundRuleType:get_param(1)
     new AllText[64]
     if(RuleType == RULE_HUMAN){
         formatex(AllText, charsmax(AllText), "%s %s", HumanRule[CurrentHunManRule] , HumManText)
@@ -306,18 +307,18 @@ public native_GetRuleAllText(id, nums){
 }
 
 public CBasePlayer_ThrowGrenade_Pre(const id, const item, const Float:vecSrc[3], const Float:vecThrow[3], const Float:time, const const usEvent) {
-	new Rule = GetHunManRule()
+    new Human_Rules:Rule = GetHunManRule()
     if(Rule == HUMAN_RULE_Fire){
         new grenade = CreateNade(id, item, vecSrc, vecThrow, 30.0);
 
-	    SetHookChainReturn(ATYPE_INTEGER, grenade);
-
-	    return HC_SUPERCEDE;
+        SetHookChainReturn(ATYPE_INTEGER, grenade);
+        return HC_SUPERCEDE;
     }
+    return HC_CONTINUE
 }
 
-public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Float:time, const team, const usEvent){
-    new Rule = GetHunManRule()
+public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Float:time, const TeamName:team, const usEvent){
+    new Human_Rules:Rule = GetHunManRule()
     if(!ExecuteHam(Ham_IsPlayer , index) || is_user_bot(index))
         return HC_CONTINUE
     if(get_member(index , m_iTeam) == _:TEAM_CT)
@@ -353,14 +354,14 @@ public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Fl
 public RULE_PlayerTakeDamage(this, idinflictor, idattacker, Float:damage, damagebits){
     if(idattacker > get_maxplayers())
         return HAM_IGNORED
-    new Rule = GetHunManRule()
+    new Human_Rules:Rule = GetHunManRule()
     switch(Rule){
         case HUMAN_RULE_Spiked_Armor:{
             CreateBlast(this)
             client_cmd(this , "spk weapons/chainsr_exp.wav")
             new Float:fOrigin[3]
             new ent = -1
-            new userteam = cs_get_user_team(this)
+            new CsTeams:userteam = cs_get_user_team(this)
             get_entvar(this , var_origin , fOrigin)
             while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
                 if(!is_valid_ent(ent) || get_entvar(ent ,var_deadflag))continue
@@ -388,6 +389,7 @@ public RULE_PlayerTakeDamage(this, idinflictor, idattacker, Float:damage, damage
             }
         }
     }
+    return HAM_IGNORED
 }
 public UnGod(id){
     new player = id -1212
@@ -395,11 +397,11 @@ public UnGod(id){
 }
 
 public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damagebits){
-    if(ExecuteHam(Ham_IsPlayer , idattacker) == false)
+    if(ExecuteHam(Ham_IsPlayer , idattacker) == _:false)
         return HAM_IGNORED
     if(!is_valid_ent(idattacker) || cs_get_user_team(idattacker) != CS_TEAM_T)
         return HAM_IGNORED
-    new Rule = GetHunManRule()
+    new Human_Rules:Rule = GetHunManRule()
     switch(Rule){
         case HUMAN_RULE_Pain_Enhancement:{
             new Float:heal = get_entvar(idattacker, var_health)
@@ -460,7 +462,7 @@ public m_FireBullets(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:ve
     if(is_nullent(pEntity) || cs_get_user_team(pEntity) != CS_TEAM_T)
         return HC_CONTINUE
     new wpn = get_member(pEntity, m_pActiveItem)
-    new Rule = GetHunManRule()
+    new Human_Rules:Rule = GetHunManRule()
     new Clip = get_member(wpn, m_Weapon_iClip)
     switch(Rule){
         case HUMAN_RULE_Depleted_Uranium:{
@@ -481,22 +483,28 @@ public m_FireBullets(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:ve
             new Float:EndOrigin[3]
             GetWatchEnd(pEntity, EndOrigin)
             new iOrigin[3]
-  	        iOrigin[0] = floatround(EndOrigin[0])
-	        iOrigin[1] = floatround(EndOrigin[1])
-	        iOrigin[2] = floatround(EndOrigin[2])
+            iOrigin[0] = floatround(EndOrigin[0])
+            iOrigin[1] = floatround(EndOrigin[1])
+            iOrigin[2] = floatround(EndOrigin[2])
 
-	        message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
-	        write_byte(TE_EXPLOSION)
-	        write_coord(iOrigin[0])
-	        write_coord(iOrigin[1])
-	        write_coord(iOrigin[2])
-	        write_short(g_Explosion)
-	        write_byte(10)
-	        write_byte(15)
-	        write_byte(0)
-	        message_end()
+            message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
+            write_byte(TE_EXPLOSION)
+            write_coord(iOrigin[0])
+            write_coord(iOrigin[1])
+            write_coord(iOrigin[2])
+            write_short(g_Explosion)
+            write_byte(10)
+            write_byte(15)
+            write_byte(0)
+            message_end()
 
-            rg_radius_damage(EndOrigin, pEntity, pEntity, 150.0, 210.0, DMG_BULLET)
+            rg_dmg_radius(EndOrigin, pEntity, pEntity, 150.0, 210.0, CLASS_PLAYER, DMG_BULLET)
+        }
+        case HUMAN_RULE_InfAmmo:{
+            if(UTIL_RandFloatEvents(0.5)){
+                Clip++
+                set_member(wpn, m_Weapon_iClip , Clip)
+            }
         }
     }
     return HC_CONTINUE
@@ -541,7 +549,7 @@ stock GetWatchEnd(player , Float:OutEndOrigin[3]){
     global_get(glb_v_forward, fwd)
     xs_vec_mul_scalar(fwd, 8192.0, EndOrigin)
     xs_vec_add(StartOrigin,EndOrigin,EndOrigin)
-	new hitent = fm_trace_line(player,StartOrigin,EndOrigin,hitorigin)
+    fm_trace_line(player,StartOrigin,EndOrigin,hitorigin)
     xs_vec_copy(hitorigin, OutEndOrigin)
 }
 
@@ -554,27 +562,22 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
     new Float:target_origin[3]
     new Float:distance
     new Float:final_damage
-	new Float:Origin_[3]
-	new Float:Heal;
-	//server_print("%f %f %f rg_radius_damage in put" , origin[0],origin[1],origin[2]);
-	// get_entvar(inflictor, var_origin, Origin_)
 
     while ((ent = find_ent_in_sphere(ent, origin, radius)) != 0)
     {
         if (!is_valid_ent(ent)) continue
         if(ent == attacker) continue;
-		if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
-        if(get_entvar(ent , pev_deadflag) == DEAD_DEAD) continue
+        if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
+        if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
 
         get_entvar(ent, var_origin, target_origin)
-        distance = vector_distance(origin, target_origin)
 
+        distance = vector_distance(origin, target_origin)   
         final_damage = damage * (1.0 - (distance / radius))
-        if (final_damage <= 0.0) continue;
+        if (final_damage <= 0.0) continue
 
-		if(ExecuteHam(Ham_IsPlayer , ent) && is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;
-
-		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
+        if(ExecuteHam(Ham_IsPlayer , ent) && is_user_alive(ent) && cs_get_user_team(ent) == cs_get_user_team(attacker))continue;    
+        ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits)
     }
 }
 
@@ -582,7 +585,7 @@ stock JpBoom(Npc){
     if(!GetIsNpc(Npc))
         return
     new ent = -1 , Float:fOrigin[3]
-    new const explosionRadius = 200.0
+    new const Float:explosionRadius = 200.0
     new const Float:maxDamage = 30.0           // 爆炸中心的最大伤害
     new const Float:minDamage = 10.0           // 爆炸边缘的最小伤害
     get_entvar(Npc , var_origin , fOrigin)
@@ -608,13 +611,13 @@ stock JpBoom(Npc){
     iOrigin[1] = floatround(fOrigin[1])
     iOrigin[2] = floatround(fOrigin[2])
     message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
-	write_byte(TE_EXPLOSION)
-	write_coord(iOrigin[0])
-	write_coord(iOrigin[1])
-	write_coord(iOrigin[2])
-	write_short(JpBoomSpr)
-	write_byte(30)
-	write_byte(15)
-	write_byte(0)
-	message_end()
+    write_byte(TE_EXPLOSION)
+    write_coord(iOrigin[0])
+    write_coord(iOrigin[1])
+    write_coord(iOrigin[2])
+    write_short(JpBoomSpr)
+    write_byte(30)
+    write_byte(15)
+    write_byte(0)
+    message_end()
 }

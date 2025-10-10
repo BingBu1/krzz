@@ -42,7 +42,7 @@ new const ROCKET_TRAIL[][] = {{224, 224, 255}, {251, 0, 6}}
 
 new Waeponid,g_Trail,g_Explosion,m_info_target
 
-new ishaveprg[33]
+// new ishaveprg[33]
 
 new weaponidmenu
 
@@ -66,11 +66,11 @@ public plugin_init()
 {
 	new plid= register_plugin("WeaponTest", AMXX_VERSION_STR, "Bing")
 
-    register_forward(FM_Touch, "m_Touch")
+	register_forward(FM_Touch, "m_Touch")
 
 	register_clcmd("giverpg","Getrpg")
 
-	RegisterHam(Ham_AddPlayerItem, "player", "OnPlayerPickupWeapon", 1)
+	// RegisterHam(Ham_AddPlayerItem, "player", "OnPlayerPickupWeapon", 1)
 
 	weaponidmenu = BulidWeaponMenu("追踪火箭筒", cost)
 
@@ -104,14 +104,6 @@ public Getrpg(id){
 	FreeGive(id)
 }
 
-public OnPlayerPickupWeapon(id, item){
-	new classname[32]
-	if(!pev_valid(item))
-		return
-	get_entvar(item, var_classname, classname, charsmax(classname))
-	if(!equal(classname , ENTITY_NAME))return
-	ishaveprg[id] = 1
-}
 
 public CreateWeaponFunc(){
 
@@ -125,7 +117,7 @@ public CreateWeaponFunc(){
    BuildWeaponReload(Waeponid, anim_reload, 61.0 / 30.0)
    BuildWeaponFireSound(Waeponid, ROCKET_SOUND)
    BuildWeaponAmmunition(Waeponid, 1, ammo)
-   BuildWeaponPrimaryAttack(Waeponid, 25.0/30.0, 0.0, 0.0, anim_fire)
+   BuildWeaponPrimaryAttack(Waeponid, 1.5 ,0.0, 0.0, anim_fire)
    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPre, "PrimaryAttackPre")
    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPrePost, "PrimaryAttackPost")
    RegisterWeaponForward(Waeponid, WForward_DeployPost, "DeployPost")

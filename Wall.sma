@@ -5,11 +5,9 @@
 #include <fakemeta>
 
 new WallModuleName[] = "models/Bing_Kr_res/Kr_wall/new_wall.mdl"
-new Current_judian
-// new Array:CreateWalls
 
 public plugin_init(){
-	register_plugin("抗日Wall", "1.0", "Bing")
+    register_plugin("抗日Wall", "1.0", "Bing")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 }
 
@@ -19,7 +17,7 @@ public plugin_precache(){
 
 public event_roundstart(){
     new ent = -1
-    while(ent = rg_find_ent_by_class(ent,"riben_wall")){
+    while((ent = rg_find_ent_by_class(ent,"riben_wall")) > 0){
         set_entvar(ent,var_effects,0)
         set_entvar(ent,var_solid,SOLID_BBOX)
         ReSize(ent)

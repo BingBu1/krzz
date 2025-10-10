@@ -17,7 +17,7 @@
 
 #define SpawnTimer 60.0 * 3
 
-#define EliteNeedKilled 150
+new EliteNeedKilled = 50
 
 enum TankModle_e{
     Tk_alive,
@@ -69,6 +69,41 @@ public plugin_init(){
 
     register_forward(FM_AddToFullPack , "Fw_AddToFullPack")
     MaxBossNpc = 3
+}
+
+public OnLevelChange_Post(lv){
+    MaxBossNpc = CalcMaxBossNpc()
+}
+
+public event_roundstart(){
+    has_tank = false
+    CurrentTankEnt = 0
+    BossNpc = 0
+    SpawnGold = 0
+    StartTime = get_gametime()
+    CurrentKill = 0
+    remove_entity_name("HBar")
+    MaxBossNpc = CalcMaxBossNpc()
+}
+
+CalcMaxBossNpc(){
+    new lv = Getleavel()
+    new BossMax = 125
+    if(lv <= 300){
+        EliteNeedKilled = 125
+        BossMax =  3
+    }else if( lv <= 550){
+        EliteNeedKilled = 88
+        BossMax = 4
+    }else if(lv <= 880){
+        EliteNeedKilled = 60
+        BossMax = 5
+    }else if(lv <= 1300){
+        EliteNeedKilled = 30
+        BossMax = 10
+    }
+    server_print("当前难度刷新精英需击杀%d精英上限%d" , EliteNeedKilled ,BossMax)
+    return BossMax
 }
 
 public plugin_precache(){
@@ -322,16 +357,7 @@ public NPC_ThinkPost(ent){
         CreateTankBoom(ent,follent)
         ResetAttack2(ent,1.0 , 5.0)
     }
-}
-
-public event_roundstart(){
-    has_tank = false
-    CurrentTankEnt = 0
-    BossNpc = 0
-    SpawnGold = 0
-    StartTime = get_gametime()
-    CurrentKill = 0
-    remove_entity_name("HBar")
+    return 0
 }
 
 public native_is_tank(){
@@ -471,8 +497,8 @@ public NPC_Killed(this , killer){
         set_entvar(this, var_rendercolor, Float:{0.0,0.0,0.0})
         set_entvar(this ,var_renderamt , 1.0)
     }
-    new origin[3]
-    get_entvar(this, var_origin,origin)
+    new Float:origin[3]
+    get_entvar(this, var_origin, origin)
     if(has_tank && this == CurrentTankEnt){
         engfunc(EngFunc_SetModel , this , TankModle[Tk_die])
         MakeBoom(origin)
@@ -490,14 +516,14 @@ public NPC_Killed(this , killer){
 public KillTank_reward(id){
     if(!is_user_connected(id))
         return
-    new Randreward = UTIL_RandFloatEvents(0.3)
+    new Randreward = UTIL_RandFloatEvents(0.2)
     //大洋奖励
     new name[32]
     get_user_name(id, name, 31)
     if(Randreward == 0) {
         new const Float:Base = 1.0
-        new Float:MinAmmo = Base + float(Getleavel()) * 0.5
-        new Float:MaxAmmo = (Base + float(Getleavel())) * 2.0
+        new Float:MinAmmo = 20.0
+        new Float:MaxAmmo = 20.0 + (Base + float(Getleavel() / 3))
         new Float:Rand = random_float(MinAmmo, MaxAmmo)
         AddAmmoPak(id, Rand)
         m_print_color(0, "!g[冰布提示] %s 击败了坦克获取到了奖励%f大洋" ,name , Rand)
@@ -515,16 +541,16 @@ public KillTank_reward(id){
 }
 
 public MakeBoom(Float:iOrigin[3]){
-    message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
-	write_byte(TE_EXPLOSION)
-	write_coord_f(iOrigin[0])
-	write_coord_f(iOrigin[1])
-	write_coord_f(iOrigin[2])
-	write_short(g_Explosion)
-	write_byte(30)
-	write_byte(15)
-	write_byte(0)
-	message_end()
+    message_begin_f(MSG_BROADCAST, SVC_TEMPENTITY)
+    write_byte(TE_EXPLOSION)
+    write_coord_f(iOrigin[0])
+    write_coord_f(iOrigin[1])
+    write_coord_f(iOrigin[2])
+    write_short(g_Explosion)
+    write_byte(30)
+    write_byte(15)
+    write_byte(0)
+    message_end()
 }
 
 public MakeBullets(Float:Start[3] , Float:End[3]){
@@ -578,6 +604,7 @@ public ThrowHeGrenade(ownid){
         WEAPON_HEGRENADE,GetFakeClient(),origin,vecls,5.0,
         TEAM_CT,0
     )
+    return heg
 }
 
 stock npc_aim_at_player(npc, player, Float:start[3], Float:end[3])
@@ -602,12 +629,12 @@ public ResetAttack2(ent , Float:Min,Float:Max){
 
 public MakeDie(beattack , DieStr[]){
     new g_msgDeathMsg = get_user_msgid("DeathMsg");
-	message_begin(MSG_BROADCAST, g_msgDeathMsg);
-	write_byte(GetFakeClient());
-	write_byte(beattack);
-	write_byte(0);
-	write_string(DieStr);
-	message_end();
+    message_begin(MSG_BROADCAST, g_msgDeathMsg);
+    write_byte(GetFakeClient());
+    write_byte(beattack);
+    write_byte(0);
+    write_string(DieStr);
+    message_end();
 }
 
 stock CreateTankBoom(ent , target){
@@ -641,16 +668,16 @@ stock CreateTankBoom(ent , target){
     SetTouch(tk_ent,"tk_Touch")
 
     message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
-	write_byte(TE_BEAMFOLLOW) // Temporary entity ID
-	write_short(tk_ent) // Entity
-	write_short(sTrail) // Sprite index
-	write_byte(10) // Life
-	write_byte(3) // Line width
-	write_byte(255) // Red
-	write_byte(255) // Green
-	write_byte(255) // Blue
-	write_byte(255) // Alpha
-	message_end() 
+    write_byte(TE_BEAMFOLLOW) // Temporary entity ID
+    write_short(tk_ent) // Entity
+    write_short(sTrail) // Sprite index
+    write_byte(10) // Life
+    write_byte(3) // Line width
+    write_byte(255) // Red
+    write_byte(255) // Green
+    write_byte(255) // Blue
+    write_byte(255) // Alpha
+    message_end() 
     return tk_ent
 }
 
@@ -673,7 +700,7 @@ public tk_Touch(const this, const other) {
     for (new i = 1; i <= maxPlayers; i++) {
         if (!is_user_alive(i) || !is_user_connected(i))
             continue
-        if (get_user_team(i) != CS_TEAM_T)
+        if (cs_get_user_team(i) != CS_TEAM_T)
             continue
 
         new Float:playerorg[3]
@@ -740,27 +767,16 @@ stock bool:RandFloatEvents(Float:Probability){
 stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage, Float:radius, dmg_bits)
 {
     new ent = -1
-    new Float:target_origin[3]
-    new Float:distance
-    new Float:final_damage
-	new Float:Origin_[3]
-	new Float:Heal;
-    new CurTmea = KrGetFakeTeam(attacker)
+    new CsTeams:CurTmea = KrGetFakeTeam(attacker)
     while ((ent = find_ent_in_sphere(ent, origin, radius)) > 0)
     {
         if(ent == attacker) continue;
-        if (!is_valid_ent(ent) || is_nullent(ent)) continue
-		if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
-		if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
+        if(!is_valid_ent(ent) || is_nullent(ent)) continue
+        if(get_entvar(ent , var_takedamage) == DAMAGE_NO) continue
+        if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
         if(ExecuteHam(Ham_IsPlayer , ent))continue
         if(CurTmea == KrGetFakeTeam(ent))continue
 
-        get_entvar(ent, var_origin, target_origin)
-        distance = vector_distance(origin, target_origin)
-
-        final_damage = damage 
-        if (final_damage <= 0.0) continue;
-
-		ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, final_damage, dmg_bits);
+        ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, damage, dmg_bits);
     }
 }

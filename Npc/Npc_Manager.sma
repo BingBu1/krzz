@@ -87,6 +87,7 @@ public plugin_natives(){
     register_native("NpcSetTinkRate" , "native_NpcSetTinkRate")
     register_native("NpcSendAnim" , "SendAnim" , 1)
     register_native("NpcTakeDamge" , "native_NpcTakeDamge" , 1)
+    register_native("NpcGetRegDamage" , "native_NpcGetRegDamage" , 1)
 }
 
 
@@ -267,9 +268,9 @@ stock CreateNpc(other , SelNpcid , CsTeams:NpcTeam = CS_TEAM_T){
     new npc = 0
     if(NpcTeam == CS_TEAM_T){
         GetWatchEnd(other , WatchOrigin , 200.0)
-        npc = CreateJpNpc(0 , _:NpcTeam , WatchOrigin , zeroVec , 0 , true)
+        npc = CreateJpNpc(0 , NpcTeam , WatchOrigin , zeroVec , 0 , true)
     }else{
-        npc = CreateJpNpc(0 , _:NpcTeam , zeroVec , zeroVec , 0 , true)
+        npc = CreateJpNpc(0 , NpcTeam , zeroVec , zeroVec , 0 , true)
     }
     
     if(is_nullent(npc)){
@@ -450,6 +451,8 @@ public Ai_Think(npc_id){
     }else if((NpcLoadMode == NpcMode_Warrior && disance >= 600.0) || NpcLoadMode == NpcMode_Ranged){
         if(NpcState == _:NpcState_FollowMaster){
             cs_set_hostage_foll(npc_id , master)
+        }else{
+            cs_set_hostage_foll(npc_id)
         }
     }
     return HAM_IGNORED
@@ -511,6 +514,11 @@ public native_NpcTakeDamge(npcid , targetid , Float:Damge){
     ExecuteHamB(Ham_TakeDamage , targetid , npcid , master , Damge , DMG_BULLET)
 }
 
+public Float:native_NpcGetRegDamage(npcid){
+    new RegNpcid = get_prop_int(npcid , var_npcid)
+    return Kr_Npc[RegNpcid][Npc_AttackDamge]
+}
+
 //================= stock函数 =====================
 stock GetNpcFakeTeam(id){
     if(!prop_exists(id, "FakeTeam")){
@@ -567,7 +575,7 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
         if(ret){
             return target
         }
-        else if(TrHit > 0 && GetIsNpc(TrHit) && KrGetFakeTeam(TrHit) == _:CS_TEAM_T) {
+        else if(TrHit > 0 && GetIsNpc(TrHit) && KrGetFakeTeam(TrHit) == CS_TEAM_T) {
             new observer = TrHit
             while(iterations < MAX_ITER){
                 ret = Stock_CanSee(observer , target , TrHit)
@@ -575,7 +583,7 @@ stock FindNearAttackNpc(npc , Npc_Mode:Mode){
                     return target
                 if(TrHit <= 0 || !GetIsNpc(TrHit))
                     break
-                if(KrGetFakeTeam(TrHit) == _:CS_TEAM_CT)
+                if(KrGetFakeTeam(TrHit) == CS_TEAM_CT)
                     return TrHit
                 observer = TrHit
                 iterations++
@@ -742,10 +750,10 @@ public SendAnim(iEntity, iAnim , ACT)
 {
     if(get_member(iEntity , m_Activity) == ACT)
         return
-    if(get_prop_int(iEntity , var_seqanim) == Npc_FLINCH && get_gametime() < get_prop_float(iEntity , var_flFlinchTime)){
-        set_prop_int(iEntity, var_seqanim , Npc_FLINCH)
-        return //播放受击
-    }
+    // if(Npc_SeqAnim:get_prop_int(iEntity , var_seqanim) == Npc_FLINCH && get_gametime() < get_prop_float(iEntity , var_flFlinchTime)){
+    //     set_prop_int(iEntity, var_seqanim , Npc_FLINCH)
+    //     return //播放受击
+    // }
     new seq = get_entvar(iEntity , var_sequence)
     if(seq != iAnim){
         new is_loop = GetSeqFlags(iEntity) & STUDIO_LOOPING
@@ -771,7 +779,7 @@ stock StopAllNpc(id){
     new ent = -1
     while((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
         if(is_nullent(ent))continue
-        if(KrGetFakeTeam(ent) == _:CS_TEAM_CT)continue
+        if(KrGetFakeTeam(ent) == CS_TEAM_CT)continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
         if(get_prop_int(ent , var_master) != id)continue
         set_prop_int(ent , var_state , _:NpcState_Idel)
@@ -782,7 +790,7 @@ stock FollowAllNpc(id){
     new ent = -1
     while((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
         if(is_nullent(ent))continue
-        if(KrGetFakeTeam(ent) == _:CS_TEAM_CT)continue
+        if(KrGetFakeTeam(ent) == CS_TEAM_CT)continue
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
         if(get_prop_int(ent , var_master) != id)continue
         set_prop_int(ent , var_state , _:NpcState_FollowMaster)
@@ -790,7 +798,7 @@ stock FollowAllNpc(id){
 }
 
 stock FindNearHuman(ent, CurrentFollow = 0) {
-    new FakeTeam = KrGetFakeTeam(ent);
+    new CsTeams:FakeTeam = KrGetFakeTeam(ent);
     new Float:CurrentLen, Float:origin[3], Float:playerOrigin[3], Float:targetOrigin[3];
     new Float:MinDistance = 999999.0;
     new target = -1;
@@ -809,7 +817,7 @@ stock FindNearHuman(ent, CurrentFollow = 0) {
         if (!is_user_alive(i) || is_user_bot(i))
             continue;
 
-        if (FakeTeam == get_user_team(i))
+        if (FakeTeam == cs_get_user_team(i))
             continue;
         if( !TraceCanSee(ent , i , TrHit))
             continue;

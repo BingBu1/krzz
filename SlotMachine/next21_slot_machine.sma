@@ -52,8 +52,8 @@ public plugin_init()
     RegisterHookChain(RG_CBasePlayer_Killed, "CBasePlayer_Killed_Pre", false)
     RegisterHam(Ham_ObjectCaps, CLASSNAME_BASE, "CBase_ObjectCaps_Pre", false)
 
-    AddMenuItem("Slot Machine Menu", "slot_machine", ADMIN_CFG, PLUGIN)
-    register_clcmd("slot_machine", "clcmd_slot_machine", ADMIN_CFG, "- displays slot machine menu")
+    AddMenuItem("Slot Machine Menu", "slot_machine", ADMIN_RCON, PLUGIN)
+    register_clcmd("slot_machine", "clcmd_slot_machine", ADMIN_RCON, "- displays slot machine menu")
 
     g_iMachineMenu = menu_create("\rSlot Machine", "machine_menu_handler")
     menu_additem(g_iMachineMenu, "\wCreate")

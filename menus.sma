@@ -348,7 +348,7 @@ LvCheck(id){
     new JpNums = 0
     while((ent = rg_find_ent_by_class(ent , "hostage_entity",true)) > 0){
         if(get_entvar(ent , var_deadflag) == DEAD_DEAD) continue
-        if(KrGetFakeTeam(ent) == _:CS_TEAM_T) continue
+        if(KrGetFakeTeam(ent) == CS_TEAM_T) continue
         JpNums++
     }
     if(JpNums == 0 && GetCurrentNpcs() > 0){

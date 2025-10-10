@@ -158,7 +158,7 @@ public get_thunderbolt(id)
 	rg_give_item(id, weapon_thunderbolt, GT_DROP_AND_REPLACE)
 	
 	static weapon_ent; weapon_ent = fm_find_ent_by_owner(-1, weapon_thunderbolt, id)
-	if(pev_valid(weapon_ent)) cs_set_weapon_ammo(weapon_ent, 1)
+	if(pev_valid(weapon_ent)) cs_set_weapon_ammo(weapon_ent, 5)
 }
 
 public FreeGive(id){
@@ -174,7 +174,7 @@ public FreeGive(id){
 
 	static weapon_ent; weapon_ent = fm_find_ent_by_owner(-1, weapon_thunderbolt, id)
 
-	if(pev_valid(weapon_ent)) cs_set_weapon_ammo(weapon_ent, 1)
+	if(pev_valid(weapon_ent)) cs_set_weapon_ammo(weapon_ent, 5)
 }
 
 public remove_thunderbolt(id)
@@ -341,7 +341,9 @@ public thunderbolt_shoothandle(id)
 		set_task(0.1, "Create_Laser", id)
 		
 		static weapon_ent; weapon_ent = fm_find_ent_by_owner(-1, weapon_thunderbolt, id)
-		if(pev_valid(weapon_ent)) ExecuteHamB(Ham_Weapon_PrimaryAttack, weapon_ent)
+		if(pev_valid(weapon_ent)) 
+			ExecuteHamB(Ham_Weapon_PrimaryAttack, weapon_ent)
+
 		set_player_nextattack(id, CSW_THUNDERBOLT, RELOAD_TIME)
 		
 		// Reset Weapon
@@ -501,7 +503,7 @@ public update_ammo(id)
 		return
 	
 	static weapon_ent; weapon_ent = fm_find_ent_by_owner(-1, weapon_thunderbolt, id)
-	if(pev_valid(weapon_ent)) cs_set_weapon_ammo(weapon_ent, 1)	
+	if(pev_valid(weapon_ent)) cs_set_weapon_ammo(weapon_ent, 5)	
 	
 	cs_set_user_bpammo(id, CSW_THUNDERBOLT, 0)
 	

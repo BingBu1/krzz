@@ -99,8 +99,11 @@ FireTimerHalving(const Player , Float:frametimer){
     set_member(Player , m_flNextAttack , NextAttack)
     new CurrentWeapon = get_member(Player , m_pActiveItem)
     if(CurrentWeapon > 0){
-        new MaxClip = rg_get_iteminfo(CurrentWeapon , ItemInfo_iMaxClip)
-        set_member(CurrentWeapon , m_Weapon_iClip , MaxClip)
+        new Slot = rg_get_iteminfo(CurrentWeapon , ItemInfo_iSlot)
+        if(Slot <= 1){
+            new MaxClip = rg_get_iteminfo(CurrentWeapon , ItemInfo_iMaxClip)
+            set_member(CurrentWeapon , m_Weapon_iClip , MaxClip)
+        }
     }
 }
 

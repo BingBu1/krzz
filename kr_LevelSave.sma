@@ -14,7 +14,9 @@ public plugin_init(){
 }
 
 public plugin_end(){
-    SaveLv_Json()
+    if(IsLoad){
+        SaveLv_Json()
+    }
 }
 
 public Check(id){
@@ -78,6 +80,7 @@ public bool:SaveLv_Json(){
 
     new bool:result = json_serial_to_file(jsonRoot, ConfigPath, true)
     json_free(jsonRoot)
+    log_amx("LevelSaveing Lv %d round %d" , Getleavel() , RoundNums)
     return result
 }
 

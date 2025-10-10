@@ -10,13 +10,14 @@ new Reg_Npcid , Moduleid
 
 public plugin_init(){
     register_plugin("Npc士兵" , "1.0" , "Bing")
-    Reg_Npcid = NpcRegister(200.0 , Moduleid ,1000.0 , 0.2, 45.0, 0.0, 0, 6, 18, 24, 51, 3.0, 1.0 , NpcMode_Ranged)
-    NpcSetNameAndLevel(Reg_Npcid , "士兵-Mp5" , 1)
+    Reg_Npcid = NpcRegister(200.0 , Moduleid , 400.0 , 0.8, 200.0, 0.0, 0, 6, 18, 23, 51, 3.0, 3.5 , NpcMode_Ranged)
+    NpcSetNameAndLevel(Reg_Npcid , "士兵-ShotGun" , 50)
 }
 
 public plugin_precache(){
     Moduleid = precache_model("models/Bing_Kr_res/Kr_npcs/officer.mdl")
-    precache_sound("weapons/mp5-1.wav")
+    UTIL_Precache_Sound("weapons/sbarrel1.wav")
+    UTIL_Precache_Sound("weapons/sshell1.wav")
 }
 
 public HandleAnimEvent(const id, event, const event_option[], len_option){
@@ -25,7 +26,7 @@ public HandleAnimEvent(const id, event, const event_option[], len_option){
 
 public NpcOnCreate(Npcid ,Regid){
     if(Regid == Reg_Npcid){
-        SetBodyGroup(Npcid , 2  , 5)
+        SetBodyGroup(Npcid , 2  , 3)
     }
 }
 
@@ -33,14 +34,19 @@ public NpcDoAttack(Npcid , Target){
     if(get_prop_int(Npcid , var_npcid) != Reg_Npcid){
         return
     }
-    new Float:fOrigin[3] , Float:TarOrigin[3]
+    new Float:fOrigin[3] , Float:TarOrigin[3] , Float:angles[3], Float:Dir[3]
     get_entvar(Npcid , var_origin , fOrigin)
     get_entvar(Target , var_origin , TarOrigin)
+    get_entvar(Npcid , var_v_angle , angles)
     fOrigin[2] += 30.0
     TarOrigin[2] += 30.0
-    MakeBullets(fOrigin , TarOrigin)
-    NpcTakeDamge(Npcid , Target )
-    emit_sound(Npcid, CHAN_WEAPON, "weapons/mp5-1.wav", 1.0, ATTN_NORM, 0, PITCH_NORM)
+    new master = get_prop_int(Npcid , var_master)
+    new Float:Damage = NpcGetRegDamage(Npcid)
+
+    angle_vector(angles , ANGLEVECTOR_FORWARD , Dir)
+    MakeShotBullets(fOrigin , Dir , 7)
+    NpcRadiusDamge(TarOrigin , master , Npcid , Damage , 30.0)
+    UTIL_EmitSound_ByCmd2(Npcid , "weapons/sbarrel1.wav" , 550.0)
 }
 
 public NpcOnSkill(Npcid , target){
@@ -59,6 +65,18 @@ stock MakeBullets(Float:Start[3] , Float:End[3]){
     message_end()
 }
 
-stock CreateLove(Npcid){
-
+stock MakeShotBullets(Float:Start[3] , Float:Dir[3] , count , speed = 2048){
+    message_begin_f(MSG_BROADCAST , SVC_TEMPENTITY)
+    write_byte(TE_STREAK_SPLASH)
+    write_coord_f(Start[0])
+    write_coord_f(Start[1])
+    write_coord_f(Start[2])
+    write_coord_f(Dir[0])
+    write_coord_f(Dir[1])
+    write_coord_f(Dir[2])
+    write_byte(4)
+    write_short(count)
+    write_short(speed)
+    write_short(128)
+    message_end()
 }

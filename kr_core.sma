@@ -895,7 +895,7 @@ public NPC_Killed(this , killer){
         ReSpawnEnt(this)
         new Judian = GetJuDianNum()
         CurrentNpcs--
-        if(CurrentNpcs <= 0){
+        if(CurrentNpcs == 0){
             set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
         }
         new lv = Current_judian
@@ -905,17 +905,19 @@ public NPC_Killed(this , killer){
             case 8 : if(!is_tank(this))AddKillRiBenJunGuan(killer)
         }
     }
-    // else if(!IsPlayerKilled){
-    //     new classname[32]
-    //     get_entvar(killer , var_classname , classname , charsmax(classname))
-    //     log_amx("日军被错误的击杀，击杀类名为%s" , classname)
-    //     new Judian = GetJuDianNum()
-    //     ReSpawnEnt(this)
-    //     CurrentNpcs--
-    //     if(CurrentNpcs <= 0){
-    //         set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
-    //     }
-    // }
+    else if(!IsPlayerKilled){
+        new classname[32]
+        get_entvar(killer , var_classname , classname , charsmax(classname))
+        log_amx("日军被错误的击杀，击杀类名为%s vim %d killer %d" , classname , 
+        this , killer)
+        server_print("%s") // 触发错误
+        new Judian = GetJuDianNum()
+        ReSpawnEnt(this)
+        CurrentNpcs--
+        if(CurrentNpcs == 0){
+            set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
+        }
+    }
 }
 
 public ChangeJudian(){

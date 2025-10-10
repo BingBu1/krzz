@@ -298,23 +298,13 @@ public client_slot_machine_spin(const iPlayer)
     HasAmooToSlot = Dec_cmp(iPlayer , NeedAmmo , ">=")
 #endif
     if(!HasAmooToSlot){
+        message_begin(MSG_ONE, g_msgBlinkAcct, .player = iPlayer)
+        write_byte(2)
+        message_end()
         m_print_color(iPlayer , "%L" , iPlayer, "NOT_ENOUGH_AMMO")
         return PLUGIN_HANDLED
     }
     SubAmmoPak(iPlayer , float(PlayerBetAmmo[iPlayer]))
     PlayerUseAmmo[iPlayer] = PlayerBetAmmo[iPlayer]
-    // if (get_member(iPlayer, m_iAccount) < BET)
-    // {
-	// 	message_begin(MSG_ONE, g_msgBlinkAcct, .player = iPlayer)
-	// 	write_byte(2)
-	// 	message_end()
-
-	// 	client_print_color(iPlayer, print_team_default, "^4[%s] %L",
-    //         PLUGIN, iPlayer, "NOT_ENOUGH_MONEY")
-
-	// 	return PLUGIN_HANDLED
-    // }
-
-    // rg_add_account(iPlayer, -BET)
     return PLUGIN_CONTINUE
 }

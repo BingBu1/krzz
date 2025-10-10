@@ -29,7 +29,7 @@
 #define GetBigWindAttackCd(%1) get_prop_float(%1 , "BWC")
 #define SetBigWindAttackCd(%1,%2) set_prop_float(%1 , "BWC" , %2)
 
-#define knf_cost 265.0
+#define knf_cost 220.0
 
 new ResModel [][]={
     "models/v_divinespear_new.mdl",
@@ -985,7 +985,7 @@ FakeTraceAttack(const iAttacker, const iVictim, const iInflictor, Float:fDamage,
 	fDamage *= Damage_Multiplier(iHitGroup);
 	if(!Compare_Target_And_Entity_Angle(iTarget, iAttacker, 90.0)) fDamage *= 3.0;
 	set_member(iTarget, m_LastHitGroup, iHitGroup);
-	Spawn_Blood(vTargetOrigin, iHitGroup, 7);
+	// Spawn_Blood(vTargetOrigin, iHitGroup, 7);
 	ExecuteHamB(Ham_TakeDamage, iTarget, iInflictor, iAttacker, fDamage, iDamageType);
 }
 

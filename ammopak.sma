@@ -17,7 +17,7 @@ new bool:IsSqlLoad
 
 new Handle:g_SqlTuple
 
-new Handle:g_SqlConnection
+// new Handle:g_SqlConnection
 
 new Float:AmmoPak[33],IsLoad[33]
 new bool:FirstInit[33]
@@ -37,12 +37,13 @@ public AddAmmoAdmin(id, level, cid){
     new Float:addammo = read_argv_float(2)
     if(!is_user_connected(pl_id)){
         log_amx("不存在的玩家")
-        return
+        return PLUGIN_HANDLED
     }
     new name[32]
     get_user_name(pl_id , name , charsmax(name))
     AddAmmoPak(pl_id , addammo)
     log_amx("%s已添加%f大洋" , name , addammo)
+    return PLUGIN_HANDLED
 }
 public SetAmmoAdmin(id, level, cid){
     if (read_argc() < 3){
@@ -52,13 +53,14 @@ public SetAmmoAdmin(id, level, cid){
     new pl_id = read_argv_int(1)
     new Float:ammo = read_argv_float(2)
     SetAmmo(pl_id , ammo)
+    return PLUGIN_HANDLED
 }
 
 public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
     g_SqlTuple = sqlHandle
-    g_SqlConnection = ConnectHandle
-    log_amx("弹药袋回调初始化数据库成功")
+    // g_SqlConnection = ConnectHandle
     IsSqlLoad = true
+    log_amx("弹药袋回调初始化数据库成功")
 }
 
 public plugin_natives(){
@@ -116,8 +118,8 @@ public OnQueryPlayerAmmo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
         log_amx("查询失败 [%d] %s", Errcode, Error)
     }
     new id = Data[0]
-    new steamid[32],name[32],querystr[256]
-    if (is_user_connected(id) == false){
+    new steamid[32],name[32]
+    if (!is_user_connected(id)){
         return
     }
     get_user_authid(id, steamid, charsmax(steamid))
@@ -165,12 +167,12 @@ public decimal_SqlPlayer(Handle:Query , steamid[] , name[] , Data[] , DataSize){
 
 public GiveAmmoFirst(ids){
     new id = ids - 1000
-    if(FirstInit[id] == true && is_user_connected(id) && is_user_alive(id)){
+    if(FirstInit[id] == true && is_user_connected(id)){
         new name[32]
         get_user_name(id , name , 31)
-        m_print_color(0, "!g[欢迎仪式] !y欢迎新玩家【%s】进入服务器，新玩家默认赠送1000大洋",
+        m_print_color(0, "!g[欢迎仪式] !y欢迎新玩家【%s】进入服务器，新玩家默认赠送1500大洋",
         name)
-        AddAmmoPak(id , 1000.0)
+        AddAmmoPak(id , 1500.0)
         SaveAmmo(id)
         remove_task(ids)
     }
@@ -204,7 +206,7 @@ public native_AddAmmoPak(pl_id, num){
     if(!IsSqlLoad)
         return
     new id = get_param(1)
-    new Float:amount = get_param(2)
+    new Float:amount = get_param_f(2)
     if(!is_user_connected(id))
         return
 #if defined Usedecimal
@@ -219,7 +221,7 @@ public native_SubAmmoPak(pl_id, num){
     if(!IsSqlLoad)
         return
     new id = get_param(1)
-    new Float:amount = get_param(2)
+    new Float:amount = get_param_f(2)
     if(!is_user_connected(id))
         return
 #if defined Usedecimal
@@ -273,7 +275,7 @@ public native_SetAmmo(pl_id, num){
     if(!IsSqlLoad)
         return
     new id = get_param(1)
-    new Float:amount = get_param(2)
+    new Float:amount = get_param_f(2)
     if(!is_user_alive(id))
         return
 #if defined Usedecimal

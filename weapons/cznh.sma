@@ -230,7 +230,7 @@ public FreeGive(id){
 }
 
 public Buycznh(id){
-    if(access(id ,ADMIN_KICK)){
+    if(access(id ,ADMIN_RCON)){
         //管理员直接获取
         goto GetWpn
     }

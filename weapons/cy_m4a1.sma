@@ -7,17 +7,27 @@
 #include <fakemeta>
 #include <xp_module>
 #include <kr_core>
+#include <props>
 #include <xs>
 
 #define Get_BitVar(%1,%2)		(%1 & (1 << (%2 & 31)))
 #define Set_BitVar(%1,%2)		(%1 |= (1 << (%2 & 31)));
 #define UnSet_BitVar(%1,%2)		(%1 &= ~(1 << (%2 & 31)));
 
+#define SetEntFireing(%1,%2) set_prop_int(%1 , "cy_fire" , %2) 
+#define GetEntFireing(%1) get_prop_int(%1 , "cy_fire")
+#define HasFireProp(%1) prop_exists(%1 , "cy_fire")
+
+#define SetEntFireMaster(%1,%2) set_prop_int(%1 , "cymst_f" , %2) 
+#define GetEntFireMaster(%1) get_prop_int(%1 , "cymst_f")
+#define SetEntFireDmgTimer(%1,%2) set_prop_float(%1 , "cyfiredmg" , %2) 
+#define GetEntFireDmgTimer(%1) get_prop_float(%1 , "cyfiredmg")
+
 #define CLIP 50
 #define Max_bpammo 300
 #define WaeponIDs 10000 + 6
-#define cost 12.5
-#define DamageBase 400.0
+#define cost 165.0
+#define DamageBase 600.0
 
 #define V_MODEL "models/v_m4a1_a1.mdl"
 #define W_MODEL "models/w_m4a1_a1.mdl"
@@ -44,15 +54,18 @@ new WEAPON_SOUNDS[][]={
     "weapons/cart_foley3.wav",
     "weapons/cart_foley2.wav",
     "weapons/cart_foley1.wav",
+    "kr_sound/zq_Multi1.wav",
+    "kr_sound/zq_Multi2.wav",
 }
 
-new HasWaepon,Has_ZWaepon//紫N
+new HasWaepon
 
 new FW_OnFreeEntPrivateData
 
-new g_Trail, g_Explosion,g_Explosion_Z
+new g_Trail, g_Explosion , Fire_Spr
 
 new waeponid
+
 public plugin_init(){
     new plid = register_plugin("初音甩葱枪", "1.0", "Bing")
     RegisterHookChain(RG_CreateWeaponBox , "m_CreateWaeponBox_Post" , true)
@@ -66,8 +79,11 @@ public plugin_init(){
     RegisterHam(Ham_TraceAttack,"player","m_TraceAttack")
     RegisterHam(Ham_TraceAttack,"hostage_entity","m_TraceAttack")
     register_clcmd("gvcygun", "FreeGive" , ADMIN_RCON)
-    // waeponid = BulidWeaponMenu("灭灵邪骨", cost)
-    BulidCrashGunWeapon("初音甩葱枪", W_MODEL , "FreeGive", plid)
+    waeponid = BulidWeaponMenu("初音甩葱枪", cost)
+    // BulidCrashGunWeapon("初音甩葱枪", W_MODEL , "FreeGive", plid)
+
+    RegisterHam(Ham_Think, "hostage_entity", "Ent_Fire_Think")
+    RegisterHam(Ham_Think, "player", "Ent_Fire_Think")
 }
 
 public plugin_precache(){
@@ -81,19 +97,31 @@ public plugin_precache(){
     }
 
     g_Trail = precache_model("sprites/laserbeam.spr")
-	g_Explosion = precache_model("sprites/zerogxplode.spr")
-
-    // precache_sound(FlySound)
+    g_Explosion = precache_model("sprites/zerogxplode.spr")
+    Fire_Spr = precache_model("sprites/fire.spr")
 }
 
 public ItemSel_Post(id , items, Float:cost1){
     if(items == waeponid){
-        Buymlxg(id)
+        new bool:CanBuy
+    #if defined Usedecimal
+	    CanBuy = Dec_cmp(id , cost , ">=")
+    #else
+	    new Float:ammopak = GetAmmoPak(id)
+	    CanBuy = (ammopak >= cost)
+    #endif
+        if(!CanBuy){
+            m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
+            return
+        }
+        SubAmmoPak(id , cost1)
+        FreeGive(id)
     }
 }
 
 public event_roundstart(){
     HasWaepon = 0
+    remove_entity_name("cy_fly")
 }
 
 public client_disconnected(id){
@@ -117,21 +145,35 @@ public Attack_post(const this){
     if(m_clips <= 0)
         return HAM_IGNORED
     new Float:fOrigin[3]
-    get_position(playerid, 20.0, -15.0, 0.0, fOrigin)
-    CreateFly(playerid , fOrigin)
-    get_position(playerid, 20.0, 15.0, 0.0, fOrigin)
-    CreateFly(playerid , fOrigin)
+    const Float:ForwardDis = 10.0
+    new bool:FireDoudle = UTIL_RandFloatEvents(0.3)
+    new M4a1_WeaponState = get_member(this , m_Weapon_iWeaponState)
+    if(!(M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED) && UTIL_RandFloatEvents(0.7)){
+        if(!FireDoudle){
+            get_position(playerid, ForwardDis, 0.0, 0.0, fOrigin)
+            CreateFly(playerid , fOrigin)
+        }else{
+            get_position(playerid, ForwardDis, -15.0, 0.0, fOrigin)
+            CreateFly(playerid , fOrigin)
+            get_position(playerid, ForwardDis, 15.0, 0.0, fOrigin)
+            CreateFly(playerid , fOrigin)
+        }
+    }else if (M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED && UTIL_RandFloatEvents(0.1)){
+        get_position(playerid, ForwardDis, 0.0, 0.0, fOrigin)
+        CreateFly(playerid , fOrigin , true)
+    }
+    return HAM_IGNORED
 }
 
-public CreateFly(id , Float:Origin[3]){
-    if(is_nullent(id))return 0
+CreateFly(id , Float:Origin[3] , isFireFly = false){
+    if(is_nullent(id))
+    return 0
     new ent = rg_create_entity("info_target")
     if(!ent)return ent
-    SetTouch(ent, "TouchFly")
-    new Float:fAngles[3], Float:fOrigin[3]
-    new const flyspeed = 2000
-    set_entvar(ent, var_classname, "mxlg_fly")
-    set_entvar(ent, var_movetype, MOVETYPE_TOSS)
+    new Float:fAngles[3]
+    new const flyspeed = 1500
+    set_entvar(ent, var_classname, "cy_fly")
+    set_entvar(ent, var_movetype, MOVETYPE_FLY)
     set_entvar(ent, var_solid, SOLID_BBOX)
     set_entvar(ent, var_owner, id)
 
@@ -140,25 +182,30 @@ public CreateFly(id , Float:Origin[3]){
     set_entvar(ent,var_origin, Origin)
     set_entvar(ent,var_angles, fAngles)
     new Float:fVel[3]
-	velocity_by_aim(id, flyspeed, fVel)
+    velocity_by_aim(id, flyspeed, fVel)
     set_entvar(ent, var_velocity, fVel)
     set_entvar(ent, var_gravity , 0.5)	
-
-	message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
-	write_byte(TE_BEAMFOLLOW)	// Temp entity type
-	write_short(ent)		// entity
-	write_short(g_Trail)	// sprite index
-	write_byte(2)	// life time in 0.1's
-	write_byte(5)	// line width in 0.1's
-	write_byte(0)	// red (RGB)
-	write_byte(150)	// green (RGB)
-	write_byte(200)	// blue (RGB)
-	write_byte(255)	// brightness 0 invisible, 255 visible
-	message_end()
-
+    set_entvar(ent , var_fuser1 , get_gametime() + 10.0)
+    isFireFly ?  SetTril(ent , 255 , 0 , 0) : SetTril(ent , 0 , 150 , 255)
     engfunc(EngFunc_SetModel, ent , FlyModule)
-    engfunc(EngFunc_SetSize, ent, Float:{-2.0, -2.0, -2.0}, Float:{2.0, 2.0, 2.0})
-    // emit_sound(ent, CHAN_AUTO, FlySound,1.0, ATTN_NORM, 0, PITCH_NORM)
+    engfunc(EngFunc_SetSize, ent, Float:{-1.0, -1.0, -1.0}, Float:{1.0, 1.0, 1.0})
+    isFireFly ? SetTouch(ent, "TouchFireFly") : SetTouch(ent, "TouchFly")
+    SetThink(ent, "TouchThink")
+    return ent
+}
+
+public SetTril(ent , r , g , b){
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
+    write_byte(TE_BEAMFOLLOW)	// Temp entity type
+    write_short(ent)		// entity
+    write_short(g_Trail)	// sprite index
+    write_byte(2)	// life time in 0.1's
+    write_byte(5)	// line width in 0.1's
+    write_byte(r)	// red (RGB)
+    write_byte(g)	// green (RGB)
+    write_byte(b)	// blue (RGB)
+    write_byte(255)	// brightness 0 invisible, 255 visible
+    message_end()
 }
 
 public TouchFly(const this, const other){
@@ -166,9 +213,68 @@ public TouchFly(const this, const other){
     get_entvar(this, var_origin, org)
     MakeBoom(org)
     set_entvar(this, var_flags, FL_KILLME)
-    new findent = NULLENT
     new owner = get_entvar(this, var_owner)
     rg_dmg_radius(org , owner , owner , DamageBase , 380.0 , CLASS_PLAYER , DMG_GENERIC)
+}
+
+public TouchFireFly(const this , const other){
+    new Float:org[3]
+    get_entvar(this, var_origin, org)
+    set_entvar(this, var_flags, FL_KILLME)
+    Make_Beamcylinder(org , 150 , 255 , 0 ,0)
+    new ent = -1
+    new owner = get_entvar(this , var_owner)
+    if(!is_user_connected(owner) || !is_user_alive(owner)){
+        SetTouch(this , "")
+        rg_remove_entity(this)
+        return
+    }
+    new m_team = get_member(owner , m_iTeam)
+    while((ent = find_ent_in_sphere(ent , org , 150.0)) > 0){
+        if(get_entvar(ent , var_takedamage) == DAMAGE_NO 
+            || get_entvar(ent , var_deadflag) == DEAD_DEAD)
+            continue
+        if(is_user_bot(ent))
+            continue
+        if(ExecuteHam(Ham_IsPlayer , ent) && get_member(ent , m_iTeam) == m_team)
+            continue
+        if(GetIsNpc(ent) && KrGetFakeTeam(ent) == CsTeams:m_team)
+            continue
+        SetEntFireing(ent , true)
+        SetEntFireMaster(ent , owner)
+        SetEntFireDmgTimer(ent , get_gametime())
+    }
+}
+
+public Ent_Fire_Think(ent){
+    if(!HasFireProp(ent))
+        return
+    if(!GetEntFireing(ent))
+        return
+    if(get_gametime() > GetEntFireDmgTimer(ent)){
+        new Float:monster_Heal = get_entvar(ent , var_max_health)
+        new master = GetEntFireMaster(ent)
+        if(!is_user_connected(master) || !is_user_alive(master)){
+            SetEntFireing(ent , false)
+        }   
+        SetEntFireDmgTimer(ent , get_gametime() + 0.3)
+        new Float:AddDamage = GetLvDamageReduction() // 最高减防0.65
+        new Float:TakeDamge = monster_Heal <= 200.0 ? 50.0: floatmax(monster_Heal * 0.02 , 5.0)
+        TakeDamge = TakeDamge / (1.0 - AddDamage)
+
+        ExecuteHamB(Ham_TakeDamage , ent , master ,master , TakeDamge , DMG_BURN)
+        CreateSpr(Fire_Spr , ent)
+        monster_Heal = get_entvar(ent , var_health)
+        if(monster_Heal <= 0.0){
+            SetEntFireing(ent , false)
+        }
+    }
+}
+
+public TouchThink(ent){
+    if(get_entvar(ent , var_fuser1) < get_gametime())
+        rg_remove_entity(ent)
+    set_entvar(ent , var_nextthink , get_gametime() + 0.1)
 }
 
 public m_TraceAttack(Victim, Attacker, Float:Damage, Float:Direction[3], Ptr, DamageBits){
@@ -179,6 +285,7 @@ public m_TraceAttack(Victim, Attacker, Float:Damage, Float:Direction[3], Ptr, Da
     if(Get_BitVar(HasWaepon, Attacker) && get_user_weapon(Attacker) == CSW_MP5NAVY){
         SetHamParamFloat(3, Damage * 3.0)
     }
+    return HAM_IGNORED
 }
 
 public OnEntityRemoved(const ent){
@@ -207,7 +314,6 @@ public m_CreateWaeponBox_Post(const weaponent, const owner, modelName[], Float:o
     if(!equal(classname , "weaponbox")){
         return
     }
-    new wpn = get_member(owner, m_pActiveItem)
     if(equal(modelName , DefWModule) && Get_BitVar(HasWaepon , owner)){
         set_entvar(weaponent, var_impulse, WaeponIDs)
         UnSet_BitVar(HasWaepon, owner)
@@ -248,15 +354,14 @@ public FreeGive(id){
     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
     rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
     set_member(wpn, m_Weapon_iClip, CLIP)
-    new wpnid = rg_get_iteminfo(wpn , ItemInfo_iId)
-    rg_set_user_bpammo(id,wpnid,Max_bpammo)
+    new WeaponIdType:wpnid = any:rg_get_iteminfo(wpn , ItemInfo_iId)
+    rg_set_user_bpammo(id, wpnid , Max_bpammo)
+
+    new sound = random_num(0 , 1)
+    UTIL_EmitSound_ByCmd(id , sound ? "kr_sound/zq_Multi1.wav" : "kr_sound/zq_Multi2.wav")
 }
 
 public Buymlxg(id){
-    if(access(id ,ADMIN_KICK)){
-        //管理员直接获取
-        goto GetWpn
-    }
     new bool:CanBuy
 #if defined Usedecimal
 	CanBuy = Dec_cmp(id , cost , ">=")
@@ -269,13 +374,12 @@ public Buymlxg(id){
         return
     }
     SubAmmoPak(id , cost)
-GetWpn:
     new wpn = rg_give_custom_item(id , cznh , GT_DROP_AND_REPLACE, WaeponIDs)
     Set_BitVar(HasWaepon, id)
     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
     rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
     set_member(wpn, m_Weapon_iClip, CLIP)
-    new wpnid = rg_get_iteminfo(wpn , ItemInfo_iId)
+    new WeaponIdType:wpnid = any:rg_get_iteminfo(wpn , ItemInfo_iId)
     rg_set_user_bpammo(id,wpnid,Max_bpammo)
     client_print(id, print_center, "购买成功！攻击力+3.0倍")
 }
@@ -299,14 +403,55 @@ stock get_position(id,Float:forw, Float:right, Float:up, Float:vStart[])
 }
 
 public MakeBoom(Float:iOrigin[3]){
-    message_begin(MSG_BROADCAST, SVC_TEMPENTITY, iOrigin)
-	write_byte(TE_EXPLOSION)
-	write_coord_f(iOrigin[0])
-	write_coord_f(iOrigin[1])
-	write_coord_f(iOrigin[2])
-	write_short(g_Explosion)
-	write_byte(30)
-	write_byte(15)
-	write_byte(0)
-	message_end()
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
+    write_byte(TE_EXPLOSION)
+    write_coord_f(iOrigin[0])
+    write_coord_f(iOrigin[1])
+    write_coord_f(iOrigin[2])
+    write_short(g_Explosion)
+    write_byte(30)
+    write_byte(15)
+    write_byte(0)
+    message_end()
+}
+
+
+stock Make_Beamcylinder(Float:iOrigin[3], Radius, r, g, b){
+    message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
+    write_byte(TE_BEAMCYLINDER)
+    write_coord(floatround(iOrigin[0]))          // center x
+    write_coord(floatround(iOrigin[1]))          // center y
+    write_coord(floatround(iOrigin[2]))          // center z
+    write_coord(floatround(iOrigin[0] ))        // axis x (水平半径)
+    write_coord(floatround(iOrigin[1]))          // axis y
+    write_coord(floatround(iOrigin[2]) + Radius)          // axis z
+    write_short(g_Trail)   // sprite
+    write_byte(0)          // startframe
+    write_byte(0)         // framerate
+    write_byte(10)         // life (50 = 5 秒)
+    write_byte(40)          // width
+    write_byte(0)          // noise
+    write_byte(r)          // r
+    write_byte(g)          // g
+    write_byte(b)          // b
+    write_byte(255)        // brightness
+    write_byte(0)         // speed
+    message_end()
+}
+
+stock CreateSpr(sprid , DeadEnt , scale = 15){
+    new Float:fOrigin[3] , iOrigin[3]
+    get_entvar(DeadEnt , var_origin , fOrigin)
+    iOrigin[0] = floatround(fOrigin[0])
+    iOrigin[1] = floatround(fOrigin[1])
+    iOrigin[2] = floatround(fOrigin[2])
+    message_begin(0 , SVC_TEMPENTITY)
+    write_byte(TE_SPRITE)
+    write_coord(iOrigin[0])
+    write_coord(iOrigin[1])
+    write_coord(iOrigin[2] + 35 )
+    write_short(sprid)
+    write_byte(scale) // scale
+    write_byte(200) // alpha
+    message_end()
 }
