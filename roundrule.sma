@@ -321,7 +321,8 @@ public m_ThrowHeGrenade(const index, Float:vecStart[3], Float:vecVelocity[3], Fl
     new Human_Rules:Rule = GetHunManRule()
     if(!ExecuteHam(Ham_IsPlayer , index) || is_user_bot(index))
         return HC_CONTINUE
-    if(get_member(index , m_iTeam) == _:TEAM_CT)
+    if(get_member(index , m_iTeam) == TEAM_CT)
+        return HC_CONTINUE
     switch(Rule){
         case HUMAN_RULE_Grenadier:{
             DisableHookChain(HOOK_ThrowHeGrenade)

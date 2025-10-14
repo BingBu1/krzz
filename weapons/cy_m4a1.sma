@@ -23,7 +23,7 @@
 #define SetEntFireDmgTimer(%1,%2) set_prop_float(%1 , "cyfiredmg" , %2) 
 #define GetEntFireDmgTimer(%1) get_prop_float(%1 , "cyfiredmg")
 
-#define CLIP 50
+#define CLIP 60
 #define Max_bpammo 300
 #define WaeponIDs 10000 + 6
 #define cost 165.0
@@ -67,7 +67,7 @@ new g_Trail, g_Explosion , Fire_Spr
 new waeponid
 
 public plugin_init(){
-    new plid = register_plugin("初音甩葱枪", "1.0", "Bing")
+    register_plugin("初音甩葱枪", "1.0", "Bing")
     RegisterHookChain(RG_CreateWeaponBox , "m_CreateWaeponBox_Post" , true)
     RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
     RegisterHookChain(RG_CBasePlayerWeapon_DefaultReload , "m_Reload")
@@ -148,7 +148,7 @@ public Attack_post(const this){
     const Float:ForwardDis = 10.0
     new bool:FireDoudle = UTIL_RandFloatEvents(0.3)
     new M4a1_WeaponState = get_member(this , m_Weapon_iWeaponState)
-    if(!(M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED) && UTIL_RandFloatEvents(0.7)){
+    if(!(M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED) && UTIL_RandFloatEvents(0.45)){
         if(!FireDoudle){
             get_position(playerid, ForwardDis, 0.0, 0.0, fOrigin)
             CreateFly(playerid , fOrigin)
@@ -214,7 +214,7 @@ public TouchFly(const this, const other){
     MakeBoom(org)
     set_entvar(this, var_flags, FL_KILLME)
     new owner = get_entvar(this, var_owner)
-    rg_dmg_radius(org , owner , owner , DamageBase , 380.0 , CLASS_PLAYER , DMG_GENERIC)
+    rg_dmg_radius(org , owner , owner , DamageBase , 250.0 , CLASS_PLAYER , DMG_GENERIC)
 }
 
 public TouchFireFly(const this , const other){
@@ -327,12 +327,10 @@ public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnim
     if(!equal(classname , cznh)){
         return
     }
-    // new wpn = get_member(get_member(this, m_pPlayer), m_pActiveItem)
     new playerid = get_member(this, m_pPlayer)
     if(Get_BitVar(HasWaepon, playerid)){
         SetHookChainArg(2,ATYPE_STRING, V_MODEL)
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
-        // UTIL_EmitSound_ByCmd(playerid , WEAPON_SOUNDS[0])
     }
 }
 
@@ -350,6 +348,7 @@ public m_AddPlayerItem (const this, const pItem){
 
 public FreeGive(id){
     new wpn = rg_give_custom_item(id , cznh , GT_DROP_AND_REPLACE, WaeponIDs)
+
     Set_BitVar(HasWaepon, id)
     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
     rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)

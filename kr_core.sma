@@ -73,7 +73,8 @@ new LvName[][]={
 }
 
 new const g_remove_entities[][] = { "func_bomb_target", "info_bomb_target", "info_vip_start", "func_vip_safetyzone", "func_escapezone", "hostage_entity",
-		"monster_scientist", "func_hostage_rescue", "info_hostage_rescue", "env_fog", "env_rain", "env_snow", "armoury_entity" }
+		"monster_scientist", "func_hostage_rescue", "info_hostage_rescue", "env_fog", "env_rain", "env_snow" }
+//armoury_entity 武器实体
 
 new const hint[][] = {
     "!t[游戏提示]本服务器可以砸枪，部分枪械为隐藏枪械只有砸枪可以产出哦。",
@@ -910,12 +911,13 @@ public NPC_Killed(this , killer){
         get_entvar(killer , var_classname , classname , charsmax(classname))
         log_amx("日军被错误的击杀，击杀类名为%s vim %d killer %d" , classname , 
         this , killer)
-        server_print("%s") // 触发错误
-        new Judian = GetJuDianNum()
-        ReSpawnEnt(this)
-        CurrentNpcs--
-        if(CurrentNpcs == 0){
-            set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
+        if(!FClassnameIs(killer , "hostage_entity")){
+            new Judian = GetJuDianNum()
+            ReSpawnEnt(this)
+            CurrentNpcs--
+            if(CurrentNpcs == 0){
+                set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
+            }
         }
     }
 }

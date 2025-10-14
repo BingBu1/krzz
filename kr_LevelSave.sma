@@ -5,12 +5,20 @@
 
 new RoundNums , IsNeedCheck
 new IsLoad
+new Float:StartRoundTime
 public plugin_init(){
     register_plugin("难度存档" , "1.0" , "Bing")
     register_logevent("EventRoundEnd", 2, "1=Round_End")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
     register_clcmd("kr_CheckLv" , "Check")
+}
+
+
+public client_disconnected(id , bool:drop){
+    new nums = get_playersnum()
+    if(nums == 0)
+        IsLoad = false
 }
 
 public plugin_end(){
@@ -52,6 +60,7 @@ public event_roundstart(){
         IsLoad = true
     }
     new lv = Getleavel()
+    StartRoundTime = get_gametime()
     if(lv > 50){
         IsNeedCheck = true
     }
@@ -65,7 +74,9 @@ public event_roundstart(){
 }
 
 public EventRoundEnd(){
-    if(!IsNeedCheck)
+    if(!IsNeedCheck || !IsLoad)
+        return
+    if(get_gametime() - StartRoundTime < 60.0)
         return
     RoundNums++
     SaveLv_Json()
@@ -121,6 +132,8 @@ stock LevelSubGet(){
     }
     else if(lv >= 800 && lv <= 1300){
         return 400
+    }else if(lv > 1300){
+        return Getleavel()
     }
     return 0
 }

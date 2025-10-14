@@ -209,6 +209,14 @@ stock GetNextLevelXpBigInt(ent , value[] , len){
     }
     MapSetValue("Lv" , 10)
     new Lv = PlayerLeavl[ent]
+    if(Lv > 1150){
+        new LvSub = Lv - 1150
+        MapSetValue("Lv" , 15388) // 设置新的
+        MapValueMulSave("Lv" , LvSub)
+        MapValueAddSave("Lv" , 13225000)
+        MapGetNums("Lv" , value , len)
+        return
+    }
     new BaseMul = Lv * Lv
     MapValueMulSave("Lv" , BaseMul)
     MapGetNums("Lv" , value , len)

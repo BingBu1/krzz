@@ -87,6 +87,7 @@ public CreateMenu(id){
     menu_additem(menuid, "老虎机设置", "11")
     menu_additem(menuid, "切换视角", "12")
     menu_additem(menuid, "查询掉难度情况", "13")
+    menu_additem(menuid, "一起来跳舞", "14")
     menu_display(id, menuid)
 }
 
@@ -182,6 +183,7 @@ public menuHandle(id,menu,item){
         case 11: client_cmd(id, "say /machine") //老虎机
         case 12: ChangeCamMenu(id) //切换视角
         case 13 : client_cmd(id  , "kr_checklv")//查询掉难度
+        case 14 : client_cmd(id  , "cheer")//跳舞
     }
     menu_destroy(menu)
 }

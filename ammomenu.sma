@@ -105,6 +105,7 @@ public GivePlayerMoney(id){
     get_user_name(giveid , name2 , 31)
     m_print_color(0, "!t[注意!!!]!g土豪!t%s!g转账给!t%s!g%f大洋!!t(已扣除手续费)" , name , name2 ,EndGive  )
     m_print_color(giveid, "!g[冰布提示]你收到了!t%s!g转给你的!t%f!g大洋实际收款!t%f。" ,name , giveammo , EndGive)
+    log_amx("%s转账给%s_%f大洋_最终到账%f" , name , name2 ,giveammo ,EndGive)
 }
 
 public AmmoHandle(id,menu,item){

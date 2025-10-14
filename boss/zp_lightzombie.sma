@@ -123,8 +123,8 @@ new boss_state, Lightz_Ent, g_FootStep, bool: y_start_npc, bool: Boss_Create_Fix
 new Float: Time1, Float: Time2, Float: Time3, Float: Time4, Float: Time5, bool: invisibilidade
 
 //Adicionais
-new g_MsgScreenShake, Camera, Cut1, g_MaxPlayers, exp_spr_id, m_iBlood[2], y_hpbar, MSGSYNC, Bomba, bool:Fix_Death_Boss
-new g_damagedealt[33], cvar_dmg_ap_allow, cvar_ammodamage, cvar_ammo_quantity, cvar_ammo_killed
+new g_MsgScreenShake, Camera, Cut1, g_MaxPlayers, exp_spr_id, m_iBlood[2], y_hpbar, Bomba, bool:Fix_Death_Boss
+new g_damagedealt[33], cvar_dmg_ap_allow, cvar_ammodamage//, cvar_ammo_quantity, cvar_ammo_killed
 
 /*================================================================================
 [Plugin Init]
@@ -136,22 +136,22 @@ public plugin_init()
 	register_think(LIGHTZ_CLASS, "Fw_Lightz_Think")
 	register_touch("Bomb_Zomibe_1", "*", "Bomb_1_Touch")
 		
-	register_clcmd("say menuboss", "Lightz_menu")	
-	register_clcmd("say /menuboss", "Lightz_menu")
-	register_clcmd("say_team menuboss", "Lightz_menu")
-	register_clcmd("say_team /menuboss", "Lightz_menu")
+	// register_clcmd("say menuboss", "Lightz_menu")	
+	// register_clcmd("say /menuboss", "Lightz_menu")
+	// register_clcmd("say_team menuboss", "Lightz_menu")
+	// register_clcmd("say_team /menuboss", "Lightz_menu")
 	
 	//System Ammor Packs
 	cvar_dmg_ap_allow = register_cvar("zp_lightz_dmg_ap_reward_allow", "1")		// Ganhar Ammo Packs Por Dano
 	cvar_ammodamage = register_cvar("zp_lightz_dmg_for_reward", "1000") 			// Dmg Necessario Para Ganhar Ammo Packs
-	cvar_ammo_quantity  = register_cvar("zp_lightz_reward_ap_quantity", "2") 		// Quantia de Ammo Packs que ira ganhar por dano	
-	cvar_ammo_killed = register_cvar("zp_lightz_kill_reward_ap_quantity", "1000")	// Quantia de Ammo Packs que ira ganhar ao matar o Boss
+	// cvar_ammo_quantity  = register_cvar("zp_lightz_reward_ap_quantity", "2") 		// Quantia de Ammo Packs que ira ganhar por dano	
+	// cvar_ammo_killed = register_cvar("zp_lightz_kill_reward_ap_quantity", "1000")	// Quantia de Ammo Packs que ira ganhar ao matar o Boss
 	
 	// set_task(30.0, "Creator_Plugin", 100, _, _, "b")
 		
 	g_MaxPlayers = get_maxplayers()
 	g_MsgScreenShake = get_user_msgid("ScreenShake")
-	MSGSYNC = CreateHudSyncObj()
+	// MSGSYNC = CreateHudSyncObj()
 }
 
 public plugin_natives(){
@@ -320,6 +320,7 @@ public Game_Start(Float:Sp_Origin[3])
 		Fix_Death_Boss = false
 		RegisterHamFromEntity(Ham_Killed, Lightz, "Lightz_Killed")
 		RegisterHamFromEntity(Ham_TakeDamage, Lightz, "fw_Lightz_Tracer_DMG", 1)
+		RegisterHamFromEntity(Ham_TakeDamage, Lightz, "fw_Lightz_Tracer_DMG_Pre")
 	}	
 	y_hpbar = create_entity("env_sprite")
 	set_pev(y_hpbar, pev_scale, 0.6)
@@ -380,6 +381,12 @@ public fw_Lightz_Tracer_DMG(victim, inflictor, attacker, Float:damage, damagebit
 		}
 	}
 }
+
+public fw_Lightz_Tracer_DMG_Pre(victim, inflictor, attacker, Float:damage, damagebits){
+	new Float:DamgeSub = GetLvDamageReduction()
+	SetHamReturnFloat(damage * (1.0 - DamgeSub))
+}
+
 /*------------------------------------------------------------------------------------------
 Ham Killed do Boss
 --------------------------------------------------------------------------------------------*/
@@ -397,7 +404,6 @@ public Lightz_Killed(Lightz, attacker)
 		get_entvar(Lightz , var_origin , DeadOrigin)
 		CreateLoot_Cso(DeadOrigin)
 		m_print_color(0 , "!g[冰布提示]!t日军生化武器已被挫败，请尽快拾取战利品")
-		// AddAmmoPak(attacker , float(get_pcvar_num(cvar_ammo_killed)))
 	}
 	return HAM_SUPERCEDE
 }
@@ -584,36 +590,36 @@ public Fw_Lightz_Think(Lightz)
 		{
 			boss_state = STATE_IDLE
 			return
-			static Float:Target[3], Float:Origin[3]
+			// static Float:Target[3], Float:Origin[3]
 			
-			pev(Lightz, pev_origin, Origin)
-			Target[0] = 1896.908691
-			Target[1] = -368.895904
-			Target[2] = 276.031250
-			if(pev(Lightz, pev_movetype) == MOVETYPE_PUSHSTEP)
-			{
-				if(get_distance_f(Target, Origin) > 90.0)
-				{
-					MM_Aim_To(Lightz, Target)
-					hook_ent2(Lightz, Target, 200.0)
-					Set_EntAnim(Lightz, ANIM_WALK, 1.0, 0)
+			// pev(Lightz, pev_origin, Origin)
+			// Target[0] = 1896.908691
+			// Target[1] = -368.895904
+			// Target[2] = 276.031250
+			// if(pev(Lightz, pev_movetype) == MOVETYPE_PUSHSTEP)
+			// {
+			// 	if(get_distance_f(Target, Origin) > 90.0)
+			// 	{
+			// 		MM_Aim_To(Lightz, Target)
+			// 		hook_ent2(Lightz, Target, 200.0)
+			// 		Set_EntAnim(Lightz, ANIM_WALK, 1.0, 0)
 					
-					if(get_gametime() - 0.5 > Time3)
-					{
-						if(g_FootStep != 15) g_FootStep = 15
-						else g_FootStep = 16
+			// 		if(get_gametime() - 0.5 > Time3)
+			// 		{
+			// 			if(g_FootStep != 15) g_FootStep = 15
+			// 			else g_FootStep = 16
 				
-						PlaySound(0, CSO_Lightzombie[g_FootStep == 15 ? 15 : 16])
-						Time3 = get_gametime()
-					}
-				}
-				else 
-				{			
-					boss_state = STATE_APPEAR_IDLE
-					Set_EntAnim(Lightz, ANIM_IDLE, 1.0, 1)
-					Scene_Appear_Jump(Lightz+TASK_APPEAR)											
-				}
-			}				
+			// 			PlaySound(0, CSO_Lightzombie[g_FootStep == 15 ? 15 : 16])
+			// 			Time3 = get_gametime()
+			// 		}
+			// 	}
+			// 	else 
+			// 	{			
+			// 		boss_state = STATE_APPEAR_IDLE
+			// 		Set_EntAnim(Lightz, ANIM_IDLE, 1.0, 1)
+			// 		Scene_Appear_Jump(Lightz+TASK_APPEAR)											
+			// 	}
+			// }				
 		}	
 		case STATE_APPEAR_JUMP:
 		{

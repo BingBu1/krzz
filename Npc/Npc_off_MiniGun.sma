@@ -26,7 +26,7 @@ public HandleAnimEvent(const id, event, const event_option[], len_option){
 public NpcOnCreate(Npcid ,Regid){
     if(Regid == Reg_Npcid){
         SetBodyGroup(Npcid , 2  , 7)
-        engfunc(EngFunc_SetModel , Npcid , "models/Bing_Kr_res/Kr_npcs/officer.mdl")
+        // engfunc(EngFunc_SetModel , Npcid , "models/Bing_Kr_res/Kr_npcs/officer.mdl")
     }
 }
 

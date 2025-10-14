@@ -3,6 +3,7 @@
 #include <kr_core>
 #include <xp_module>
 #include <easy_http>
+#include <json>
 
 #define Vip_Flags ADMIN_RESERVATION
 new IsVip[33]
@@ -17,6 +18,7 @@ public plugin_natives(){
 public client_putinserver(id){
     if(is_user_bot(id))
         return
+    IsVip[id] = false
     VipBySteamid_Http(id)
 }
 
@@ -47,8 +49,22 @@ public VipStatusGet(EzHttpRequest:request_id ){
         server_print("Vip请求失败 %s " , error);
         return
     }
-    new req_data[512] , data[1]
-    ezhttp_get_data(request_id , req_data , charsmax(req_data))
+    new req_data[512] , data[1] , playerid
     ezhttp_get_user_data(request_id , data)
-    server_print("Response data: %s , data is %d", req_data , data[0])
+    ezhttp_get_data(request_id , req_data , charsmax(req_data))
+    playerid = data[0]
+
+    server_print("Response data: %s , data is %d", req_data , playerid)
+    new JSON:JsonRoot = json_parse(req_data)
+    if(JsonRoot == Invalid_JSON){
+        log_amx("Vip请求vip接口解析Json失败,Id:%d" , playerid)
+        return
+    }
+
+    new bool:Vip_Get = json_object_get_bool(JsonRoot , "isVip")
+
+    if(!Vip_Get)
+        return
+
+    IsVip[playerid] = true
 }

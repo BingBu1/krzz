@@ -50,6 +50,7 @@ new PreModules [][]= {
     "models/player/NecoArc/NecoArc.mdl",
     "models/player/kobelaoda/kobelaoda.mdl",
     "models/player/hongdou/hongdou.mdl",
+    "models/player/gordon/gordon.mdl",
     "sprites/wrbot/cn.spr"
 }
 
@@ -72,8 +73,9 @@ new g_ModelData[][ModelLvNames] = {
     { 750, "普京"    ,"pujing"      },//16
     { 850, "kobe牢大","kobelaoda"      },//17
     {1000, "金正恩"   ,"jinzhengen"     },//18
-    {   0, "猫姬-管理模型" , "NecoArc" ,2},//19
-    {   0, "红豆(Vip或管理)" , "hongdou" ,1},//20
+    {1150 , "戈登弗里曼" , "gordon"},
+    {   0, "猫姬-管理模型" , "NecoArc" ,2},
+    {   0, "红豆(Vip或管理)" , "hongdou" ,1},
 };
 
 //设置模型开场音乐

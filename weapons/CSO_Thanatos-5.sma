@@ -12,7 +12,7 @@
 #define AUTHOR "Dias no Pendragon"
 
 #define DAMAGE_A 29 // 58 for zombie
-#define DAMAGE_B 1000 // 300 for zombie
+#define DAMAGE_B 500 // 300 for zombie
 
 #define CLIP 30
 #define SCYTHE_RADIUS 120.0
@@ -181,8 +181,8 @@ public Hook_Weapon(id)
 
 public Get_Thanatos5(id)
 {
-	drop_weapons(id, 1)
-	
+	// drop_weapons(id, 1)
+	rg_drop_items_by_slot(id , PRIMARY_WEAPON_SLOT)
 	Set_BitVar(g_Had_Thanatos5, id)
 	UnSet_BitVar(g_GrenadeMode, id)
 	rg_give_item(id , weapon_thanatos5 , GT_DROP_AND_REPLACE)
@@ -481,8 +481,8 @@ public Create_FakeAttackAnim(id)
 }
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
 	new playerid = get_member(this, m_pPlayer)
-	new iWpn = get_member(playerid , m_pActiveItem)
-    if(Get_BitVar(g_Had_Thanatos5, playerid) && iWpn == this){
+	new iWpn = get_member(playerid , m_pActiveItem)9
+	if(Get_BitVar(g_Had_Thanatos5, playerid) && any:rg_get_iteminfo(iWpn , ItemInfo_iId) == WEAPON_M4A1){
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
     }
 }
@@ -893,7 +893,7 @@ public Thanatos5_Damage(id, Team, Float:Origin[3])
 		ExecuteHamB(Ham_TakeDamage, i, 0, id, float(DAMAGE_B), DMG_BULLET)
 	}
 	new ent = -1
-	while(ent = find_ent_by_class(ent, "hostage_entity")){
+	while((ent = find_ent_by_class(ent, "hostage_entity")) > 0){
 		if(!is_user_alive(id))
 			continue
 		if(pev(ent, pev_deadflag) == DEAD_DEAD || pev(ent, pev_takedamage) == DAMAGE_NO)
