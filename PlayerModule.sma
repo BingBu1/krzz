@@ -90,6 +90,7 @@ new hero[33]
 new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
 new LastUseModel[MAX_PLAYERS +1 ][LastUseModelData]
 new VipModelSize
+new ChangeModel_Hanle
 public plugin_init(){
     register_plugin("设置玩家模型", "1.0", "Bing")
     RegisterHookChain(RG_CBasePlayer_Spawn,"PlayerSpawn_Post",true)
@@ -104,6 +105,8 @@ public plugin_init(){
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
     register_clcmd("say /changemodle" , "CreateMoudleMenu")
+
+    ChangeModel_Hanle = CreateMultiForward("OnModelChange" , ET_STOP , FP_CELL ,FP_STRING)
 
     GetVipModelSize()
 }
@@ -186,6 +189,7 @@ public PlayerSpawn_Post(this){
         SetModuleByLv(this , true)
     }else if(hero[this]){
         rg_set_user_model(this, "linghu_red")
+        ExecuteForward(ChangeModel_Hanle , _ , this , "linghu_red")
         return HC_CONTINUE
     }
     return HC_CONTINUE
@@ -224,6 +228,7 @@ public MakeHero(const id){
     hero[id] = true
     rg_set_user_model(id, "linghu_red")
     MakeHeroSpr(id)
+    ExecuteForward(ChangeModel_Hanle , _ , id , "linghu_red")
     set_task(0.5,"GiveHeroWeapon",id)
 }
 
@@ -261,10 +266,12 @@ public SetModuleByLv(this , bool:playsound){
             if(setlv <= 14){
                 rg_set_user_model(this, "rainych_krall1")
                 set_entvar(this, var_body , setlv)
+                ExecuteForward(ChangeModel_Hanle , _ , this ,"rainych_krall1")
                 return
             }
             if(LastUseModel[this][Use_ed]){
                 rg_set_user_model(this , LastUseModel[this][Use_Model])
+                ExecuteForward(ChangeModel_Hanle , _ , this ,LastUseModel[this][Use_Model])
                 if(playsound){
                     PlayBgm(this)
                 }
@@ -278,6 +285,7 @@ public SetModuleByLv(this , bool:playsound){
             setlv += 14
             setlv = min(setlv, 19)
             rg_set_user_model(this, "rainych_krall1")
+            ExecuteForward(ChangeModel_Hanle , _ , this ,"rainych_krall1")
             set_entvar(this, var_body , setlv)
         }
     }
@@ -309,25 +317,11 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
     GetModeleSetName(model_inx , SetName , charsmax(SetName))
     server_print("Index %d , Name %s" , model_inx , SetName)
     rg_set_user_model(this , SetName)
+    ExecuteForward(ChangeModel_Hanle , _ , this ,SetName)
     if(PlayerSound == true){
         PlayBgm(this)
     } 
     return true
-    // if(divlv >= 15){
-    //     rg_set_user_model(this, "linghu_yellow")
-    // }
-    // if(divlv >= 16){
-    //     rg_set_user_model(this, "pujing")
-    // }
-    // if(modellv == 1000 && lv >= 1000){
-    //     rg_set_user_model(this, "jinzhengen")
-    // }
-    // if(modellv == 850 && lv >= 850){
-    //     rg_set_user_model(this, "kobelaoda")
-    // }
-    // if(modellv == 0 && is_user_admin(this)){
-    //     rg_set_user_model(this, "NecoArc")
-    // }  
 }
 
 public bool:CanSetThisModel(index , userid){

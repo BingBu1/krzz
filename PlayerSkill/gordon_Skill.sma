@@ -84,7 +84,7 @@ public HevTouch(this , touched){
     HasHev[touched] = true
 
     set_member(touched , m_fLongJump , 1)
-    rg_set_user_armor(touched , 200 , ARMOR_VESTHELM)
+    rg_set_user_armor(touched , 200 , ARMOR_KEVLAR)
 
     UTIL_EmitSound_ByCmd(touched , "kr_sound/hev_aax.wav")
 }

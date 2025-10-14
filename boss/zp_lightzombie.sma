@@ -24,7 +24,7 @@ new const LIGHTZ_HPSPR[] = "sprites/CSO_Lightzombie/LightZombie_Boss_HP.spr"
 
 
 #define LIGHTZ_CLASS "LightZombie"
-#define LIGHTZ_HEALTH 100000.0 		// HP BOSS
+#define LIGHTZ_HEALTH 200000.0 		// HP BOSS
 
 #define HEALTH_OFFSET 0.0		// Don't Edit 
 
@@ -133,13 +133,8 @@ public plugin_init()
 {
 	register_plugin("Light Zombie Fix","4.6.2","Skill Von Dragon")	
 		
-	register_think(LIGHTZ_CLASS, "Fw_Lightz_Think")
+	// register_think(LIGHTZ_CLASS, "Fw_Lightz_Think")
 	register_touch("Bomb_Zomibe_1", "*", "Bomb_1_Touch")
-		
-	// register_clcmd("say menuboss", "Lightz_menu")	
-	// register_clcmd("say /menuboss", "Lightz_menu")
-	// register_clcmd("say_team menuboss", "Lightz_menu")
-	// register_clcmd("say_team /menuboss", "Lightz_menu")
 	
 	//System Ammor Packs
 	cvar_dmg_ap_allow = register_cvar("zp_lightz_dmg_ap_reward_allow", "1")		// Ganhar Ammo Packs Por Dano
@@ -151,7 +146,10 @@ public plugin_init()
 		
 	g_MaxPlayers = get_maxplayers()
 	g_MsgScreenShake = get_user_msgid("ScreenShake")
-	// MSGSYNC = CreateHudSyncObj()
+
+	RegisterHam(Ham_Killed, "info_target", "Lightz_Killed")
+	RegisterHam(Ham_TakeDamage, "info_target", "fw_Lightz_Tracer_DMG", 1)
+	RegisterHam(Ham_TakeDamage, "info_target", "fw_Lightz_Tracer_DMG_Pre")
 }
 
 public plugin_natives(){
@@ -274,13 +272,7 @@ public Game_Start(Float:Sp_Origin[3])
 		return
 	
 	Lightz_Ent = Lightz
-	// new Float:Sp_origin[3],Float:angles[3],Float:vec[3]
-	// get_entvar(spawnerid,var_origin , Sp_origin)
-	// get_entvar(spawnerid,var_angles , angles)
-	// angle_vector(angles,200.0,vec)
-	// xs_vec_add(Sp_origin,vec,Sp_origin)
-	// Set Origin & Angles
-	// set_pev(Lightz, pev_origin, {2366.411376, -368.851348, 276.031250})
+
 	set_pev(Lightz,pev_origin,Sp_Origin)	
 
 	Angles[1] = 180.0
@@ -318,9 +310,6 @@ public Game_Start(Float:Sp_Origin[3])
 		y_start_npc = true
 		invisibilidade = false
 		Fix_Death_Boss = false
-		RegisterHamFromEntity(Ham_Killed, Lightz, "Lightz_Killed")
-		RegisterHamFromEntity(Ham_TakeDamage, Lightz, "fw_Lightz_Tracer_DMG", 1)
-		RegisterHamFromEntity(Ham_TakeDamage, Lightz, "fw_Lightz_Tracer_DMG_Pre")
 	}	
 	y_hpbar = create_entity("env_sprite")
 	set_pev(y_hpbar, pev_scale, 0.6)
@@ -331,6 +320,8 @@ public Game_Start(Float:Sp_Origin[3])
 					
 	set_pev(Lightz, pev_nextthink, get_gametime() + 1.0)	
 	engfunc(EngFunc_DropToFloor, Lightz)
+
+	SetThink(Lightz , "Fw_Lightz_Think")
 }
 public Code_Hp(Lightz)
 {
@@ -361,6 +352,10 @@ public Code_Hp(Lightz)
 =================================================================================*/
 public fw_Lightz_Tracer_DMG(victim, inflictor, attacker, Float:damage, damagebits)
 {
+	new classname [32]
+	get_entvar(victim , var_classname , classname , charsmax(classname))
+	if(strcmp(classname , LIGHTZ_CLASS))
+		return HAM_IGNORED
 	static Float:Origin[3]
 	fm_get_aimorigin(attacker, Origin)
 	
@@ -380,11 +375,18 @@ public fw_Lightz_Tracer_DMG(victim, inflictor, attacker, Float:damage, damagebit
 			AddAmmoPak(attacker , 0.02)
 		}
 	}
+	return HAM_IGNORED
 }
 
 public fw_Lightz_Tracer_DMG_Pre(victim, inflictor, attacker, Float:damage, damagebits){
+	new classname [32]
+	get_entvar(victim , var_classname , classname , charsmax(classname))
+	if(strcmp(classname , LIGHTZ_CLASS))
+		return HAM_IGNORED
 	new Float:DamgeSub = GetLvDamageReduction()
-	SetHamReturnFloat(damage * (1.0 - DamgeSub))
+	new Float:NewDamage = damage * (1.0 - DamgeSub)
+	SetHamParamFloat( 4 , NewDamage)
+	return HAM_IGNORED
 }
 
 /*------------------------------------------------------------------------------------------
@@ -394,7 +396,10 @@ public Lightz_Killed(Lightz, attacker)
 {
 	if(!is_valid_ent(Lightz))
 		return HAM_IGNORED
-		
+	new classname [32]
+	get_entvar(Lightz , var_classname , classname , charsmax(classname))
+	if(strcmp(classname , LIGHTZ_CLASS))
+		return HAM_IGNORED
 	if(!Fix_Death_Boss)
 	{	
 		StopSound() 
@@ -407,6 +412,7 @@ public Lightz_Killed(Lightz, attacker)
 	}
 	return HAM_SUPERCEDE
 }
+
 public Remove_boss(Lightz)
 {
 	Lightz -= TASK_DEATH

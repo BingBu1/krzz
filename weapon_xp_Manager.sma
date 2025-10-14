@@ -6,6 +6,7 @@
 #include <reapi>
 #include <kr_core>
 #include <xp_module>
+#include <VipManager>
 #include <props>
 
 public plugin_init(){
@@ -55,5 +56,8 @@ public Float:native_GetPlayerMul(id, nums){
         RetMul = 1.0
     else if (RetMul > 3.0)
         RetMul = 3.0
+    if(IsPlayerVip(Playerid)){
+        RetMul = RetMul == 1.0 ? 2.0 : RetMul + 2.0
+    }
     return RetMul
 }

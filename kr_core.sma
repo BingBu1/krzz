@@ -9,6 +9,7 @@
 #include <roundrule>
 #include <hamsandwich>
 #include <xp_module>
+#include <VipManager>
 #include <props>
 #include <xs>
 
@@ -1106,7 +1107,8 @@ public Npc_OnDamagePost(this , attacker, Float:Damage){
     if(XpDamage[attacker] >= DamgeToAmmo){
         new daminc = floatround(XpDamage[attacker]) / floatround(DamgeToAmmo)
         new RealAddxp = 3 + lvadd * daminc
-        RealAddxp *= floatround(GetPlayerMul(attacker))
+        new XpMul = floatround(GetPlayerMul(attacker))
+        RealAddxp *= XpMul 
         XpDamage[attacker] -= float(daminc) * DamgeToAmmo
         AddXp(attacker, RealAddxp)
         PlayerDamgeInc[attacker] += daminc

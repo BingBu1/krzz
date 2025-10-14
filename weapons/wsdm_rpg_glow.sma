@@ -50,6 +50,8 @@ new weaponidmenu
 
 #define MaxClip 3
 
+new Isgordon[33]
+
 enum Rpg
 {
 	anim_idle,
@@ -68,7 +70,7 @@ public plugin_init()
 {
 	new plid= register_plugin("WeaponTest", AMXX_VERSION_STR, "Bing")
 
-    register_forward(FM_Touch, "m_Touch")
+    // register_forward(FM_Touch, "m_Touch")
 
 	register_clcmd("giverpg","Getrpg")
 
@@ -77,6 +79,14 @@ public plugin_init()
 	weaponidmenu = BulidWeaponMenu("幽灵火箭筒", cost)
 
 	BulidCrashGunWeapon("幽灵火箭筒", W_MODEL , "FreeGive", plid)
+}
+
+public OnModelChange(id , name[]){
+    if(!strcmp(name ,"gordon" )){
+        Isgordon[id] = true
+        return
+    }
+    Isgordon[id] = false
 }
 
 public ItemSel_Post(id, items, Float:cost1){
@@ -155,16 +165,11 @@ public DeployPost(EntityID){
 }
 
 public m_Touch(toucher, touched){
-	new classname[32]
-	if(!pev_valid(toucher))
-		return FMRES_IGNORED
-	get_entvar(toucher, var_classname, classname, sizeof(classname))
-	if(!equal(classname , "Rpg_rock"))return FMRES_IGNORED
-	
-	
+	new bool:isBigBoom = (get_entvar(toucher , var_iuser1) == 1)
 	static Float:fOrigin[3], iOrigin[3]
 	pev(toucher, pev_origin, fOrigin)
-			
+	new classname[32]
+	get_entvar(touched, var_classname, classname, 31)		
 	iOrigin[0] = floatround(fOrigin[0])
 	iOrigin[1] = floatround(fOrigin[1])
 	iOrigin[2] = floatround(fOrigin[2])
@@ -175,43 +180,49 @@ public m_Touch(toucher, touched){
 	write_coord(iOrigin[1])
 	write_coord(iOrigin[2])
 	write_short(g_Explosion)
-	write_byte(30)
+	write_byte(isBigBoom ? 180 : 30)
 	write_byte(15)
 	write_byte(0)
 	message_end()
 
 	new attacker = pev(toucher, pev_owner)
 	
-	rg_dmg_radius(fOrigin , attacker , attacker ,ROCKET_DAMAGE , 300.0 , CLASS_PLAYER , DMG_GENERIC)
-	// rg_radius_damage(fOrigin, attacker, attacker, ROCKET_DAMAGE, 300.0, DMG_GENERIC)
-	 //RadiusDamageEx(fOrigin,300.0,200.0,attacker,attacker,DMG_BLAST,RDFlag_Knockback)
+	rg_dmg_radius(fOrigin , attacker , attacker ,isBigBoom ? ROCKET_DAMAGE * 3.5: ROCKET_DAMAGE , isBigBoom ? 1000.0 : 300.0 , CLASS_PLAYER , DMG_GENERIC)
 
 	if(pev_valid(touched)){
 		// Check if the touched entity is breakable, if so, break it :)
+		new classname[32]
 		pev(touched, pev_classname, classname, 31)
 		if(equal(classname, "func_breakable"))
 			dllfunc(DLLFunc_Use, touched, toucher)
 	}
 	set_entvar(toucher,	var_flags,FL_KILLME)
-	return FMRES_IGNORED
 }
 public PrimaryAttackPre(EntityID){
 	new id = get_pdata_cbase(EntityID, m_pPlayer);
 	new Float:origin[3]
+	if(Isgordon[id]){
+		get_position(id,20.0,20.0,-10.0,origin)
+		set_entvar(CreateRpg(id, origin, true) , var_iuser1 , 1)
+		get_position(id,20.0,-20.0,-10.0,origin)
+		set_entvar(CreateRpg(id, origin, true) , var_iuser1 , 1)
+		get_position(id,20.0,0.0,30.0,origin)
+		set_entvar(CreateRpg(id, origin, true) , var_iuser1 , 1)
+		return
+	}
 	get_position(id,20.0,20.0,-10.0,origin)
-	CreateRpg(id,origin)
+	set_entvar(CreateRpg(id,origin) , var_iuser1 , 0)
 	get_position(id,20.0,-20.0,-10.0,origin)
-	CreateRpg(id,origin)
+	set_entvar(CreateRpg(id,origin) , var_iuser1 , 0)
 	get_position(id,20.0,0.0,30.0,origin)
-	CreateRpg(id,origin)
-
+	set_entvar(CreateRpg(id,origin) , var_iuser1 , 0)
 }
 
 public PrimaryAttackPost(Wpn){
 	set_member(Wpn , m_Weapon_flNextPrimaryAttack , 0.8)
 }
 
-public CreateRpg(ids , Float:Sp_Origin[3]){
+CreateRpg(ids , Float:Sp_Origin[3] , bool:IsBig = false){
 	new id = ids
 	new rocket = engfunc(EngFunc_CreateNamedEntity, m_info_target)
 	if(!rocket || !is_valid_ent(rocket))
@@ -238,6 +249,7 @@ public CreateRpg(ids , Float:Sp_Origin[3]){
 	set_pev(rocket, pev_v_angle, fAngles)
 
 	SetThink(rocket, "Rockthink")
+	SetTouch(rocket, "m_Touch")
 	set_pev(rocket , pev_nextthink , get_gametime()+0.1)
 
 	new Float:fVel[3]
@@ -250,9 +262,9 @@ public CreateRpg(ids , Float:Sp_Origin[3]){
 	write_short(g_Trail)	// sprite index
 	write_byte(25)	// life time in 0.1's
 	write_byte(5)	// line width in 0.1's
-	write_byte(ROCKET_TRAIL[0][0])	// red (RGB)
-	write_byte(ROCKET_TRAIL[0][1])	// green (RGB)
-	write_byte(ROCKET_TRAIL[0][2])	// blue (RGB)
+	write_byte(IsBig ? 255 :ROCKET_TRAIL[0][0])	// red (RGB)
+	write_byte(IsBig ? 0 : ROCKET_TRAIL[0][1])	// green (RGB)
+	write_byte(IsBig ? 255 : ROCKET_TRAIL[0][2])	// blue (RGB)
 	write_byte(255)	// brightness 0 invisible, 255 visible
 	message_end()
 	
@@ -265,10 +277,8 @@ public CreateRpg(ids , Float:Sp_Origin[3]){
 
 
 public Rockthink(ent){
-	if(is_nullent(ent))return
-
 	new attacker = get_entvar(ent, var_owner)
-	if(!is_user_alive(attacker)){
+	if(!is_user_alive(attacker) || !is_user_connected(attacker)){
 		engfunc(EngFunc_RemoveEntity , ent)
 		return;
 	}

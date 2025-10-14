@@ -342,8 +342,8 @@ public fw_CmdStart(id, uc_handle, seed)
 			
 			Set_WeaponAnim(id, ANIM_CHANGE)
 			
-			remove_task(id+TASK_RELOAD)
-			set_task(1.0, "Complete_Reload", id+TASK_RELOAD)
+			remove_task(id+ TASK_RELOAD)
+			set_task(2.5, "Complete_Reload", id+TASK_RELOAD)
 		} else {
 			Shoot_Scythe(id)
 		}
@@ -481,7 +481,7 @@ public Create_FakeAttackAnim(id)
 }
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
 	new playerid = get_member(this, m_pPlayer)
-	new iWpn = get_member(playerid , m_pActiveItem)9
+	new iWpn = get_member(playerid , m_pActiveItem)
 	if(Get_BitVar(g_Had_Thanatos5, playerid) && any:rg_get_iteminfo(iWpn , ItemInfo_iId) == WEAPON_M4A1){
         SetHookChainArg(3,ATYPE_STRING, P_MODEL)
     }

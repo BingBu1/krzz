@@ -83,6 +83,7 @@ new DanceNames[][]={
 public plugin_init(){
     register_plugin("抗日跳舞" , "1.0" , "Bing")
     register_clcmd("cheer", "Open_EmoMenu")
+    register_clcmd("say cheer", "Open_EmoMenu")
     register_forward(FM_CmdStart, "fw_CmdStart")
     // register_forward(FM_AddToFullPack, "fw_AddToFullPack_Post", 1)
 }

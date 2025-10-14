@@ -679,12 +679,12 @@ public projectile_Thick(const this){
 	StudioFrameAdvance(this)
 	new Float:fOrigin[3] , ent = -1
 	get_entvar(this , var_origin , fOrigin)
-	new owner = get_entvar(this , var_owner)
+	// new owner = get_entvar(this , var_owner)
 	if(is_valid_ent(ent)){
 		rg_remove_entity(this)
 		return
 	}
-	new owner_team = cs_get_user_team(owner)
+	// new owner_team = cs_get_user_team(owner)
 	// while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
 	// 	if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
 	// 	if(get_entvar(ent , var_iuser2) == this)continue
@@ -712,8 +712,7 @@ public Exp(const expEnt , owner){
 	write_byte(TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NODLIGHTS)	// flags
 	message_end()
 
-	rg_dmg_radius(ExpOrigin , owner , owner , 1500.0 , 250.0 , CLASS_PLAYER , DMG_BULLET)
-	// rg_radius_damage(ExpOrigin ,owner ,  owner, 1500.0 , 350.0 , DMG_BULLET)
+	rg_dmg_radius(ExpOrigin , owner , owner , 2000.0 , 380.0 , CLASS_PLAYER , DMG_BULLET)
 }
 
 public Ham_CWeapon_Holster_Post(ent) 
