@@ -788,9 +788,9 @@ public fw_HostageTouch(this , other){
 	new CsTeams:thisteam =  KrGetFakeTeam(this)
 	new touch_IsPlayer = ExecuteHam(Ham_IsPlayer , other)
 	if(!touch_IsPlayer && KrGetFakeTeam(other) != thisteam && GetIsNpc(other)){
-		RibenNormlAttack(this , other)
+		RibenNormlAttack(this , other , true)
 	}else if(touch_IsPlayer && cs_get_user_team(other) != thisteam){
-		RibenNormlAttack(this , other)
+		RibenNormlAttack(this , other , true)
 	}
 	new Float:this_velocity[3]
 	new const Float:PushForce = 50.0
@@ -906,7 +906,7 @@ public FindNearHuman(ent, CurrentFollow) {
 }
 
 
-public RibenNormlAttack(this ,beattack){
+stock RibenNormlAttack(this ,beattack , bool:touched = false){
 	new Float:origin[3],Float:Playerorigin[3];
 	new Float:AttackTimeer = Float:getnpc_nextattack(this)
 	if(AttackTimeer > get_gametime())
@@ -916,6 +916,8 @@ public RibenNormlAttack(this ,beattack){
 	if(Rule == JAP_RULE_Lethal_Rhythm){
 		AttackCd =  random_float(0.5, 0.8)
 	}
+	// new bool:IsAttackNpc = GetIsNpc(beattack)
+
 	setnpc_nextattack(this, get_gametime() + AttackCd)
 	get_entvar(this, var_origin, origin)
 	get_entvar(beattack, var_origin, Playerorigin)
@@ -946,14 +948,19 @@ public RibenNormlAttack(this ,beattack){
 			damage = 100.0
 	}
 
+	if(GetIsNpc(beattack) && KrGetFakeTeam(beattack) == KrGetFakeTeam(this)){
+		return
+	}
+
+	if(!touched && !Ez_CanSee(this , beattack)){
+		return
+	}
+
 	if(get_entvar(beattack , var_takedamage) != DAMAGE_NO)
 		ExecuteHamB(Ham_TakeDamage, beattack, GetFakeClient(), GetFakeClient(), damage, DMG_CRUSH)
 
-	if(GetIsNpc(beattack)){
-		return
-	}
 	set_msg_block(DeadMsg, BLOCK_NOT)
-	if(!is_user_alive(beattack)){
+	if(get_entvar(beattack , var_deadflag) == DEAD_DEAD){
 		new soundnum = _:AttackToDieMan
 		new g_msgDeathMsg = DeadMsg;
 		message_begin(MSG_BROADCAST, g_msgDeathMsg);
@@ -1155,4 +1162,27 @@ stock UpdateHostagePos(){
 			continue
 			
 	}
+}
+
+stock bool:Ez_CanSee(ent1 , ent2){
+	if (is_nullent(ent1) || is_nullent(ent2))
+		return false
+ 	new Float:Ent1Origin[3] , Float:Ent2Origin[3] ,Float:Temp[3]
+ 	get_entvar(ent1 , var_origin ,Ent1Origin)
+ 	get_entvar(ent2 , var_origin ,Ent2Origin)
+ 	get_entvar(ent1, var_view_ofs, Temp)
+ 	xs_vec_add(Ent1Origin , Temp , Ent1Origin)
+ 	get_entvar(ent2, var_view_ofs, Temp)
+ 	xs_vec_add(Ent2Origin , Temp , Ent2Origin)
+
+	if (get_entvar(ent1, var_flags) & EF_NODRAW || get_entvar(ent2, var_flags) & EF_NODRAW)
+		return false
+	engfunc(EngFunc_TraceLine, Ent1Origin, Ent2Origin, 0, ent1, 0)
+	if (get_tr2(0, TraceResult:TR_InOpen) && get_tr2(0, TraceResult:TR_InWater)) return false
+	else {
+	    if(get_tr2(0, TraceResult:TR_pHit) == ent2){
+	        return true
+	    }
+	}
+	return false
 }

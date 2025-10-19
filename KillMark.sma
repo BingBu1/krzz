@@ -217,6 +217,7 @@ public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
 public NPC_Killed(this , killer){
     if(!ExecuteHam(Ham_IsPlayer , killer))
         return
+    return
     new Usering = KillMarkUse[killer]
     if(is_user_admin(killer)){
         new AdminMark = ArrayGetCell(KillMarkSpr , Usering)

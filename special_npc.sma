@@ -129,6 +129,11 @@ public plugin_natives(){
     register_native("CreateLoot_Cso" , "native_CreateLoot")
 }
 
+public On_judian_Change_Post(juidan){
+    remove_entity_name("HBar")
+    BossNpc = 0
+}
+
 public native_GetTankNpcEnt(){
     return CurrentTankEnt
 }
@@ -293,11 +298,7 @@ public NPC_CreatePost(ent){
         set_entvar(ent , var_max_health, maxHeal)
         set_entvar(ent , var_health, maxHeal)
         get_entvar(ent , var_origin , fOrigin)
-        // rg_remove_entity(ent)
-        // new Spawnid = Get_Master(ent)
-        // ent = CreateNpcByTeam(0 , CS_TEAM_CT , fOrigin)
-        // set_entvar(ent , var_Spawnid , ent)
-        
+        set_prop_int(ent, "CanStop", 1)
         new spr = CreateHealBar(ent)
         if(!spr){
             log_error(AMX_ERR_NONE , "创建血条实体失败。")
@@ -307,7 +308,10 @@ public NPC_CreatePost(ent){
         engfunc(EngFunc_SetModel , ent , TankModle[Tk_alive])
         //重置size
         dllfunc(DLLFunc_Spawn, ent)
-
+        // new Float:maxHeal = 2000.0//基础血量
+        // maxHeal = maxHeal + (150.0 * float(level))
+        // set_entvar(ent , var_max_health, maxHeal)
+        // set_entvar(ent , var_health, maxHeal)
         set_prop_int(ent , "istank" , 1)
         set_prop_int(ent, "CanStop", 1)  //无法被武器定身，和出现受伤动画
     }

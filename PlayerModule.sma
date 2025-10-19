@@ -51,6 +51,7 @@ new PreModules [][]= {
     "models/player/kobelaoda/kobelaoda.mdl",
     "models/player/hongdou/hongdou.mdl",
     "models/player/gordon/gordon.mdl",
+    "models/player/Miku/Miku.mdl",
     "sprites/wrbot/cn.spr"
 }
 
@@ -69,13 +70,14 @@ new g_ModelData[][ModelLvNames] = {
     { 550, "海军"          }, //12
     { 600, "老蒋"          }, //13
     { 650, "毛爷爷"        },//14
-    { 700, "灵狐者"  ,"linghu_yellow" },//15
-    { 750, "普京"    ,"pujing"      },//16
-    { 850, "kobe牢大","kobelaoda"      },//17
-    {1000, "金正恩"   ,"jinzhengen"     },//18
-    {1150 , "戈登弗里曼" , "gordon"},
+    { 800, "灵狐者"  ,"linghu_yellow" },//15
+    { 950, "普京"    ,"pujing"      },//16
+    { 1100, "kobe牢大","kobelaoda"      },//17
+    { 1250, "金正恩"   ,"jinzhengen"     },//18
+    { 1700 , "戈登弗里曼" , "gordon"},
     {   0, "猫姬-管理模型" , "NecoArc" ,2},
-    {   0, "红豆(Vip或管理)" , "hongdou" ,1},
+    {   0, "红豆(Vip)" , "hongdou" ,1},
+    {   800, "初音未来(Vip)" , "Miku" ,1},
 };
 
 //设置模型开场音乐
@@ -86,7 +88,7 @@ new ModelSounds[][ModelSoundData]={
     {"kobelaoda", "kr_sound/LaoDa_Start.wav"},
 }
 
-new hero[33]
+new hero[33] , Float:ChangeModelsCd[33]
 new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
 new LastUseModel[MAX_PLAYERS +1 ][LastUseModelData]
 new VipModelSize
@@ -258,7 +260,7 @@ public DropItems(const this, const pszItemName[]){
 public SetModuleByLv(this , bool:playsound){
     client_cmd(this , "cl_minmodels 0")
     new lv = GetLv(this)
-    new setlv = (lv / 50) + 1
+    new setlv = GetModelIndexByLv(lv)
     new team = get_user_team(this)
     new const maxDiv = sizeof g_ModelData
     switch(team){
@@ -291,6 +293,21 @@ public SetModuleByLv(this , bool:playsound){
     }
 }
 
+// 根据当前等级返回最合适的模型索引（g_ModelData 下标 +1）
+public GetModelIndexByLv(lv)
+{
+    new bestIndex = 0
+    for (new i = 0; i < sizeof g_ModelData; i++)
+    {
+        if (lv >= g_ModelData[i][Lv])
+            bestIndex = i
+        else
+            break
+    }
+    return bestIndex + 1 // +1 因为 SetOtherModule 期望的是 1-based
+}
+
+
 public PlayBgm(this){
     new modelName[32]
     get_user_info(this, "model", modelName, charsmax(modelName))
@@ -307,7 +324,6 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
     new model_inx = divlv - 1
     new SetName[32]
     new modellv = GetModeleLv(model_inx)
-
     if(lv < modellv)
         return false
     if(!CanSetThisModel(model_inx , this)){
@@ -406,15 +422,22 @@ public SelMenuByid(id, selid){
         m_print_color(id, "!g[冰布提示]!y您的等级不足以切换模型")
         return
     }
+    if(get_gametime() < ChangeModelsCd[id]){
+        m_print_color(id, "!g[冰布提示]!t切换角色还在冷却中剩余%.0f秒" , ChangeModelsCd[id] - get_gametime())
+        return
+    }
     if(selid <= MAX_STANDARD_MODEL_ID){
         rg_set_user_model(id, "rainych_krall1")
         set_entvar(id, var_body , selid + 1)
+        ExecuteForward(ChangeModel_Hanle , _ , id , "rainych_krall1")
+        ChangeModelsCd[id] = get_gametime() + 30.0
     }else{
         if(!SetOtherModule(id , selid + 1 , true)){
             return
         }
         get_user_info(id, "model", LastUseModel[id][Use_Model], 31)
         LastUseModel[id][Use_ed] = true
+        ChangeModelsCd[id] = get_gametime() + 30.0
     }
     new username[32]
     get_user_name(id,username,31)

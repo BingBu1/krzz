@@ -64,13 +64,13 @@ new FW_OnFreeEntPrivateData
 
 new g_Trail, g_Explosion , Fire_Spr
 
-new waeponid
+new waeponid , bool:IsMiku[33]
 
 public plugin_init(){
     register_plugin("初音甩葱枪", "1.0", "Bing")
     RegisterHookChain(RG_CreateWeaponBox , "m_CreateWaeponBox_Post" , true)
     RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
-    RegisterHookChain(RG_CBasePlayerWeapon_DefaultReload , "m_Reload")
+    // RegisterHookChain(RG_CBasePlayerWeapon_DefaultReload , "m_Reload")
     RegisterHookChain(RG_CBasePlayer_AddPlayerItem, "m_AddPlayerItem")
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
     
@@ -99,6 +99,14 @@ public plugin_precache(){
     g_Trail = precache_model("sprites/laserbeam.spr")
     g_Explosion = precache_model("sprites/zerogxplode.spr")
     Fire_Spr = precache_model("sprites/fire.spr")
+}
+
+public OnModelChange(id , name[]){
+    if(!strcmp(name , "Miku")){
+        IsMiku[id] = true
+        return
+    }
+    IsMiku[id] = false
 }
 
 public ItemSel_Post(id , items, Float:cost1){
@@ -148,17 +156,26 @@ public Attack_post(const this){
     const Float:ForwardDis = 10.0
     new bool:FireDoudle = UTIL_RandFloatEvents(0.3)
     new M4a1_WeaponState = get_member(this , m_Weapon_iWeaponState)
-    if(!(M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED) && UTIL_RandFloatEvents(0.45)){
+    if(!(M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED) && UTIL_RandFloatEvents(IsMiku[playerid] ? 1.0 : 0.45)){
         if(!FireDoudle){
             get_position(playerid, ForwardDis, 0.0, 0.0, fOrigin)
             CreateFly(playerid , fOrigin)
         }else{
-            get_position(playerid, ForwardDis, -15.0, 0.0, fOrigin)
-            CreateFly(playerid , fOrigin)
-            get_position(playerid, ForwardDis, 15.0, 0.0, fOrigin)
-            CreateFly(playerid , fOrigin)
+            if(IsMiku[playerid]){
+                get_position(playerid, ForwardDis, -15.0, 0.0, fOrigin)
+                CreateFly(playerid , fOrigin)
+                get_position(playerid, ForwardDis, 15.0, 0.0, fOrigin)
+                CreateFly(playerid , fOrigin)
+                get_position(playerid, ForwardDis, 0.0, 15.0, fOrigin)
+                CreateFly(playerid , fOrigin)
+            }else{
+                get_position(playerid, ForwardDis, -15.0, 0.0, fOrigin)
+                CreateFly(playerid , fOrigin)
+                get_position(playerid, ForwardDis, 15.0, 0.0, fOrigin)
+                CreateFly(playerid , fOrigin)
+            }
         }
-    }else if (M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED && UTIL_RandFloatEvents(0.1)){
+    }else if (M4a1_WeaponState & _:WPNSTATE_M4A1_SILENCED && UTIL_RandFloatEvents(IsMiku[playerid] ? 0.45 :0.1)){
         get_position(playerid, ForwardDis, 0.0, 0.0, fOrigin)
         CreateFly(playerid , fOrigin , true)
     }
@@ -258,10 +275,10 @@ public Ent_Fire_Think(ent){
             SetEntFireing(ent , false)
         }   
         SetEntFireDmgTimer(ent , get_gametime() + 0.3)
-        new Float:AddDamage = GetLvDamageReduction() // 最高减防0.65
+        // new Float:AddDamage = GetLvDamageReduction() // 最高减防0.65
         new Float:TakeDamge = monster_Heal <= 200.0 ? 50.0: floatmax(monster_Heal * 0.02 , 5.0)
-        TakeDamge = TakeDamge / (1.0 - AddDamage)
-
+        // TakeDamge = TakeDamge / (1.0 - AddDamage)
+        TakeDamge = floatmin(TakeDamge , 1500.0)
         ExecuteHamB(Ham_TakeDamage , ent , master ,master , TakeDamge , DMG_BURN)
         CreateSpr(Fire_Spr , ent)
         monster_Heal = get_entvar(ent , var_health)

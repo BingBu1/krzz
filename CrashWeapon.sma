@@ -395,7 +395,7 @@ public RandShit(boxid , owner){
 
     get_user_name(owner,name,charsmax(name))
     if(is_gold == false){
-        m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎", name)
+        m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎,但被扫地大妈清理掉了。", name)
     }else{
         m_print_color(0,"!g[砸枪提示]!t八方来财的%s砸出了一坨24K金屎,痛并快乐。(10w金钱)", name)
     }
@@ -403,6 +403,8 @@ public RandShit(boxid , owner){
     set_entvar(boxid, var_body, is_gold)
     set_prop_int(boxid, "shitid" ,is_gold)
     SetTouch(boxid,"Touch_Boxs")
+    if(!is_gold)
+        rg_remove_entity(boxid)
 }
 
 public create_effect(Float:_origin[3]){
@@ -446,6 +448,10 @@ public WpnTouch_Boxs(this, other){
     new Float:picktime = get_prop_float(this, "picktime")
     if(get_gametime() < picktime)
         return
+    new pItem = get_member( other, m_rgpPlayerItems, PRIMARY_WEAPON_SLOT );
+    if(!is_nullent(pItem)){
+        return
+    }
     callfunc_begin_i(funcid,plid)
     callfunc_push_int(other) // 玩家
     callfunc_end()

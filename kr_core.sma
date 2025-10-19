@@ -1106,10 +1106,10 @@ public Npc_OnDamagePost(this , attacker, Float:Damage){
     const Float:DamgeToAmmo = 1800.0
     if(XpDamage[attacker] >= DamgeToAmmo){
         new daminc = floatround(XpDamage[attacker]) / floatround(DamgeToAmmo)
-        new RealAddxp = 3 + lvadd * daminc
+        new RealAddxp = 3 * daminc + lvadd
         new XpMul = floatround(GetPlayerMul(attacker))
         RealAddxp *= XpMul 
-        XpDamage[attacker] -= float(daminc) * DamgeToAmmo
+        XpDamage[attacker] = 0.0
         AddXp(attacker, RealAddxp)
         PlayerDamgeInc[attacker] += daminc
         if(PlayerDamgeInc[attacker] >= 80){

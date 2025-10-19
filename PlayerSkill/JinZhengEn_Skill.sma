@@ -91,6 +91,6 @@ public SunThink(ent){
     while((getent = rg_find_ent_by_class(getent ,"hostage_entity" , true)) > 0){
         if(get_entvar(getent , var_deadflag) == DEAD_DEAD )continue
         if(KrGetFakeTeam(getent) == CS_TEAM_T) continue
-        ExecuteHamB(Ham_TakeDamage , getent , owner , owner , 350.0 , 0)
+        ExecuteHamB(Ham_TakeDamage , getent , owner , owner , 450.0 , 0)
     }
 }

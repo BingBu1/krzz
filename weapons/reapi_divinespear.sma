@@ -72,7 +72,7 @@ enum
 	HIT_WALL
 };
 
-enum v_sequence{
+enum _:v_sequence{
     idel,
     attack_1,
     attack_2,
@@ -95,7 +95,7 @@ enum status{
 	s_dononting,
 }
 
-new handleNewRound, HC_AddPlayerItem, HC_DefaultDeploy, HAM_Item_PostFrame
+new HookChain:HC_AddPlayerItem, HookChain:HC_DefaultDeploy, HamHook:HAM_Item_PostFrame
 new Message_WeaponListID
 new const Weapon_DefinitionID = 1919145
 new iTotalPlayerUseWeapon
@@ -139,7 +139,7 @@ public ItemSel_Post(id, items, Float:cost){
 }
 
 public plugin_precache(){
-    for(new i = 0 ; i < sizeof ResModel ; i++){
+ 	for(new i = 0 ; i < sizeof ResModel ; i++){
 		if( i == 5){
 			LineSpr = precache_model(ResModel[i])
 			continue
@@ -149,13 +149,13 @@ public plugin_precache(){
 			continue
 		}
 		precache_model(ResModel[i])
-    }
-    for(new i = 0 ; i < sizeof Res_sounds ; i++){
-        UTIL_Precache_Sound(Res_sounds[i])
-    }
-    for(new i = 0 ; i < sizeof Res_idelSound ; i++){
-        precache_sound(Res_idelSound[i])
-    }
+ 	}
+ 	for(new i = 0 ; i < sizeof Res_sounds ; i++){
+ 	    UTIL_Precache_Sound(Res_sounds[i])
+ 	}
+ 	for(new i = 0 ; i < sizeof Res_idelSound ; i++){
+ 	    precache_sound(Res_idelSound[i])
+ 	}
 	iBloodPrecacheID[0] = precache_model("sprites/bloodspray.spr");
 	iBloodPrecacheID[1] = precache_model("sprites/blood.spr");
 }
@@ -165,14 +165,14 @@ public plugin_natives(){
 }
 
 public Hook_Knife(id){
-    engclient_cmd(id, "weapon_knife");
+	engclient_cmd(id, "weapon_knife");
 	return PLUGIN_HANDLED;
 }
 
 public FreeGive(id){
 	if(!is_user_admin(id))
 		return
-    Get_Divinespear(id , 0.0)
+	Get_Divinespear(id , 0.0)
 }
 
 public EmitSound(const clientIndex, const iChannel, const szSound[])
@@ -230,8 +230,8 @@ public OnEntityRemoved(const entityIndex)
 public Native_Get_Divinespear(iPlugin, iParams)
 {
 	new clientIndex = get_param(1);
-    new Float:buy_cost = get_param_f(2)
-    new bool:CanBuy
+	new Float:buy_cost = get_param_f(2)
+	new bool:CanBuy
 #if defined Usedecimal
 	CanBuy = Dec_cmp(clientIndex , buy_cost , ">=")
 #else
@@ -282,7 +282,7 @@ public CBasePlayer_AddPlayerItem(const clientIndex, const iWeaponEntityID)
 public CBasePlayerWeapon_DefaultDeploy(const iWeaponEntityID, const szViewModel[], const szWeaponModel[], const iAnim, const szAnimExt[], const skiplocal) 
 {
 	new clientIndex = get_member(iWeaponEntityID, m_pPlayer); 
-   	if(get_entvar(iWeaponEntityID, var_impulse) == Weapon_DefinitionID)
+	if(get_entvar(iWeaponEntityID, var_impulse) == Weapon_DefinitionID)
 	{
 		SetHookChainArg(2, ATYPE_STRING, ResModel[0]); 
 		SetHookChainArg(3, ATYPE_STRING, ResModel[1]); 
@@ -304,7 +304,7 @@ public CBasePlayerWeapon_DefaultDeploy(const iWeaponEntityID, const szViewModel[
 		remove_task(Weapon_EntityID[clientIndex]+Weapon_DefinitionID);
 		Weapon_EntityID[clientIndex] = 0; 
 	}
-    return HC_CONTINUE;
+	return HC_CONTINUE;
 }
 
 public CWeapon__Holster_Post(const pItem){
@@ -334,7 +334,7 @@ public Think_Buttons(iWeaponEntityID){
 	static Button; Button = get_entvar(clientIndex, var_button); 
 	static LastButton;LastButton = GetLastbutton(clientIndex)
 	static Float:Time; Time = get_gametime(); 
-	static iTotalSlash, iTotalStab;
+	// static iTotalSlash, iTotalStab;
 	set_entvar(iWeaponEntityID, var_nextthink, Time + 0.1);
 	if(Button & IN_ATTACK && !(Button & IN_ATTACK2)){
 		remove_task(iWeaponEntityID + Weapon_DefinitionID);
@@ -366,7 +366,7 @@ public Think_Buttons(iWeaponEntityID){
 public Throw(clientIndex , iWeaponEntityID){
 	new Float:origin[3]
 	Weapon_Animation(clientIndex , throw)
-	get_position(clientIndex, 20.0, 0, 0, origin)
+	get_position(clientIndex, 20.0, 0.0, 0.0, origin)
 	CreateThrow(clientIndex , origin)
 	UTIL_EmitSound_ByCmd(clientIndex , Res_sounds[9])
 	set_task(0.5 , "PriAttackEnd" , iWeaponEntityID + Weapon_DefinitionID)
@@ -542,8 +542,8 @@ public Throwthink(ent){
 	xs_vec_normalize(dir, dir)
 
 	// 当前速度转为单位方向
-    new Float:curdir[3]
-    xs_vec_normalize(vel, curdir)
+	new Float:curdir[3]
+	xs_vec_normalize(vel, curdir)
 
 	new Float:newdir[3]
 	xs_vec_lerp(curdir, dir, 0.5, newdir)
@@ -552,7 +552,7 @@ public Throwthink(ent){
 	new Float:new_angles[3]
 	vector_to_angle(newdir, new_angles)   // 把方向向量转换成角度 (pitch, yaw, roll)
 	set_entvar(ent, var_angles, new_angles)
-	
+		
 
 	new Float:new_vel[3]
 	xs_vec_mul_scalar(newdir, 1000.0, new_vel)
@@ -627,6 +627,10 @@ public cycloneBig_think(this){
 			}else if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) == this){
 				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 200.0 , DMG_BULLET)
 				set_entvar(ent , var_velocity , fVel)
+				new Float:Heal = get_entvar(owner , var_health)
+				if(Heal < 110.0){
+					set_entvar(owner , var_health , Heal + 5.0)
+				}
 			}
 		}
 	}
@@ -639,10 +643,10 @@ public cycloneBig_think(this){
 
 stock Create_cyclone(clientIndex , IsBig = false){
 	new Float:Sp_Origin[3]
-	get_position(clientIndex, 20.0, 0, 0, Sp_Origin)
+	get_position(clientIndex, 20.0, 0.0, 0.0, Sp_Origin)
 	new Throw = rg_create_entity("env_sprite")
 	if(is_nullent(Throw))
-		return PLUGIN_CONTINUE
+		return NULLENT
 	set_entvar(Throw , var_classname , "ef_cyclone")
 	engfunc(EngFunc_SetModel, Throw, IsBig ? ResModel[4] : ResModel[3])
 
@@ -653,14 +657,12 @@ stock Create_cyclone(clientIndex , IsBig = false){
 	set_entvar(Throw, var_mins, Float:{-1.0, -1.0, -1.0})
 	set_entvar(Throw, var_maxs, Float:{1.0, 1.0, 1.0})
 
-	new Float:fAngles[3], Float:fOrigin[3]
-	// get_entvar(id , var_v_angle, fAngles)
+	new Float:fAngles[3]
+
 	get_entvar(clientIndex , var_v_angle, fAngles)
 	fAngles[0] *= -1.0
 	// Set the origin and view
 	set_entvar(Throw, var_origin, Sp_Origin)
-	// set_entvar(Throw, var_angles, fAngles)
-	// set_entvar(Throw, var_v_angle, fAngles)
 	set_entvar(Throw , var_rendermode , kRenderTransAdd)
 	set_entvar(Throw , var_renderamt , 255.0)
 	set_entvar(Throw , var_fuser1 , get_gametime() + (IsBig ? 10.0 : 6.0))
@@ -677,6 +679,7 @@ stock Create_cyclone(clientIndex , IsBig = false){
 		velocity_by_aim(clientIndex, 50, fVel)	
 		set_entvar(Throw, var_velocity, fVel)
 	}
+	return Throw
 }
 
 stock CreateThrow(clientIndex , Float:Sp_Origin[3]){
@@ -694,8 +697,8 @@ stock CreateThrow(clientIndex , Float:Sp_Origin[3]){
 	set_entvar(Throw, var_mins, Float:{-5.0, -5.0, -5.0})
 	set_entvar(Throw, var_maxs, Float:{5.0, 5.0, 5.0})
 
-	new Float:fAngles[3], Float:fOrigin[3]
-	// get_entvar(id , var_v_angle, fAngles)
+	new Float:fAngles[3]
+
 	get_entvar(clientIndex , var_v_angle, fAngles)
 	fAngles[0] *= -1.0
 	// Set the origin and view
@@ -732,7 +735,7 @@ stock Find_near_ent(id){
 	new retv = NULLENT
 	new Float:org[3]
 	get_entvar(id, var_origin, org)
-	while(ent = rg_find_ent_by_class(ent , "hostage_entity")){
+	while((ent = rg_find_ent_by_class(ent , "hostage_entity")) > 0){
 		if(get_entvar(ent, var_takedamage) == DAMAGE_NO || get_entvar(ent, var_deadflag) == DEAD_DEAD)
 			continue
 		if(KrGetFakeTeam(ent) == CS_TEAM_T)
@@ -810,7 +813,7 @@ stock Do_Damage(const clientIndex, const Float:Damage_Range, const Float:Damage,
 
 	new Find_E = -1
 
-	while(Find_E = rg_find_ent_by_class(Find_E, "hostage_entity")){
+	while((Find_E = rg_find_ent_by_class(Find_E, "hostage_entity")) > 0){
 		if(get_entvar(Find_E, var_takedamage) == DAMAGE_NO || get_entvar(Find_E,var_deadflag) == DEAD_DEAD)
 			continue;
 		
@@ -1002,7 +1005,7 @@ Float:Damage_Multiplier(const iBody)
 	return X;
 }
 
-Spawn_Blood(const Float:Origin[3], const iBody, const iScale)
+stock Spawn_Blood(const Float:Origin[3], const iBody, const iScale)
 {
 	new Blood_Scale;
 	switch (iBody)

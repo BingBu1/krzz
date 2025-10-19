@@ -7,14 +7,14 @@
 #include <reapi>
 #include <xp_module>
 
-
+new g_PMaxLv
 
 public plugin_init(){
     register_plugin("难度菜单", "1.0", "Bing")
 
     register_clcmd("say /lv", "CreateMenu")
 
-    create_cvar("Kr_MaxLv" , "1300" , .min_val = 100.0)
+    g_PMaxLv = create_cvar("Kr_MaxLv" , "1400" , .min_val = 100.0)
 }
 
 public CreateMenu(id){
@@ -28,6 +28,8 @@ public CreateMenu(id){
     menu_additem(Menus,"增加难度1\r(20大洋)","3")
     menu_additem(Menus,"增加难度10\r(200大洋)","4")
     menu_additem(Menus,"增加难度100\r(1800大洋)","5")
+
+    // menu_additem(Menus,"超加难度100\r(3000大洋)","6")
 
     menu_display(id, Menus)
 }
@@ -124,7 +126,7 @@ public AddLvByAmmo(id, Float:NeedAmmo, AddLv){
         setlv = MaxLv
         SubAmmoPak(id, NeedAmmo)
         Setleavel(setlv)
-        m_print_color(id, "!g[冰布提醒] !t难度最大支持1300,已返回多余%f弹药袋" , Rt_Ammo)
+        m_print_color(id, "!g[冰布提醒] !t难度最大支持%d,已返回多余%f弹药袋" , get_pcvar_num(g_PMaxLv) , Rt_Ammo)
         m_print_color(0, "!g[冰布提醒] !y%s将当前难度提升了!g%d!y等级(%d当前等级)",username, AddLv,Getleavel())
         return
     }else if (setlv > MaxLv && lv >= MaxLv){

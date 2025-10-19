@@ -187,7 +187,7 @@ public m_Touch(toucher, touched){
 
 	new attacker = pev(toucher, pev_owner)
 	
-	rg_dmg_radius(fOrigin , attacker , attacker ,isBigBoom ? ROCKET_DAMAGE * 3.5: ROCKET_DAMAGE , isBigBoom ? 1000.0 : 300.0 , CLASS_PLAYER , DMG_GENERIC)
+	rg_dmg_radius(fOrigin , attacker , attacker ,isBigBoom ? ROCKET_DAMAGE * 1.8: ROCKET_DAMAGE , isBigBoom ? 1000.0 : 300.0 , CLASS_PLAYER , DMG_GENERIC)
 
 	if(pev_valid(touched)){
 		// Check if the touched entity is breakable, if so, break it :)

@@ -105,7 +105,7 @@ new const EXP_MODELS[][] =
 #define UnSet_BitVar(%1,%2) %1 &= ~(1 << (%2 & 31))
 
 new g_cachde_mf, Float:g_cache_frame_mf, g_cache_light, g_cache_hit, g_cache_exp[2], g_cache_beam[2], g_SpraySpr, g_DropSpr
-new g_Had_Base, g_Clip[33], g_OldWeapon[33], g_Dprd, g_iVic[5]
+new g_Had_Base, g_Clip[33], g_OldWeapon[33], g_Dprd
 	
 // Safety
 new g_HamBot
@@ -585,11 +585,11 @@ public WE_GUNGNIR(id,iEnt,iClip, bpammo,iButton)
 		
 		if(iState == 1)
 		{
+			new g_iVic[5]
 			iClip--
-			set_pdata_int(iEnt, 51, iClip, 4)
-			
-			set_pdata_float(iEnt, 46, SPEED, 4)
-			set_pdata_float(iEnt, 48, SPEED + 0.5, 4)
+			set_member(iEnt , m_Weapon_iClip , iClip)
+			set_member(iEnt , m_Weapon_flNextPrimaryAttack , SPEED)
+			set_member(iEnt , m_Weapon_flTimeWeaponIdle , SPEED + 0.5)
 			
 			MakeMuzzleFlash(id, iEnt)
 			Set_WeaponAnim(id, ANIM_SHOOT_LOOP)
@@ -630,6 +630,8 @@ public WE_GUNGNIR(id,iEnt,iClip, bpammo,iButton)
 						continue
 					if(ExecuteHam(Ham_IsPlayer , pEntity) && cs_get_user_team(pEntity) == m_team)
 						continue
+					if(is_user_bot(pEntity))
+						continue
 					if(GetIsNpc(pEntity) == true && KrGetFakeTeam(pEntity) == m_team)
 						continue
 					if(pEntity == id)
@@ -662,25 +664,25 @@ public WE_GUNGNIR(id,iEnt,iClip, bpammo,iButton)
 					continue
 				get_entvar(nowent, var_origin, LOL[k])
 				if(get_entvar(nowent,var_deadflag) != DEAD_DEAD && entity_range(id, nowent) < ELECTRO_RANGE){
-					engfunc(EngFunc_MessageBegin, MSG_PVS, SVC_TEMPENTITY, fOrigin, 0)
+					message_begin_f(MSG_PVS , SVC_TEMPENTITY , fOrigin)
 					write_byte(TE_EXPLOSION)
-					engfunc(EngFunc_WriteCoord, LOL[k][0])
-					engfunc(EngFunc_WriteCoord, LOL[k][1])
-					engfunc(EngFunc_WriteCoord, LOL[k][2] - 15.0 + 30.0)
+					write_coord_f(LOL[k][0])
+					write_coord_f(LOL[k][1])
+					write_coord_f(LOL[k][2] + 15.0)
 					write_short(g_cache_hit)
 					write_byte(2)
 					write_byte(30)
 					write_byte(TE_EXPLFLAG_NODLIGHTS|TE_EXPLFLAG_NOSOUND|TE_EXPLFLAG_NOPARTICLES)
 					message_end()
 					
-					engfunc(EngFunc_MessageBegin, MSG_PVS, SVC_TEMPENTITY, fOrigin, 0)
+					message_begin_f(MSG_PVS , SVC_TEMPENTITY , fOrigin)
 					write_byte(TE_BEAMPOINTS)
-					engfunc(EngFunc_WriteCoord, LOL[k][0])
-					engfunc(EngFunc_WriteCoord, LOL[k][1])
-					engfunc(EngFunc_WriteCoord, LOL[k][2] + 30.0)
-					engfunc(EngFunc_WriteCoord, fEnd[0])
-					engfunc(EngFunc_WriteCoord, fEnd[1])
-					engfunc(EngFunc_WriteCoord, fEnd[2])
+					write_coord_f(LOL[k][0])
+					write_coord_f(LOL[k][1])
+					write_coord_f(LOL[k][2] + 30.0)
+					write_coord_f(fEnd[0])
+					write_coord_f(fEnd[1])
+					write_coord_f(fEnd[2])
 					write_short(g_cache_light)
 					write_byte(0)		// byte (starting frame) 
 					write_byte(10)		// byte (frame rate in 0.1's) 

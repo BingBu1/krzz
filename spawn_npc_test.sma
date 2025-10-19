@@ -113,6 +113,7 @@ public CreateWallMenu(){
     menu_additem(WallMenu , judian)
     menu_additem(WallMenu , "切换据点墙")
     menu_additem(WallMenu , "删除上一个")
+    menu_additem(WallMenu , "删除看向的")
     return WallMenu
 }
 
@@ -695,6 +696,13 @@ public WallHandle(id, menu, item){
         case 5:{
             RemoveLastEntByStack(Lastwall)
             DelAndShowMenu(id,menu, Tostr(ShowWallMenu))
+        }
+        case 6:{
+            new iEnt, iBody
+            get_user_aiming(id, iEnt, iBody)
+
+            if (FClassnameIs(iEnt, "riben_wall"))
+                set_entvar(iEnt, var_flags, FL_KILLME)
         }
     }
 }

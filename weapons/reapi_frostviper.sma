@@ -657,6 +657,7 @@ public CreateModeBEnt(const iPlayer , const iWpn){
 	SetThink(iEnt , "projectile_Thick")
 	set_entvar(iEnt , var_nextthink , get_gametime() + 0.1)
 	set_size(iEnt , Float:{-50.0 , -50.0, -10.0} , Float:{50.0, 50.0, 10.0})
+	set_prop_int_array_length(iEnt , "Touched" , 1)
 	return iEnt
 }
 
@@ -669,9 +670,14 @@ public projectile_touch(const this , const pToucher){
 		rg_remove_entity(this)
 		emit_sound(this, CHAN_WEAPON, SOUND_FIRE[4], VOL_NORM, ATTN_NORM, 0, random_num(95,120))
 	}
-	if(prop_exists(pToucher , "t_m") && get_prop_int(pToucher , "t_m") == this)
-		return
-	set_prop_int(pToucher,"t_m" , this)
+	new Length = get_prop_array_length(this , "Touched")
+	for(new i = 0 ; i < Length ; i++){
+		if(get_prop_int_array_elem(this , "Touched" , i) == pToucher)
+			return
+	}
+	new Data[1]
+	Data[0] = pToucher
+	insert_prop_int_array(this , "Touched" , Length , 1 , Data)
 	ExecuteHamB(Ham_TakeDamage , pToucher , this , owner , 1000.0 , DMG_BULLET)
 }
 
@@ -684,17 +690,6 @@ public projectile_Thick(const this){
 		rg_remove_entity(this)
 		return
 	}
-	// new owner_team = cs_get_user_team(owner)
-	// while((ent = find_ent_in_sphere(ent , fOrigin , 100.0)) > 0){
-	// 	if(get_entvar(ent , var_deadflag) == DEAD_DEAD)continue
-	// 	if(get_entvar(ent , var_iuser2) == this)continue
-	// 	if(ent == owner)continue
-	// 	if(ExecuteHam(Ham_IsPlayer , ent) && cs_get_user_team(ent) == owner_team)continue
-	// 	if(is_valid_ent(ent)){
-	// 		// ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
-	// 		// set_entvar(ent , var_iuser2 , this)
-	// 	}
-	// }
 	set_entvar(this , var_nextthink , get_gametime() + 0.1)
 }
 

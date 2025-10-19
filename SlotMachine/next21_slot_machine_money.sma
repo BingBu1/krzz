@@ -28,6 +28,8 @@ new const GAME_PRIZES[] =
 
 new g_msgBlinkAcct
 
+new PlayNums[33]
+
 public plugin_init()
 {
     register_plugin(PLUGIN, VERSION, AUTHOR)
@@ -48,6 +50,7 @@ public client_putinserver(id){
     IsInPvp[id] = 0
     PvpAdd[id] = 0
     PlayerUseAmmo[id] = 0
+    PlayNums[id] = 0
 }
 
 public client_disconnected(id){
@@ -55,6 +58,7 @@ public client_disconnected(id){
     IsInPvp[id] = 0
     PvpAdd[id] = 0
     PlayerUseAmmo[id] = 0
+    PlayNums[id] = 0
 }
 
 public CreatemachineMenu(const id){
@@ -275,12 +279,26 @@ public Change_Bet(id){
 
 public client_slot_machine_win(const iPlayer, const iPrize)
 {
+    new bool:CanMul = false , bool:IsMul = false
+    if(PlayNums[iPlayer] > 5){
+        CanMul = true
+        PlayNums[iPlayer] = 0
+    }
     new Win =  GAME_PRIZES[iPrize]
     new AddPak = PlayerUseAmmo[iPlayer] * Win
     AddAmmoPak(iPlayer , float(AddPak))
+    if(CanMul && UTIL_RandFloatEvents(0.1)){
+        IsMul = true
+        AddAmmoPak(iPlayer , float(AddPak))
+    }
     new name[32]
     get_user_name(iPlayer , name , charsmax(name))
-    client_print_color(0 , print_team_default , "%L" , iPlayer , "WIN_AMMO" , name , AddPak , Win)
+    if(!IsMul){
+        client_print_color(0 , print_team_default , "%L" , iPlayer , "WIN_AMMO" , name , AddPak , Win)
+    }else{
+        client_print_color(0 , print_team_default , "%L" , iPlayer , "WIN_AMMO_MUL" , name , AddPak , AddPak, Win , Win)
+    }
+    
     if(IsInPvp[iPlayer]){
         PvpAdd[iPlayer] += AddPak
         m_print_color(iPlayer , "!g[赌局]!t你已经累计%d" , PvpAdd[iPlayer])
@@ -306,5 +324,6 @@ public client_slot_machine_spin(const iPlayer)
     }
     SubAmmoPak(iPlayer , float(PlayerBetAmmo[iPlayer]))
     PlayerUseAmmo[iPlayer] = PlayerBetAmmo[iPlayer]
+    PlayNums[iPlayer]++
     return PLUGIN_CONTINUE
 }

@@ -123,7 +123,7 @@
             set_entvar(ent , var_angles , newAngles)
 
             MakeBullets(fOrigin , TargetOrigin)
-            ExecuteHamB(Ham_TakeDamage , Attack , master , master , 60.0 , DMG_BULLET)
+            ExecuteHamB(Ham_TakeDamage , Attack , master , master , 120.0 , DMG_BULLET)
 
             set_prop_float(ent , var_NextAttackTimer , get_gametime() + 0.05)
             emit_sound(master, CHAN_AUTO, Sounds[2], VOL_NORM, ATTN_NORM, 0, PITCH_NORM)
@@ -263,7 +263,7 @@
                 MakeBoom(org)  // 生成爆炸效果
                 // 标记删除
                 set_entvar(this, var_flags, FL_KILLME)
-                rg_dmg_radius(org , master , master , 150.0 , 300.0 , CLASS_PLAYER , DMG_BLAST)
+                rg_dmg_radius(org , master , master , 300.0 , 350.0 , CLASS_PLAYER , DMG_BLAST)
                 break
             }
         }

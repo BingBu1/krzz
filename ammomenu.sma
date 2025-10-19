@@ -32,7 +32,7 @@ public CreateGiveAmmoMenu(id){
     new info[8]
     for(new i = 1 ; i < players ; i++){
         if( i == id )continue
-        if(!is_user_alive(i) || !is_valid_ent(i))continue
+        if(!is_valid_ent(i))continue
         new name[32]
         get_user_name(i , name , 31)
         num_to_str(i, info, charsmax(info))
