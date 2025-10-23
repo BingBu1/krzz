@@ -141,12 +141,15 @@ public native_CreateDanceEnt(plid , nums){
     new Float:Origin[3]
     new id = get_param(1)
     get_array_f(2 , Origin , 3)
-    new AvtEnt = Create_AvtEnt(id)
-    new AnimEnt = CreateAnimEnt(id)
+    Do_Reset_Emotion(id)
+    new Avt_Ent = Create_AvtEnt(id)
+    new Anim_Ent = CreateAnimEnt(id)
     Do_Set_Emotion(id , 2)
-    set_entvar(AvtEnt , var_origin , Origin)
-    set_entvar(AnimEnt , var_origin , Origin)
-    return AvtEnt
+    set_entvar(Avt_Ent , var_origin , Origin)
+    set_entvar(Anim_Ent , var_origin , Origin)
+    AvtEnt[id] = 0
+    AnimEnt[id] = 0
+    return Avt_Ent
 }
 
 

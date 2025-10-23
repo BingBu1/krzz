@@ -195,13 +195,6 @@ public Fw_AddToFullPack_Post(const es, e, ent, HOST, hostflags, player, set){
     return FMRES_IGNORED
 }
 
-public fw_Item_AddToPlayer_Post(iWpn, id){
-    set_member(id , m_bHasC4 , 0) //防止压缩器闪退
-    if(get_entvar(id ,var_body) == 1 && !hero[id]){
-        SetModuleByLv(id , false)
-    }
-}
-
 public plugin_precache(){
     precache_model(Jp_PlayerModule)
     for(new i = 0 ; i < sizeof PreModules ; i++){
@@ -293,15 +286,25 @@ public GiveHeroWeapon(id){
 }
 
 public DropItems(const this, const pszItemName[]){
-    if(!is_user_connected(this))
+    if(!is_user_connected(this) || hero[this] )
         return
     new body = get_entvar(this, var_body)
     new modelName[32]
     get_user_info(this, "model", modelName, charsmax(modelName))
-    if(body == 0 && !hero[this] && !strcmp(modelName , "rainych_krall1")){
+    if(body == 0 && !strcmp(modelName , "rainych_krall1")){
         new setbody = GetLv(this) / 50 + 1
         set_entvar(this, var_body , setbody)
     }
+}
+
+public fw_Item_AddToPlayer_Post(iWpn, id){
+    set_member(id , m_bHasC4 , 0) //防止压缩器闪退
+    if(hero[id])
+        return HAM_IGNORED
+    if(get_entvar(id ,var_body) == 1){
+        SetModuleByLv(id , false)
+    }
+    return HAM_IGNORED
 }
 
 public SetModuleByLv(this , bool:playsound){

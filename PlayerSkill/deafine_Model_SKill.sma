@@ -130,7 +130,9 @@ public GodMode(const this){
         new player = ArrayGetCell(FindPlayer , i)
         set_entvar(player , var_takedamage , DAMAGE_NO)
         set_task(isEndurance ? 18.0 : 10.0 , "UnGod" , player + 1212)
-        set_entvar(player , var_health , get_entvar(player , var_health) + 50.0)
+        new Float:Health =  get_entvar(player , var_health)
+        Health += 50.0
+        set_entvar(player , var_health , Health)
         rg_set_user_armor(player , 100 , ARMOR_NONE)
     }
 }
