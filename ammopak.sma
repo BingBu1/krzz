@@ -60,7 +60,7 @@ public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
     g_SqlTuple = sqlHandle
     // g_SqlConnection = ConnectHandle
     IsSqlLoad = true
-    log_amx("弹药袋回调初始化数据库成功")
+    server_print("弹药袋回调初始化数据库成功")
 }
 
 public plugin_natives(){
@@ -167,7 +167,7 @@ public decimal_SqlPlayer(Handle:Query , steamid[] , name[] , Data[] , DataSize){
 
 public GiveAmmoFirst(ids){
     new id = ids - 1000
-    if(FirstInit[id] == true && is_user_connected(id)){
+    if(FirstInit[id] == true && is_user_connected(id) && is_user_alive(id)){
         new name[32]
         get_user_name(id , name , 31)
         m_print_color(0, "!g[欢迎仪式] !y欢迎新玩家【%s】进入服务器，新玩家默认赠送1500大洋",

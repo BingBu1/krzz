@@ -10,7 +10,7 @@ new Trie:SkillReg
 
 new Float:SkillCd[33]
 
-new SkillId
+new SkillId , g_CurrentModelName[33][32]
 
 public plugin_init(){
     register_plugin("角色技能" , "1.0" , "Bing")
@@ -27,6 +27,9 @@ public plugin_natives(){
     register_native("SetSkillCd" , "native_SetSkillCd")
 }
 
+public OnModelChange(id , name[]){
+    copy(g_CurrentModelName[id] , 31 , name)
+}
 
 public round_start_event(){
     arrayset(SkillCd , 0 , sizeof SkillCd)
@@ -37,15 +40,13 @@ public plugin_end(){
 }
 
 public GetSkillId(id){
-    new modelName[32]
-    get_user_info(id, "model", modelName, charsmax(modelName))
     new Size = TrieGetSize(SkillReg)
     for(new i = 0 ; i < Size; i++){
         new key[10]
         new SkillData[SKillStruct]
         num_to_str(i , key , charsmax(key))
         TrieGetArray(SkillReg , key , SkillData , sizeof SkillData)
-        if(!strcmp(SkillData[SkillModelNames] , modelName))
+        if(!strcmp(SkillData[SkillModelNames] , g_CurrentModelName[id]))
             return i
     }
     return -1

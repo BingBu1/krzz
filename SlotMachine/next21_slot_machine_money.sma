@@ -28,7 +28,7 @@ new const GAME_PRIZES[] =
 
 new g_msgBlinkAcct
 
-new PlayNums[33]
+new PlayNums[33] ,FaildMul[33]
 
 public plugin_init()
 {
@@ -287,9 +287,13 @@ public client_slot_machine_win(const iPlayer, const iPrize)
     new Win =  GAME_PRIZES[iPrize]
     new AddPak = PlayerUseAmmo[iPlayer] * Win
     AddAmmoPak(iPlayer , float(AddPak))
-    if(CanMul && UTIL_RandFloatEvents(0.1)){
-        IsMul = true
-        AddAmmoPak(iPlayer , float(AddPak))
+    if(CanMul){
+        if( UTIL_RandFloatEvents(0.1 + (FaildMul[iPlayer] * 0.01))){
+            IsMul = true
+            AddAmmoPak(iPlayer , float(AddPak))
+            FaildMul[iPlayer] = 0
+        }
+        FaildMul[iPlayer]++
     }
     new name[32]
     get_user_name(iPlayer , name , charsmax(name))

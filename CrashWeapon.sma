@@ -10,6 +10,7 @@
 #include <xp_module>
 #include <CrashWeapon>
 #include <roundrule>
+#include <VipManager>
 enum EventInfo {
     _:EventName[32],          // 事件名称（调试用）
     Float:EventProbability, // 独立触发概率
@@ -221,7 +222,7 @@ public CreateItem(ownerid , Float:org[3]){
     new Array:eventArray = ArrayCreate()
     new Array:PriSomeEvent = ArrayCreate()
     new bool:istrigger
-
+    //随机触发，如多次触发加入动态列表
     for(new i = 0;i  < sizeof Events;i++){
         if(random_float(0.0, 1.0) <= Events[i][EventProbability]) {
             ArrayPushCell(eventArray , i)
@@ -236,7 +237,7 @@ public CreateItem(ownerid , Float:org[3]){
         rg_remove_entity(ent)
         return
     }
-
+    //如果触发概率>1个那么取优先级最高的
     new HigeProb = -1 , evnum = ArraySize(eventArray)
     for(new i = 0; i < evnum ; i++){
         new id = ArrayGetCell(eventArray, i) //触发到的事件
@@ -395,7 +396,12 @@ public RandShit(boxid , owner){
 
     get_user_name(owner,name,charsmax(name))
     if(is_gold == false){
-        m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎,但被扫地大妈清理掉了。", name)
+        if(IsPlayerVip(owner)){
+            rg_remove_entity(boxid)
+            m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎,但被扫地大妈清理掉了。", name)
+            return
+        }
+        m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎", name)
     }else{
         m_print_color(0,"!g[砸枪提示]!t八方来财的%s砸出了一坨24K金屎,痛并快乐。(10w金钱)", name)
     }
@@ -403,8 +409,6 @@ public RandShit(boxid , owner){
     set_entvar(boxid, var_body, is_gold)
     set_prop_int(boxid, "shitid" ,is_gold)
     SetTouch(boxid,"Touch_Boxs")
-    if(!is_gold)
-        rg_remove_entity(boxid)
 }
 
 public create_effect(Float:_origin[3]){

@@ -55,6 +55,11 @@ new PreModules [][]= {
     "sprites/wrbot/cn.spr"
 }
 
+new PrePlayerModel [][] = {
+    "ramenchan_",
+    "lemonfeijibei"
+}
+
 new g_ModelData[][ModelLvNames] = {
     {   0, "小八路"        },//1
     {  50, "老八路"        },//2
@@ -93,6 +98,9 @@ new Jp_PlayerModule[]= "models/player/rainych_krall1/rainych_krall1.mdl"
 new LastUseModel[MAX_PLAYERS +1 ][LastUseModelData]
 new VipModelSize
 new ChangeModel_Hanle
+new Handle:g_SqlTuple
+new Trie:g_PlayerModelMap
+
 public plugin_init(){
     register_plugin("设置玩家模型", "1.0", "Bing")
     RegisterHookChain(RG_CBasePlayer_Spawn,"PlayerSpawn_Post",true)
@@ -111,6 +119,39 @@ public plugin_init(){
     ChangeModel_Hanle = CreateMultiForward("OnModelChange" , ET_STOP , FP_CELL ,FP_STRING)
 
     GetVipModelSize()
+
+    g_PlayerModelMap = TrieCreate()
+}
+
+public SqlInitOk(Handle:sqlHandle , Handle:ConnectHandle){
+    g_SqlTuple = sqlHandle
+    QueryPlayerModel()
+    server_print("定制玩家sql回调完成")
+}
+
+public QueryPlayerModel(){
+    new querystr[] = "SELECT * FROM PlayerModel"
+    SQL_ThreadQuery(g_SqlTuple, "QueryPlayerModelHandle", querystr)
+}
+
+public QueryPlayerModelHandle(FailState, Handle:Query, Error[], Errcode, Data[], DataSize , Float:QueryTime){
+    if(FailState != TQUERY_SUCCESS){
+        log_amx("查询失败 [%d] %s", Errcode, Error)
+        return
+    }
+    if(!SQL_NumResults(Query)){
+        return
+    }
+    new steamid[64] , modelname[33]
+    while (SQL_MoreResults(Query)){
+        new q_steamid = SQL_FieldNameToNum(Query , "steamid")
+        new q_modelname = SQL_FieldNameToNum(Query , "modelname")
+        SQL_ReadResult(Query , q_steamid , steamid , charsmax(steamid))
+        SQL_ReadResult(Query , q_modelname , modelname , charsmax(modelname))
+        TrieSetString(g_PlayerModelMap , steamid , modelname)
+        server_print("steamid %s modelname %s" , steamid , modelname)
+        SQL_NextRow(Query)
+	}
 }
 
 public GetVipModelSize(){
@@ -165,6 +206,9 @@ public plugin_precache(){
     precache_model(Jp_PlayerModule)
     for(new i = 0 ; i < sizeof PreModules ; i++){
         precache_model(PreModules[i])
+    }   
+    for(new i = 0 ; i < sizeof PrePlayerModel ; i++){
+        UTIL_ChaChePlayerModel(PrePlayerModel[i])
     }   
     for(new i = 0 ; i < sizeof BgmStart ; i++){
         UTIL_Precache_Sound(BgmStart[StartBgm:i])
@@ -273,10 +317,10 @@ public SetModuleByLv(this , bool:playsound){
             }
             if(LastUseModel[this][Use_ed]){
                 rg_set_user_model(this , LastUseModel[this][Use_Model])
-                ExecuteForward(ChangeModel_Hanle , _ , this ,LastUseModel[this][Use_Model])
                 if(playsound){
                     PlayBgm(this)
                 }
+                ExecuteForward(ChangeModel_Hanle , _ , this ,LastUseModel[this][Use_Model])
                 return
             }
             setlv = min(setlv , maxDiv - VipModelSize)
@@ -333,10 +377,10 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
     GetModeleSetName(model_inx , SetName , charsmax(SetName))
     server_print("Index %d , Name %s" , model_inx , SetName)
     rg_set_user_model(this , SetName)
-    ExecuteForward(ChangeModel_Hanle , _ , this ,SetName)
     if(PlayerSound == true){
         PlayBgm(this)
     } 
+    ExecuteForward(ChangeModel_Hanle , _ , this ,SetName)
     return true
 }
 
@@ -442,4 +486,20 @@ public SelMenuByid(id, selid){
     new username[32]
     get_user_name(id,username,31)
     m_print_color(0, "!g[冰布提示]!y%s更换了模型 !y(你可以输入指令/changemodle来打开菜单)",username)
+}
+
+public OnModelChange(id , name[]){
+    new steamid[32]
+    get_user_authid(id , steamid , charsmax(steamid))
+    if(TrieKeyExists(g_PlayerModelMap , steamid)){
+        new modelname[32]
+        TrieGetString(g_PlayerModelMap , steamid , modelname , charsmax(modelname))
+        rg_set_user_model(id , modelname)
+    }
+}
+
+stock UTIL_ChaChePlayerModel(name[]){
+    new ModelPath[256]
+    formatex(ModelPath , 255 , "models/player/%s/%s.mdl" , name , name)
+    precache_model(ModelPath)
 }

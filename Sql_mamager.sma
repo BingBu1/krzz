@@ -22,14 +22,14 @@ public plugin_natives(){
 
 public SqlInit(){
     new Err[512],errcode
-    g_SqlTuple = SQL_MakeDbTuple("127.0.0.1", "root", "114514", "amxx_sql")
+    g_SqlTuple = SQL_MakeDbTuple("frp-dog.com:49163", "amxx", "amxxsql", "amxx_sql")
     g_SqlConnection = SQL_Connect(g_SqlTuple, errcode, Err, charsmax(Err))
     SQL_SetCharset(g_SqlTuple , "utf8")
     if(Empty_Handle == g_SqlConnection){
         log_amx("[错误码%d]管理器Sql初始化失败。%s",errcode,Err)
         return
     }
-    log_amx("数据库初始化成功.")
+    server_print("数据库初始化成功.")
     ExecuteForward(forwardfunction,_, g_SqlTuple, g_SqlConnection)
     IsSqlLoad = true
 }

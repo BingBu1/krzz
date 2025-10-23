@@ -78,6 +78,7 @@ public plugin_init()
 	RegisterHam(Ham_TraceAttack, "hostage_entity", "fw_TraceAttack")
 	RegisterHam(Ham_TraceAttack, "hostage_entity", "fw_TraceAttack_Post", 1)
 	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy , "m_DefaultDeploy")
+	RegisterHookChain(RG_CBaseEntity_FireBullets3 , "m_fireBullets3")
 	register_event("CurWeapon", "Event_CurWeapon", "be", "1=1")
 	register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 	
@@ -86,6 +87,14 @@ public plugin_init()
 	register_clcmd("admin_get_thunderbolt", "get_thunderbolt", ADMIN_RCON)
 	register_clcmd("weapon_sfsniper", "hook_weapon")
 	BulidCrashGunWeapon("特殊武器 雷神机关枪", "models/w_sfsniper.mdl" ,"FreeGive", plid)
+}
+
+public m_fireBullets3(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:vecSpread, Float:flDistance, iPenetration, iBulletType, iDamage, Float:flRangeModifier, pevAttacker, bool:bPistol, shared_rand){
+    if(!is_user_connected(pEntity) || !g_had_thunderbolt[pEntity] || get_user_weapon(pEntity) != CSW_AWP){
+        return HC_CONTINUE
+    }
+    SetHookChainArg(4 , ATYPE_FLOAT , 0.0)
+    return HC_CONTINUE
 }
 
 public event_roundstart(){

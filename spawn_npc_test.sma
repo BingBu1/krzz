@@ -29,7 +29,7 @@ new judian_wall = 2 ,npcbody = 1, npc_bulidlistnum = 10
 
 new const XiaoRiBen[][]={
     "models/rainych/krzz/Japanese4.mdl",
-    "models/rainych/krzz/wall/kangri_wall.mdl",
+    "models/Bing_Kr_res/Kr_wall/new_wall.mdl",
     "models/rainych/krzz/tank.mdl"
 }
 

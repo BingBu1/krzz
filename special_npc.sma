@@ -29,6 +29,7 @@ enum Elite_Var{
     Elite_Green,
     Elite_Blue,
     Elite_Red,
+    Elite_Purple,
     Elite_Gold
 }
 
@@ -83,7 +84,12 @@ public event_roundstart(){
     StartTime = get_gametime()
     CurrentKill = 0
     remove_entity_name("HBar")
+    remove_entity_name("FuDai")
     MaxBossNpc = CalcMaxBossNpc()
+    if(GetHunManRule() == HUMAN_RULE_Elite_Scatter){
+        MaxBossNpc = max(MaxBossNpc - 3 , 1)
+    }
+    
 }
 
 CalcMaxBossNpc(){
@@ -187,23 +193,24 @@ public CreateHealBar(Npc){
 }
 
 public CreateEliteNpc(ent , lv , Judian){
-    new const Float:colors[4][3] = {
+    new const Float:colors[][3] = {
         {255.0, 255.0, 255.0}, // White
         {0.0, 255.0, 0.0},     // Green
         {0.0, 0.0, 255.0},     // Blue
-        {255.0, 0.0, 0.0}      // Red
+        {255.0, 0.0, 0.0},      // Red
+        {255.0, 0.0, 255.0},     // Purple
     }
     if(KilledNpcNum < EliteNeedKilled)
         return false
-    new Float:baseHeal[4] = {500.0, 1000.0, 1500.0, 2000.0};
-    new Float:healScale[4] = {30.0, 50.0, 100.0, 130.0};  // 对应白、绿、蓝、红
-    new Float:healMax[4] = {15000.0, 25000.0, 78000.0, 150000.0};
-    new Elite_Var:EliteIds[4] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red};
-    new bool:SetProp[4] = {false, false, true, true};
-    new levelThreshold[4] = {30, 150, 300, 500}; // 对应白、绿、蓝、红
+    new Float:baseHeal[] = {500.0, 1000.0, 1500.0, 2000.0 , 2500.0};
+    new Float:healScale[] = {30.0, 50.0, 100.0, 130.0 , 150.0};  // 对应白、绿、蓝、红
+    new Float:healMax[] = {15000.0, 25000.0, 78000.0, 150000.0 , 180000.0};
+    new Elite_Var:EliteIds[] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red , Elite_Purple};
+    new bool:SetProp[] = {false, false, true, true , true};
+    new levelThreshold[] = {30, 150, 300, 500 , 800}; // 对应白、绿、蓝、红
 
-    new available[4], count = 0;
-    for(new i = 0; i < 4; i++)
+    new available[sizeof EliteIds], count = 0;
+    for(new i = 0; i < sizeof EliteIds; i++)
     {
         if(lv >= levelThreshold[i])
         {
@@ -215,7 +222,7 @@ public CreateEliteNpc(ent , lv , Judian){
 
     new index = available[random_num(0, count-1)];
 
-    new Float:chance[4] = {0.1, 0.02, 0.05, 0.01}; // 白、绿、蓝、红
+    new Float:chance[] = {0.1, 0.02, 0.05, 0.01 , 0.01}; // 白、绿、蓝、红
 
     if(!RandFloatEvents(chance[index])){
         KilledNpcNum = 0
@@ -225,7 +232,7 @@ public CreateEliteNpc(ent , lv , Judian){
     new Float:Heal = floatmin(baseHeal[index] + lv * healScale[index], healMax[index]);
     set_entvar(ent, var_renderfx, kRenderFxGlowShell);
     set_entvar(ent, var_rendercolor, colors[index]);
-    set_entvar(ent, var_renderamt, 1.0);
+    set_entvar(ent, var_renderamt, 10.0);
     set_entvar(ent, var_health, Heal);
     set_entvar(ent, var_max_health, Heal);
     set_entvar(ent, var_iuser1, EliteIds[index]);
@@ -317,11 +324,26 @@ public NPC_CreatePost(ent){
     }
 }
 
+EliteThink(ent , EliteLevle){
+    switch(EliteLevle){
+        case Elite_Red:{
+
+        }
+        case Elite_Purple:{
+
+        }
+    }
+}
+
 public NPC_ThinkPost(ent){
     new Judian_num = GetJuDianNum()
     new hitent
     new follent
     new Float:origin[3], Float:targetorigin[3],Float:hitorigin[3]
+    new Elite = get_entvar(ent,var_iuser1)
+    if(Elite){
+        EliteThink(ent , Elite)
+    }
     //小于7不存在开枪的特殊兵种
     if(Judian_num < 7 && GetRiJunRule() != JAP_RULE_Tank_Rampage)
         return 0
@@ -414,7 +436,7 @@ CreateLootEntity(const master , Float:KilledOrigin[3]){
     set_entvar(Entity , var_gravity , 0.5)
     set_entvar(Entity , var_nextthink , get_gametime() + 0.1)
     set_entvar(Entity , var_iuser1 , master) //1代表未被拾取
-    set_entvar(Entity , var_fuser1 , get_gametime() + 120.0) //1代表未被拾取
+    // set_entvar(Entity , var_fuser1 , get_gametime() + 120.0) //1代表未被拾取
     set_entvar(Entity , var_origin , origin)
     SetThink(Entity , "LootThink")
     SetTouch(Entity , "LootTouch")
@@ -424,7 +446,7 @@ CreateLootEntity(const master , Float:KilledOrigin[3]){
 
 public LootThink(const Lootindex){
     new master = get_entvar(Lootindex , var_iuser1)
-    if(get_gametime() > get_entvar(Lootindex , var_fuser1) || !is_user_connected(master)){
+    if(!is_user_connected(master)){
         rg_remove_entity(Lootindex)
         return
     }

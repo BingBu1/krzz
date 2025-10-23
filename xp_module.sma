@@ -22,7 +22,6 @@ new IsSqlLoad
 public plugin_init(){
     register_plugin("Xp系统抗日", "1.0", "Bing")
     register_concmd("AddLv" , "AddPlayerLv")
-    //SqlInit()
 }
 
 public AddPlayerLv(){
@@ -42,7 +41,7 @@ public AddPlayerLv(){
 public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
     g_SqlTuple = sqlHandle
     g_SqlConnection = ConnectHandle
-    log_amx("回调初始化数据库成功")
+    server_print("XPModel回调初始化数据库成功")
     IsSqlLoad = true
 }
 

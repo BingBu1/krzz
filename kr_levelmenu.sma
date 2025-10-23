@@ -26,8 +26,8 @@ public CreateMenu(id){
     menu_addblank2(Menus)
 
     menu_additem(Menus,"增加难度1\r(20大洋)","3")
-    menu_additem(Menus,"增加难度10\r(200大洋)","4")
-    menu_additem(Menus,"增加难度100\r(1800大洋)","5")
+    menu_additem(Menus,"增加难度10\r(180大洋)","4")
+    menu_additem(Menus,"增加难度100\r(1600大洋)","5")
 
     // menu_additem(Menus,"超加难度100\r(3000大洋)","6")
 
@@ -56,10 +56,10 @@ public LvHandle(id,menu,item){
             AddLvByAmmo(id,20.0,1)
         }
         case 4 :{
-            AddLvByAmmo(id,200.0,10)
+            AddLvByAmmo(id,180.0,10)
         }
         case 5 :{
-            AddLvByAmmo(id,1800.0,100)
+            AddLvByAmmo(id,1600.0,100)
         }
     }
     CreateMenu(id)

@@ -117,6 +117,8 @@ new IsHanJian[33]
 
 new TrHandle , LvMaxNps ,PlayerKilled[33]
 
+new Float:StartTimer , bool:g_OnlyOneJudian
+
 public plugin_init(){
     register_plugin("抗日核心", "1.0", "Bing")
     
@@ -173,7 +175,6 @@ public plugin_init(){
 
 public plugin_end(){
     free_tr2(TrHandle)
-    
 }
 
 public Qa(){
@@ -195,7 +196,6 @@ public FuckMapTank(){
     ent = -1
     while((ent = rg_find_ent_by_class(ent , "func_tank")) > 0){
         fm_set_kvd(ent , "bullet_damage" , "10" )
-        // fm_set_kvd(ent , "firerate" , "1" )
     }
 }
 
@@ -458,12 +458,19 @@ public event_roundstart(){
     set_task(60.0, "SavePlayers",1122, .flags = "b")
     ChangeAllPlayerTeam(CS_TEAM_T)
     CalcLvAdd()
+    StartTimer = get_gametime()
     // set_task(0.5,"MakeBommer")
 }
 
 public NewRound(){
+    new Human_Rules:Rule = GetHunManRule()
     new timer = get_member_game(m_iRoundTime)
+    new MaxTimer = (g_OnlyOneJudian ? 33 : 40 )
+    if(Rule == HUMAN_RULE_Endurance_War){
+        MaxTimer += 5
+    }
     timer += Getleavel() * 10
+    timer = min(timer , MaxTimer * 60)
     set_member_game(m_iRoundTime, timer)
 }
 
@@ -518,14 +525,26 @@ public ShowHud(){
     static HuManRuleText[64],RiJunRuleText[64]
     GetRuleAllText(RoundRuleType:RULE_HUMAN, HuManRuleText, charsmax(HuManRuleText))
     GetRuleAllText(RoundRuleType:RULE_RIJUN, RiJunRuleText, charsmax(RiJunRuleText))
-    ShowSyncHudMsg(0,Hud_sync,"当前难度 %d级 | 当前据点攻占%d/8 | 剩余日本鬼子 %d^n\
-    当前难度积分加成%d^n\
-    八路规则:%s ^n日军规则: %s" ,
-    judian_leavel, Current_judian + 1 , CurrentNpcs, 
-    lvadd,
-    HuManRuleText, RiJunRuleText
-    )
-
+    if(g_OnlyOneJudian){
+        new ShowTopHud[] = "当前难度 %d级 | 当前据点攻占%d/8 | 剩余日本鬼子 %d^n\
+        非线性地图当前难度积分加成%d^n\
+        八路规则:%s ^n日军规则: %s" 
+        ShowSyncHudMsg(0,Hud_sync,ShowTopHud,
+            judian_leavel, Current_judian + 1 , CurrentNpcs, 
+            lvadd,
+            HuManRuleText, RiJunRuleText
+        )
+    }else{
+        new ShowTopHud[] = "当前难度 %d级 | 当前据点攻占%d/8 | 剩余日本鬼子 %d^n\
+        当前难度积分加成%d^n\
+        八路规则:%s ^n日军规则: %s" 
+        ShowSyncHudMsg(0,Hud_sync,ShowTopHud,
+            judian_leavel, Current_judian + 1 , CurrentNpcs, 
+            lvadd,
+            HuManRuleText, RiJunRuleText
+        )
+    }
+    
     new playernums = get_maxplayers()
     for (new i = 1; i < playernums; i++){
         if(!is_user_connected(i) || is_user_bot(i))
@@ -598,6 +617,7 @@ public LoadNpcPonit(JSON:root){
         if(SpawnPonitNpcNum[i] == 0 && i != 7){
             SpawnPonitNpcNum[i] = SpawnPonitNpcNum[0] + SpawnPonitNpcNum[0] / 2
             DontHasOtherJudian[i] = true
+            g_OnlyOneJudian = true
         }else if(i == 7 && SpawnPonitNpcNum[i] == 0){
             SpawnPonitNpcNum[7] = 5
             DontHasOtherJudian[i] = true
@@ -842,14 +862,46 @@ public KillAllT(){
 public FaildSound(){
     new soundnum = random_num(_:RiBenWin , _:RiBenWin2)
     EmitSoundToall( Jp_EndRoundSound[soundnum])
-    Setleavel(judian_leavel - 1)
+    new Sub = 1
+    if(judian_leavel <= 200){
+        Sub = 2
+    }else if(judian_leavel <= 400){
+        Sub = 4
+    }else if(judian_leavel <= 600){
+        Sub = 6
+    }else if(judian_leavel <= 800){
+        Sub = 8
+    }else if(judian_leavel <= 1000){
+        Sub = 10
+    }else{
+        Sub = 15
+    }
+    Setleavel(judian_leavel - Sub)
 }
 
 public WinSound(){
     new Rand[2] = {_:EndJudian , _:ChineseWin}
     new Emit = Rand[random_num(0,1)]
     EmitSoundToall( Jp_EndRoundSound[Emit])
-    Setleavel(judian_leavel + 1)
+    new Add = 1
+    new Float:WinerTimer = get_gametime() - StartTimer
+
+    if(WinerTimer <= SecondstoMinutes(5.5)){
+        Add = 8
+    }else if(WinerTimer <= SecondstoMinutes(8.0)){
+        Add = 5
+    }else if(WinerTimer <= SecondstoMinutes(9.0)){
+        Add = 3
+    }else if(WinerTimer <= SecondstoMinutes(15.0)){
+        Add = 2
+    }else{
+        Add = 1
+    }
+    Setleavel(judian_leavel + Add)
+}
+
+Float:SecondstoMinutes(Float:Sec){
+    return Sec * 60.0
 }
 
 public EmitSoundToall(Sound[]){
@@ -914,7 +966,7 @@ public NPC_Killed(this , killer){
         this , killer)
         if(!FClassnameIs(killer , "hostage_entity")){
             new Judian = GetJuDianNum()
-            ReSpawnEnt(this)
+            rg_remove_entity(this)
             CurrentNpcs--
             if(CurrentNpcs == 0){
                 set_task(Judian <= 7 ? 3.0 : 0.1 , "ChangeJudian")
@@ -1153,15 +1205,13 @@ public native_Setleavel(){
     new SetLv = get_param(1)
     if(get_param(1) > Maxlv){
         judian_leavel = Maxlv
+    }else if(SetLv < 0 ){
+        judian_leavel = 0
     }else{
         judian_leavel = SetLv
     }
     
     ExecuteForward(call_forwards[kr_OnLevelChange_Post],_,judian_leavel)
-    //加时间
-    new timer = get_member_game(m_iRoundTime)
-    timer += Getleavel() * 15
-    set_member_game(m_iRoundTime, timer)
 }
 
 

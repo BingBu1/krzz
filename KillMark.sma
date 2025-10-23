@@ -211,7 +211,7 @@ public GetHasKillMark(id , QueryName[]){
 public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
     g_SqlTuple = sqlHandle
     g_SqlConnection = ConnectHandle
-    log_amx("回调初始化数据库成功")
+    server_print("KillMark回调初始化数据库成功")
 }
 
 public NPC_Killed(this , killer){
@@ -221,22 +221,22 @@ public NPC_Killed(this , killer){
     new Usering = KillMarkUse[killer]
     if(is_user_admin(killer)){
         new AdminMark = ArrayGetCell(KillMarkSpr , Usering)
-        CreateKillSpr( AdminMark , this)
+        CreateKillSpr( AdminMark , this , killer)
     }
     else if(Usering != 0){
         new UserMark = ArrayGetCell(KillMarkSpr , Usering)
-        CreateKillSpr( UserMark , this)
+        CreateKillSpr( UserMark , this , killer)
     }
 }
 
 
-public CreateKillSpr(sprid , DeadEnt){
+public CreateKillSpr(sprid , DeadEnt , sendid){
     new Float:fOrigin[3] , iOrigin[3]
     get_entvar(DeadEnt , var_origin , fOrigin)
     iOrigin[0] = floatround(fOrigin[0])
     iOrigin[1] = floatround(fOrigin[1])
     iOrigin[2] = floatround(fOrigin[2])
-    message_begin(0 , SVC_TEMPENTITY)
+    message_begin(sendid , SVC_TEMPENTITY)
     write_byte(TE_SPRITE)
     write_coord(iOrigin[0])
     write_coord(iOrigin[1])

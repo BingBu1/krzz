@@ -580,12 +580,23 @@ public cyclone_think(this){
 		if(GetIsNpc(ent) && KrGetFakeTeam(ent) == CsTeams:owner_team) continue
 		if(ExecuteHam(Ham_IsPlayer , ent) && get_member(ent , m_iTeam) == owner_team)continue
 		new Flag = get_entvar(ent , var_flags)
+		new Length = get_prop_array_length(this , "Touched")
+		new bool:Toued = false
+		for(new i = 0 ; i < Length ; i++){
+			if(get_prop_int_array_elem(this , "Touched" , i) == ent){
+				Toued = true
+				break;
+			}
+		}
+		new Data[1]
 		if(Flag & FL_MONSTER || Flag & FL_CLIENT){
-			if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) != this){
+			if(is_valid_ent(ent) && !Toued){
 				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1000.0 , DMG_BULLET)
 				set_entvar(ent , var_iuser2 , this)
 				set_entvar(ent , var_velocity , fVel)
-			}else if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) == this){
+				Data[0] = ent
+				insert_prop_int_array(this , "Touched" , Length , 1 , Data)
+			}else if(is_valid_ent(ent) && Toued){
 				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 50.0 , DMG_BULLET)
 				set_entvar(ent , var_velocity , fVel)
 			}
@@ -619,12 +630,24 @@ public cycloneBig_think(this){
 		fVel[1] = 0.0
 		fVel[2] = 200.0
 		new Flag = get_entvar(ent , var_flags)
+		new Length = get_prop_array_length(this , "Touched")
+		new bool:Toued = false
+		for(new i = 0 ; i < Length ; i++){
+			if(get_prop_int_array_elem(this , "Touched" , i) == ent){
+				Toued = true
+				break;
+			}
+		}
+		new Data[1]
 		if(Flag & FL_MONSTER || Flag & FL_CLIENT){
-			if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) != this){
+			if(is_valid_ent(ent) && !Toued){
 				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 1500.0 , DMG_BULLET)
 				set_entvar(ent , var_iuser2 , this)
 				set_entvar(ent , var_velocity , fVel)
-			}else if(is_valid_ent(ent) && get_entvar(ent , var_iuser2) == this){
+				Data[0] = ent
+				insert_prop_int_array(this , "Touched" , Length , 1 , Data)
+			}
+			else if(is_valid_ent(ent) && Toued){
 				ExecuteHamB(Ham_TakeDamage , ent , this , owner , 200.0 , DMG_BULLET)
 				set_entvar(ent , var_velocity , fVel)
 				new Float:Heal = get_entvar(owner , var_health)
@@ -667,7 +690,7 @@ stock Create_cyclone(clientIndex , IsBig = false){
 	set_entvar(Throw , var_renderamt , 255.0)
 	set_entvar(Throw , var_fuser1 , get_gametime() + (IsBig ? 10.0 : 6.0))
 	set_entvar(Throw, var_framerate, 1.0)
-
+	set_prop_int_array_length(Throw , "Touched" , 1)
 	IsBig ? SetThink(Throw, "cycloneBig_think") : SetThink(Throw, "cyclone_think")
 	if(IsBig){
 		SetBigWindAttackCd(Throw , get_gametime())

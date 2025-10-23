@@ -28,7 +28,9 @@ new const HumanRule[][] = {
     "幸运儿",
     "贫铀弹头",
     "尖刺护甲",
-    "九命猫"
+    "九命猫",
+    "精英退散",
+    "持久战"
 }
 
 new const RiJunRule[][]={
@@ -49,7 +51,7 @@ new const HUNMAN_RULE_Text[][]= {
     "手雷伤害提升，并一次投掷出三颗",
     "血量低于70时伤害提升100%",
     "主武器伤害提升25%",
-    "副武器5%概率秒杀敌人",
+    "副武器伤害提升25%",
     "子弹概率发出爆炸伤害",
     "随机获取武器",
     "所有人成为英雄",
@@ -62,7 +64,9 @@ new const HUNMAN_RULE_Text[][]= {
     "砸枪生成枪械概率大幅度提升",
     "伤害无视防御10%,并可穿透9层墙体",
     "受到伤害时向周围造成伤害",
-    "受到致死伤害时强制抵挡9次"
+    "受到致死伤害时强制抵挡9次",
+    "生成的精英怪减少3个",
+    "本局时间增加5分钟",
 }
 
 new const RIJUN_RULE_Text[][]= {
@@ -371,6 +375,8 @@ public RULE_PlayerTakeDamage(this, idinflictor, idattacker, Float:damage, damage
             }
         }
         case HUMAN_RULE_Nine_Lives:{
+            if(cs_get_user_team(idattacker) == cs_get_user_team(this))
+                return HAM_IGNORED
             new Float:Health = get_entvar(this , var_health)
             if(Health < damage && get_entvar(this , var_takedamage) != DAMAGE_NO && NineLivesCat[this] < 9){
                 set_entvar(this , var_health , 1.0)
@@ -422,9 +428,10 @@ public RULE_HostageTakeDamage(this, idinflictor, idattacker, Float:damage, damag
             }else{
                 if(slot != 1 || !UTIL_RandFloatEvents(0.05))
                     return HAM_IGNORED
-                new Float:heal = get_entvar(this , var_max_health)
-                SetHamParamFloat(4 , heal*2) //副武器秒杀
-                rg_spawn_random_gibs(this , 1)
+                SetHamParamFloat(4 , damage * 1.25)
+                // new Float:heal = get_entvar(this , var_max_health)
+                // SetHamParamFloat(4 , heal*2) //副武器秒杀
+                // rg_spawn_random_gibs(this , 1)
             }
         }
         case HUMAN_RULE_Vampirism:{

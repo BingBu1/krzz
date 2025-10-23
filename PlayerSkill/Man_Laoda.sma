@@ -11,7 +11,7 @@ new g_Explosion
 
 public plugin_init(){
     new plid = register_plugin("角色技能-牢大" , "1.0" , "Bing")
-    RegPlayerSkill(plid , "LaodaSkill" , "kobelaoda" , 360.0)
+    RegPlayerSkill(plid , "LaodaSkill" , "kobelaoda" , 40.0)
 }
 
 public plugin_precache(){

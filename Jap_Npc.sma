@@ -167,9 +167,13 @@ public Float:native_GetLvDamageReduction(){
 }
 
 Float:ClacLvDamageReduction(){
-	new const Float:TARGET_LEVEL = 500.0;
+	new const Float:TARGET_LEVEL = 700.0;
 	new const Float:LEVEL_COEFFICIENT = Max_DamageReduction / TARGET_LEVEL;
-	return floatmin(float(Getleavel()) * LEVEL_COEFFICIENT, Max_DamageReduction);
+	new Float:Current = floatmin(float(Getleavel()) * LEVEL_COEFFICIENT, Max_DamageReduction);
+	if(Getleavel() > 1300){
+		Current += 0.1
+	}
+	return Current
 }
 
 public OnLevelChange_Post(Lv){

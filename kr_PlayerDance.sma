@@ -88,6 +88,10 @@ public plugin_init(){
     // register_forward(FM_AddToFullPack, "fw_AddToFullPack_Post", 1)
 }
 
+public plugin_natives(){
+    register_native("CreateDanceEnt" , "native_CreateDanceEnt")
+}
+
 public plugin_precache(){
     precache_model(p_model)
 }
@@ -133,6 +137,19 @@ public OnEmoSel(id , menu , item){
     return
 }
 
+public native_CreateDanceEnt(plid , nums){
+    new Float:Origin[3]
+    new id = get_param(1)
+    get_array_f(2 , Origin , 3)
+    new AvtEnt = Create_AvtEnt(id)
+    new AnimEnt = CreateAnimEnt(id)
+    Do_Set_Emotion(id , 2)
+    set_entvar(AvtEnt , var_origin , Origin)
+    set_entvar(AnimEnt , var_origin , Origin)
+    return AvtEnt
+}
+
+
 Start_Dance(id , selitem ){
     Do_Reset_Emotion(id)
     InDoingEmo[id] = true
@@ -154,11 +171,11 @@ CallBackMenu(id , selid){
 Create_AvtEnt(id){
     static PlayerModelPath[256] ,UsersModelName[32]
     if(is_valid_ent(AvtEnt[id])){
-        return
+        return AvtEnt[id]
     }      
     new ent = rg_create_entity("info_target")
     if(is_nullent(ent))
-        return
+        return 0
     AvtEnt[id] = ent
     set_entvar(ent , var_classname , "avatar")
     set_entvar(ent , var_owner , id)
@@ -178,14 +195,15 @@ Create_AvtEnt(id){
     set_entvar(ent , var_renderfx , get_entvar(id , var_renderfx))
     set_entvar(ent , var_rendermode , get_entvar(id , var_rendermode))
     SetEnt_Invisible(ent , false)
+    return ent
 }
 
 CreateAnimEnt(id){
     if(is_valid_ent(AnimEnt[id]))
-        return
+        return AnimEnt[id]
     new ent = rg_create_entity("info_target")
     if(is_nullent(ent))
-        return
+        return 0
     AnimEnt[id] = ent
     set_entvar(ent , var_classname , "AnimEnt")
     set_entvar(ent , var_owner , id)
@@ -199,6 +217,7 @@ CreateAnimEnt(id){
     set_entity_visibility(ent , false)
     set_entvar(ent , var_nextthink , get_gametime() + 0.1)
     SetThink(ent , "AnimThink")
+    return ent
 }
 
 public AnimThink(ent){
