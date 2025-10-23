@@ -6,6 +6,7 @@
 #include <fakemeta>
 #include <kr_core>
 #include <hamsandwich>
+#include <roundrule>
 
 new bool:MaxSpeed[33]
 new bool:Money_add[33]
@@ -113,15 +114,24 @@ public MoneyAdd(const this){
 public GodMode(const this){
     new username[32]
     get_user_name(this , username , charsmax(username))
-    m_print_color(0 , "!g[冰布提示]%s使用了毛爷爷技能 : 人民的军队" , username)
-    SetSkillCd(this , 100.0)
+    new Human_Rules:Rule = GetHunManRule()
+    new bool:isEndurance = (Rule == HUMAN_RULE_Endurance_War) ? true : false
+    if(isEndurance){
+        m_print_color(0 , "!g[冰布提示]%s使用了毛爷爷技能 : 论持久战" , username)
+    }else{
+        m_print_color(0 , "!g[冰布提示]%s使用了毛爷爷技能 : 人民的军队" , username)
+    }
+    
+    SetSkillCd(this , isEndurance ? 80.0 : 100.0)
 
     SkillFindPlayer(this)
     new size = ArraySize(FindPlayer)
     for(new i = 0 ; i < size ; i++){
         new player = ArrayGetCell(FindPlayer , i)
         set_entvar(player , var_takedamage , DAMAGE_NO)
-        set_task(10.0 , "UnGod" , player + 1212)
+        set_task(isEndurance ? 18.0 : 10.0 , "UnGod" , player + 1212)
+        set_entvar(player , var_health , get_entvar(player , var_health) + 50.0)
+        rg_set_user_armor(player , 100 , ARMOR_NONE)
     }
 }
 

@@ -296,8 +296,11 @@ public DropItems(const this, const pszItemName[]){
     if(!is_user_connected(this))
         return
     new body = get_entvar(this, var_body)
-    if(body == 0 && !hero[this]){
-        SetModuleByLv(this , false)
+    new modelName[32]
+    get_user_info(this, "model", modelName, charsmax(modelName))
+    if(body == 0 && !hero[this] && !strcmp(modelName , "rainych_krall1")){
+        new setbody = GetLv(this) / 50 + 1
+        set_entvar(this, var_body , setbody)
     }
 }
 

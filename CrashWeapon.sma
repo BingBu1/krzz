@@ -398,7 +398,7 @@ public RandShit(boxid , owner){
     if(is_gold == false){
         if(IsPlayerVip(owner)){
             rg_remove_entity(boxid)
-            m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎,但被扫地大妈清理掉了。", name)
+            m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎,但VIP使用钞能力让扫地大妈清理掉了。", name)
             return
         }
         m_print_color(0,"!g[砸枪提示]!t悲催的的%s砸出了一坨屎", name)
