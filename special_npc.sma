@@ -11,7 +11,7 @@
 #include <hamsandwich>
 #include <Npc_Manager>
 
-#define MaxGold 2
+#define MaxGold 1
 
 #define LootModel "models/supplybox_Newyear.mdl"
 
@@ -208,7 +208,7 @@ public CreateEliteNpc(ent , lv , Judian){
         return false
     new Float:baseHeal[] = {500.0, 1000.0, 1500.0, 2000.0 , 2500.0};
     new Float:healScale[] = {30.0, 50.0, 100.0, 130.0 , 135.0};  // 对应白、绿、蓝、红
-    new Float:healMax[] = {15000.0, 25000.0, 78000.0, 150000.0 , 158000.0};
+    new Float:healMax[] = {15000.0, 25000.0, 78000.0, 150000.0 , 178000.0};
     new Elite_Var:EliteIds[] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red , Elite_Purple};
     new bool:SetProp[] = {false, false, true, true , true};
     new levelThreshold[] = {30, 150, 300, 500 , 800}; // 对应白、绿、蓝、红
@@ -226,7 +226,7 @@ public CreateEliteNpc(ent , lv , Judian){
 
     new index = available[random_num(0, count-1)];
 
-    new Float:chance[] = {0.1, 0.02, 0.05, 0.01 , 0.005}; // 白、绿、蓝、红
+    new Float:chance[] = {0.1, 0.02, 0.05, 0.01 , 0.008}; // 白、绿、蓝、红
 
     if(!RandFloatEvents(chance[index])){
         KilledNpcNum = 0

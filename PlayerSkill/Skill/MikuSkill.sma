@@ -7,7 +7,7 @@
 #include <hamsandwich>
 
 new bool:InSkill , Float:SkillTimer
-new HamHook:DamgeHandle , HamHook:PostDamageHandle
+new HamHook:DamgeHandle //, HamHook:PostDamageHandle
 new SkillMaster
 public plugin_init(){
     new plid = register_plugin("角色技能-初音" , "1.0" , "Bing")
@@ -62,7 +62,7 @@ public Miku_Skill(id){
     SkillMaster = id
     set_task(35.0 , "CloseSkill")
     EnableHamForward(DamgeHandle)
-    EnableHamForward(PostDamageHandle)
+    // EnableHamForward(PostDamageHandle)
     PlayerSkillBuff()
 }
 

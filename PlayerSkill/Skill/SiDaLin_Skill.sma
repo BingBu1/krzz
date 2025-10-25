@@ -37,6 +37,7 @@
     public SiDaLin_Skill(id){
         if(IsSkillUsed){
             m_print_color(0 , "!g[冰布提示]!t此技能已被他人释放")
+            SetSkillCd(id , 0.0)
             return
         }   
         new username[32]
@@ -95,6 +96,7 @@
         if(!is_user_alive(master) || !is_user_connected(master)){
             SetThink(ent , "")
             rg_remove_entity(ent)
+            IsSkillUsed = false
             return
         }
         new target = -1
@@ -192,7 +194,7 @@
                 break
             }
         }
-        set_entvar(this ,var_nextthink, get_gametime() + random_float(0.1,0.3))
+        set_entvar(this ,var_nextthink, get_gametime() + random_float(0.25,0.45))
         // new Attack = FindNearNpc(this)
         // if(Attack > 0){
         //     lerp(this , Attack)

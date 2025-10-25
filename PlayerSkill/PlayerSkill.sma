@@ -35,6 +35,11 @@ public round_start_event(){
     arrayset(SkillCd , 0 , sizeof SkillCd)
 }
 
+public client_putinserver(id){
+    SkillCd[id] = 0.0
+    copy(g_CurrentModelName[id] , 31 , "")
+}
+
 public plugin_end(){
     TrieDestroy(SkillReg)
 }
@@ -76,7 +81,7 @@ public SkillOn(id){
     callfunc_begin_i(funcid , SkillData[SkillPlugin_id])
     callfunc_push_int(id)
     callfunc_end()
-
+    
     return PLUGIN_HANDLED
 }
 
