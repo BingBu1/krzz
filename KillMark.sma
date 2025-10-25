@@ -7,6 +7,9 @@
 
 new Handle:g_SqlTuple
 new Handle:g_SqlConnection
+new Float:NextCreateSprTimer[33]
+new Spawned[33]
+const MaxSpawn = 10
 
 enum MarkData{
     _:Data_MarkName[32],
@@ -60,6 +63,8 @@ public client_putinserver(id){
     if(is_user_bot(id) || !GetSqlIsInit())
         return
     QueryMark(id)
+    NextCreateSprTimer[id] = 0.0
+    Spawned[id] = 0
 }
 
 public client_disconnected(id){
@@ -67,6 +72,8 @@ public client_disconnected(id){
     for(new i = 0 ; i < sizeof MarkName ; i++){
         HasKillMark[id][i][Is_Has] = false
     }
+    NextCreateSprTimer[id] = 0.0
+    Spawned[id] = 0
 }
 
 public KillMarkMenu(id){
@@ -217,7 +224,13 @@ public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
 public NPC_Killed(this , killer){
     if(!ExecuteHam(Ham_IsPlayer , killer))
         return
-    return
+    if(get_gametime() < NextCreateSprTimer[killer])
+        return
+    if(Spawned[killer] >= MaxSpawn){
+        NextCreateSprTimer[killer] = get_gametime() + 1.0
+        Spawned[killer] = 0
+        return
+    }
     new Usering = KillMarkUse[killer]
     if(is_user_admin(killer)){
         new AdminMark = ArrayGetCell(KillMarkSpr , Usering)
@@ -227,6 +240,7 @@ public NPC_Killed(this , killer){
         new UserMark = ArrayGetCell(KillMarkSpr , Usering)
         CreateKillSpr( UserMark , this , killer)
     }
+    Spawned[killer]++
 }
 
 

@@ -145,9 +145,10 @@ public ItemSel_Post(id , item , Float:cost){
 		new flags = get_user_flags(id)
 		if(flags > 0 && flags & ADMIN_RESERVATION){
 			BuyWeapon(id ,cost)
-			return
+			return 0
 		}
 		m_print_color(id , "你没有权限购买此道具。")
+		return PLUGIN_HANDLED
 	}
 }
 

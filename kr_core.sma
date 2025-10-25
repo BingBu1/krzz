@@ -864,17 +864,17 @@ public FaildSound(){
     EmitSoundToall( Jp_EndRoundSound[soundnum])
     new Sub = 1
     if(judian_leavel <= 200){
-        Sub = 2
-    }else if(judian_leavel <= 400){
         Sub = 4
-    }else if(judian_leavel <= 600){
+    }else if(judian_leavel <= 400){
         Sub = 6
-    }else if(judian_leavel <= 800){
+    }else if(judian_leavel <= 600){
         Sub = 8
-    }else if(judian_leavel <= 1000){
+    }else if(judian_leavel <= 800){
         Sub = 10
-    }else{
+    }else if(judian_leavel <= 1000){
         Sub = 15
+    }else{
+        Sub = 50
     }
     Setleavel(judian_leavel - Sub)
 }

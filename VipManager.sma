@@ -22,6 +22,10 @@ public client_putinserver(id){
     VipBySteamid_Http(id)
 }
 
+public client_disconnected(id){
+    IsVip[id] = false
+}
+
 public native_IsPlayerVip(){
     new id = get_param(1)
     if(access(id , Vip_Flags) || IsVip[id])
@@ -66,5 +70,5 @@ public VipStatusGet(EzHttpRequest:request_id ){
     if(!Vip_Get)
         return
 
-    IsVip[playerid] = true
+    IsVip[playerid] = Vip_Get
 }

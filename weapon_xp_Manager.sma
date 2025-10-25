@@ -36,7 +36,7 @@ public native_SetWpnXpMul(id, nums){
 
 public Float:native_GetPlayerMul(id, nums){
     new Playerid = get_param(1)
-    new Float:RetMul
+    new Float:RetMul = 0.0
     if(!is_user_alive(Playerid) || !is_user_connected(Playerid))
         return 1.0
     for(new i = 0 ; i < 6 ; i++){
@@ -52,10 +52,7 @@ public Float:native_GetPlayerMul(id, nums){
             PlayerItem = get_member(PlayerItem , m_pNext)
         }
     }
-    if(RetMul < 1.0)
-        RetMul = 1.0
-    else if (RetMul > 3.0)
-        RetMul = 3.0
+    RetMul = RetMul < 1.0 ? 1.0 : RetMul > 3.0 ? 3.0 : RetMul
     if(IsPlayerVip(Playerid)){
         RetMul = RetMul == 1.0 ? 2.0 : RetMul + 2.0
     }

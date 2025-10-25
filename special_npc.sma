@@ -17,6 +17,10 @@
 
 #define SpawnTimer 60.0 * 3
 
+#define GetNextSkillCD(%1) get_prop_float(%1 , "El_Cd")
+
+#define SetNextSkillCD(%1,%2) set_prop_float(%1 , "El_Cd",%2)
+
 new EliteNeedKilled = 50
 
 enum TankModle_e{
@@ -203,8 +207,8 @@ public CreateEliteNpc(ent , lv , Judian){
     if(KilledNpcNum < EliteNeedKilled)
         return false
     new Float:baseHeal[] = {500.0, 1000.0, 1500.0, 2000.0 , 2500.0};
-    new Float:healScale[] = {30.0, 50.0, 100.0, 130.0 , 150.0};  // 对应白、绿、蓝、红
-    new Float:healMax[] = {15000.0, 25000.0, 78000.0, 150000.0 , 180000.0};
+    new Float:healScale[] = {30.0, 50.0, 100.0, 130.0 , 135.0};  // 对应白、绿、蓝、红
+    new Float:healMax[] = {15000.0, 25000.0, 78000.0, 150000.0 , 158000.0};
     new Elite_Var:EliteIds[] = {Elite_White, Elite_Green, Elite_Blue, Elite_Red , Elite_Purple};
     new bool:SetProp[] = {false, false, true, true , true};
     new levelThreshold[] = {30, 150, 300, 500 , 800}; // 对应白、绿、蓝、红
@@ -222,7 +226,7 @@ public CreateEliteNpc(ent , lv , Judian){
 
     new index = available[random_num(0, count-1)];
 
-    new Float:chance[] = {0.1, 0.02, 0.05, 0.01 , 0.01}; // 白、绿、蓝、红
+    new Float:chance[] = {0.1, 0.02, 0.05, 0.01 , 0.005}; // 白、绿、蓝、红
 
     if(!RandFloatEvents(chance[index])){
         KilledNpcNum = 0
@@ -330,7 +334,7 @@ EliteThink(ent , EliteLevle){
 
         }
         case Elite_Purple:{
-
+            PuperNpcSkill(ent)
         }
     }
 }
@@ -503,6 +507,10 @@ public NPC_Killed(this , killer){
             case Elite_Red :{
                 baseaddxp = 1000 + random_num(500 , lv * (5 + MonsterLv))
                 money += 15000
+            }
+            case Elite_Purple:{
+                baseaddxp = 1000 + random_num(500 , lv * (5 + MonsterLv))
+                money += 18000
             }
             case Elite_Gold:{
                 new Float:origin[3]
@@ -782,7 +790,7 @@ stock get_aim_origin_vector(iPlayer, Float:forw, Float:right, Float:up, Float:vS
 
 
 stock bool:RandFloatEvents(Float:Probability){
-    if(Probability >=1.0)
+    if(Probability >= 1.0)
         return true
     new Float:randnum = random_float(0.0,1.0)
     if(randnum <= Probability)
@@ -805,4 +813,54 @@ stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage,
 
         ExecuteHamB(Ham_TakeDamage, ent, inflictor, attacker, damage, dmg_bits);
     }
+}
+
+stock PuperNpcSkill(ent){
+    if(!prop_exists(ent , "El_Cd")){
+        SetNextSkillCD(ent , get_gametime() + 20.0)
+    }
+    if(GetNextSkillCD(ent) > get_gametime()){
+        return
+    }
+    SetNextSkillCD(ent , get_gametime() + 40.0) //技能冷却时间10秒
+    if (!is_entity(ent)) return;
+    if (get_entvar(ent, var_iuser1) != Elite_Purple) return;
+    new Float:ent_origin[3];
+    get_entvar(ent, var_origin, ent_origin);
+
+    new maxPlayers = get_maxplayers();
+    for (new id = 1; id <= maxPlayers; id++)
+    {
+        if (!is_user_alive(id))
+            continue;
+
+        // 玩家位置
+        new Float:pl_origin[3];
+        get_entvar(id, var_origin, pl_origin);
+
+        // 向精英方向的向量
+        new Float:dir[3];
+        dir[0] = ent_origin[0] - pl_origin[0];
+        dir[1] = ent_origin[1] - pl_origin[1];
+        dir[2] = ent_origin[2] - pl_origin[2];
+
+        // 单位化（得到方向）
+        new Float:len = floatsqroot(dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2]);
+        if (len == 0.0)
+            continue;
+
+        dir[0] /= len;
+        dir[1] /= len;
+        dir[2] /= len;
+
+        // 设置吸引速度
+        new Float:speed = 400.0; // 吸引强度，可调
+        new Float:vel[3];
+        vel[0] = dir[0] * speed;
+        vel[1] = dir[1] * speed;
+        vel[2] = 400.0;
+
+        set_entvar(id, var_velocity, vel);
+    }
+    m_print_color(0 , "!t[冰布提示] 紫色精英正在吸引附近玩家，请小心接近！")
 }

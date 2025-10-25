@@ -6,6 +6,7 @@
 #include <reapi>
 #include <engine>
 #include <xp_module>
+#include <VipManager>
 
 #define MaxItem 255
 
@@ -44,6 +45,7 @@ public plugin_natives(){
     register_native("ChangeMenuName","native_ChangeMenuName")
     register_native("DisableMenu","native_DisableMenu")
     register_native("EnableMenu","native_EnableMenu")
+    register_native("GetMenuIsDisable","native_GetMenuIsDisable")
     // register_native("OnBuySubAmmo","native_OnBuySubAmmo")
 }
 
@@ -88,6 +90,7 @@ public CreateMenu(id){
     menu_additem(menuid, "切换视角", "12")
     menu_additem(menuid, "查询掉难度情况", "13")
     menu_additem(menuid, "一起来跳舞", "14")
+    menu_additem(menuid, "查询VIP状态", "15")
     menu_display(id, menuid)
 }
 
@@ -157,7 +160,9 @@ public native_DisableMenu(pluginid , nums){
 public native_EnableMenu(pluginid , nums){
     CanUseMenu[get_param(1)] = true
 }
-
+public native_GetMenuIsDisable(pluginid , nums){
+    return (CanUseMenu[get_param(1)] == false)
+}
 public menuHandle(id,menu,item){
     if(item == MENU_EXIT){
         menu_destroy(menu)
@@ -184,6 +189,7 @@ public menuHandle(id,menu,item){
         case 12: ChangeCamMenu(id) //切换视角
         case 13 : client_cmd(id  , "kr_checklv")//查询掉难度
         case 14 : client_cmd(id  , "cheer")//跳舞
+        case 15 : VipCheckPrint(id)
     }
     menu_destroy(menu)
 }
@@ -199,7 +205,7 @@ public SetWpnMul(id , Float:BuyCost){
         SetWpnXpMul(BuyWpn , 3.0)
     }
     new Float:Mulxp = GetPlayerMul(id)
-    m_print_color(id, "!g【冰布提醒】购买武器成功!您当前积分加成%d倍。" , floatround(Mulxp))
+    m_print_color(id, "!g【冰布提醒】购买成功!您当前积分加成%d倍。" , floatround(Mulxp))
 }
 
 public WpnMenuHandle(id,menu,item){
@@ -222,8 +228,15 @@ public WpnMenuHandle(id,menu,item){
 #endif
     
     if(IsHaveBuyAmmo){
-        ExecuteForward(WpnForwad, _, id, infoid, buycost)
+        new BuyStatus
+        ExecuteForward(WpnForwad, BuyStatus , id, infoid, buycost)
+        log_amx("购买状态：%d", BuyStatus)
+        if(BuyStatus >= PLUGIN_HANDLED){
+            menu_destroy(menu)
+            return
+        }
         SetWpnMul(id, buycost)
+        
     }else{
         m_print_color(id, "!g[冰布提醒]!y你的大洋不够。")
     }
@@ -364,5 +377,13 @@ LvCheck(id){
 public SetCam(id, Cam){
     if(is_user_alive(id) && is_user_connected(id)){
         set_view(id,Cam)
+    }
+}
+
+stock VipCheckPrint(id){
+    if(IsPlayerVip(id)){
+        m_print_color(id , "!g[冰布提示]!t您是尊贵的VIP会员，享受专属特权！")
+    }else{
+        m_print_color(id , "!g[冰布提示]!t您目前不是VIP会员，购买VIP可享受更多特权！")
     }
 }

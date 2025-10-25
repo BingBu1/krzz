@@ -52,7 +52,7 @@ new weaponidmenu
 
 new Isgordon[33]
 
-enum Rpg
+enum _:Rpg
 {
 	anim_idle,
 	anim_fidget,
@@ -96,7 +96,7 @@ public ItemSel_Post(id, items, Float:cost1){
 }
 
 public FreeGive(id){
-	new Wpn = GiveWeaponByID(id, Waeponid)
+	GiveWeaponByID(id, Waeponid)
 }
 
 public Getrpg(id){
@@ -107,11 +107,11 @@ public Getrpg(id){
 	new Float:ammopak = GetAmmoPak(id)
 	CanBuy = (ammopak >= cost)
 #endif
-    if(!CanBuy){
-        m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
-        return
-    }
-    SubAmmoPak(id , cost)
+	if(!CanBuy){
+	    m_print_color(id , "!g[冰桑提示] 您的大洋不足以购买")
+	    return
+	}
+	SubAmmoPak(id , cost)
 	FreeGive(id)
 }
 
@@ -138,7 +138,7 @@ public CreateWeaponFunc(){
    BuildWeaponAmmunition(Waeponid, MaxClip , ammo)
    BuildWeaponPrimaryAttack(Waeponid, 1.5, 0.0, 0.0, anim_fire)
    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPre, "PrimaryAttackPre")
-   RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPrePost, "PrimaryAttackPost")
+//    RegisterWeaponForward(Waeponid, WForward_PrimaryAttackPrePost, "PrimaryAttackPost")
    RegisterWeaponForward(Waeponid, WForward_DeployPost, "DeployPost")
 }
 
@@ -159,8 +159,8 @@ public plugin_precache(){
 }
 
 public DeployPost(EntityID){
-    new id = get_pdata_cbase(EntityID, m_pPlayer)
-    play_weapon_anim(id, anim_draw1)
+	new id = get_pdata_cbase(EntityID, m_pPlayer)
+	play_weapon_anim(id, anim_draw1)
 	rg_set_iteminfo(EntityID , ItemInfo_iMaxClip , MaxClip)
 }
 
@@ -187,7 +187,7 @@ public m_Touch(toucher, touched){
 
 	new attacker = pev(toucher, pev_owner)
 	
-	rg_dmg_radius(fOrigin , attacker , attacker ,isBigBoom ? ROCKET_DAMAGE * 1.8: ROCKET_DAMAGE , isBigBoom ? 1000.0 : 300.0 , CLASS_PLAYER , DMG_GENERIC)
+	rg_dmg_radius(fOrigin , attacker , attacker , isBigBoom ? ROCKET_DAMAGE * 2.0 : ROCKET_DAMAGE , isBigBoom ? 1000.0 : 300.0 , CLASS_PLAYER , DMG_GENERIC)
 
 	if(pev_valid(touched)){
 		// Check if the touched entity is breakable, if so, break it :)
@@ -239,8 +239,8 @@ CreateRpg(ids , Float:Sp_Origin[3] , bool:IsBig = false){
 	set_pev(rocket, pev_mins, Float:{-1.0, -1.0, -1.0})
 	set_pev(rocket, pev_maxs, Float:{1.0, 1.0, 1.0})
 
-	new Float:fAngles[3], Float:fOrigin[3]
-	// get_entvar(id , var_v_angle, fAngles)
+	new Float:fAngles[3]
+
 	pev(id , pev_v_angle,fAngles)
 	fAngles[0] *= -1.0
 	// Set the origin and view
@@ -298,20 +298,20 @@ public Rockthink(ent){
 	xs_vec_normalize(dir, dir)
 
 	// 当前速度转为单位方向
-    new Float:curdir[3]
-    xs_vec_normalize(vel, curdir)
+	new Float:curdir[3]
+	xs_vec_normalize(vel, curdir)
 
 	new Float:newdir[3]
 	xs_vec_lerp(curdir, dir, TRACK_SMOOTH, newdir)
 	xs_vec_normalize(newdir, newdir)
 
-	
+		
 
 	new Float:new_vel[3]
 	xs_vec_mul_scalar(newdir, float(ROCKET_SPEED), new_vel)
 	set_entvar(ent, var_velocity, new_vel)
 
-	set_entvar(ent, var_nextthink, get_gametime() + floatround(0.1,0.3))
+	set_entvar(ent, var_nextthink, get_gametime() + random_float(0.1,0.3))
 }
 
 public Find_near_ent(id){
@@ -320,7 +320,7 @@ public Find_near_ent(id){
 	new retv = NULLENT
 	new Float:org[3]
 	get_entvar(id, var_origin, org)
-	while(ent = find_ent_by_class(ent , "hostage_entity")){
+	while((ent = find_ent_by_class(ent , "hostage_entity")) > 0){
 		if(get_entvar(ent, var_takedamage) == DAMAGE_NO || get_entvar(ent, var_deadflag) == DEAD_DEAD)
 			continue
 		if(KrGetFakeTeam(ent) == CS_TEAM_T)
@@ -429,7 +429,7 @@ stock get_position(id,Float:forw, Float:right, Float:up, Float:vStart[])
 	vStart[2] = vOrigin[2] + vForward[2] * forw + vRight[2] * right + vUp[2] * up
 }
 
-fake_damage(attacker, victim, Float:takedamage, damagetype)
+stock fake_damage(attacker, victim, Float:takedamage, damagetype)
 {
 	// Used quite often :D
 	static entity, temp[16], wpnname[64]

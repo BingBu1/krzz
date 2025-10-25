@@ -468,10 +468,10 @@ public ShitTouch_Boxs(this, other){
         return
     new shitid = get_prop_int(this, "shitid")
     if(shitid == 0){
-        user_slap(other,10)
+        ExecuteHam(Ham_TakeDamage , other , 0 , 0 , 10.0 , DMG_CRUSH)
     }else{
         new money = cs_get_user_money(other) + 100000
-        user_slap(other,10)
+        ExecuteHam(Ham_TakeDamage , other , 0 , 0 , 10.0 , DMG_CRUSH)
         cs_set_user_money(other, money)
     }
 

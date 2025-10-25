@@ -275,10 +275,13 @@ public Ent_Fire_Think(ent){
             SetEntFireing(ent , false)
         }   
         SetEntFireDmgTimer(ent , get_gametime() + 0.3)
-        // new Float:AddDamage = GetLvDamageReduction() // 最高减防0.65
+        new bool:Miku = IsMiku[master]
+        new Float:AddDamage = GetLvDamageReduction() // 最高减防0.65
         new Float:TakeDamge = monster_Heal <= 200.0 ? 50.0: floatmax(monster_Heal * 0.02 , 5.0)
-        // TakeDamge = TakeDamge / (1.0 - AddDamage)
-        TakeDamge = floatmin(TakeDamge , 1500.0)
+        if(Miku){
+            TakeDamge = TakeDamge / (1.0 - AddDamage)
+        }
+        TakeDamge = floatmin(TakeDamge , Miku ? 10000.0 : 1500.0)
         ExecuteHamB(Ham_TakeDamage , ent , master ,master , TakeDamge , DMG_BURN)
         CreateSpr(Fire_Spr , ent)
         monster_Heal = get_entvar(ent , var_health)

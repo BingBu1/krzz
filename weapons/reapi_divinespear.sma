@@ -134,7 +134,7 @@ public plugin_init()
 
 public ItemSel_Post(id, items, Float:cost){
 	if(items == wpnid){
-		Get_Divinespear(id , cost)
+		return Get_Divinespear(id , cost)
 	}
 }
 
@@ -240,7 +240,7 @@ public Native_Get_Divinespear(iPlugin, iParams)
 #endif
 	if(!CanBuy){
 		m_print_color(clientIndex, "!g[冰布提示]大洋不足以购买此武器")
-		return
+		return PLUGIN_HANDLED;
 	}
 	SubAmmoPak(clientIndex , buy_cost)
 	if(clientIndex > 0 && clientIndex <= MAX_PLAYERS)
@@ -249,7 +249,8 @@ public Native_Get_Divinespear(iPlugin, iParams)
 		rg_give_custom_item(clientIndex, "weapon_knife", GT_REPLACE, Weapon_DefinitionID);
 		DisableHookChain(HC_AddPlayerItem);
 		engclient_cmd(clientIndex, "weapon_knife");
-	}	
+	}
+	return PLUGIN_CONTINUE;	
 }
 
 public CBasePlayer_AddPlayerItem(const clientIndex, const iWeaponEntityID)

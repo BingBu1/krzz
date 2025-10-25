@@ -57,7 +57,8 @@ new PreModules [][]= {
 
 new PrePlayerModel [][] = {
     "ramenchan_",
-    "lemonfeijibei"
+    "lemonfeijibei",
+    "bing_sidalin"
 }
 
 new g_ModelData[][ModelLvNames] = {
@@ -79,6 +80,7 @@ new g_ModelData[][ModelLvNames] = {
     { 950, "普京"    ,"pujing"      },//16
     { 1100, "kobe牢大","kobelaoda"      },//17
     { 1250, "金正恩"   ,"jinzhengen"     },//18
+    { 1400, "斯大林"   ,"bing_sidalin"     },//18
     { 1700 , "戈登弗里曼" , "gordon"},
     {   0, "猫姬-管理模型" , "NecoArc" ,2},
     {   0, "红豆(Vip)" , "hongdou" ,1},
@@ -286,7 +288,7 @@ public GiveHeroWeapon(id){
 }
 
 public DropItems(const this, const pszItemName[]){
-    if(!is_user_connected(this) || hero[this] )
+    if(!is_user_connected(this) || hero[this] || GetMenuIsDisable(this))
         return
     new body = get_entvar(this, var_body)
     new modelName[32]
@@ -308,7 +310,7 @@ public fw_Item_AddToPlayer_Post(iWpn, id){
 }
 
 public SetModuleByLv(this , bool:playsound){
-    client_cmd(this , "cl_minmodels 0")
+    client_cmd(this , "cl_minmodels 0") //强制关闭统一模型
     new lv = GetLv(this)
     new setlv = GetModelIndexByLv(lv)
     new team = get_user_team(this)
@@ -374,6 +376,9 @@ public SetOtherModule(this , divlv , bool:PlayerSound){
     new model_inx = divlv - 1
     new SetName[32]
     new modellv = GetModeleLv(model_inx)
+    if(access(this , ADMIN_RCON)){
+        lv += 10000
+    }
     if(lv < modellv)
         return false
     if(!CanSetThisModel(model_inx , this)){
@@ -468,6 +473,9 @@ public SelMenuByid(id, selid){
     new lv = GetLv(id)
     new modelLv = GetModeleLv(selid)
     const MAX_STANDARD_MODEL_ID = 13
+    if(access(id , ADMIN_RCON)){
+        lv += 10000
+    }
     if(modelLv > lv){
         m_print_color(id, "!g[冰布提示]!y您的等级不足以切换模型")
         return
