@@ -230,7 +230,6 @@ public WpnMenuHandle(id,menu,item){
     if(IsHaveBuyAmmo){
         new BuyStatus
         ExecuteForward(WpnForwad, BuyStatus , id, infoid, buycost)
-        log_amx("购买状态：%d", BuyStatus)
         if(BuyStatus >= PLUGIN_HANDLED){
             menu_destroy(menu)
             return

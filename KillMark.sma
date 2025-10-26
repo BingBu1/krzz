@@ -224,6 +224,7 @@ public SqlInitOk(Handle:sqlHandle, Handle:ConnectHandle){
 public NPC_Killed(this , killer){
     if(!ExecuteHam(Ham_IsPlayer , killer))
         return
+    return
     if(get_gametime() < NextCreateSprTimer[killer])
         return
     if(Spawned[killer] >= MaxSpawn){

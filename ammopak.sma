@@ -5,6 +5,7 @@
 #include <fakemeta>
 #include <sqlx>
 #include <xp_module>
+#include <hamsandwich>
 #include <bigint>
 
 
@@ -127,21 +128,21 @@ public OnQueryPlayerAmmo(FailState,Handle:Query,Error[],Errcode,Data[],DataSize)
     #if defined Usedecimal
         decimal_SqlPlayer(Query , steamid , name , Data , DataSize)
     #else
-    if(!SQL_NumResults(Query)){
-        log_amx("%s不存在数据开始初始化 id : %s", name,steamid)
-        formatex(querystr,charsmax(querystr),"INSERT INTO ammopaks (steamid,pakammo)\
-        VALUES ('%s', 0.0)", steamid)
-        SQL_ThreadQuery(g_SqlTuple, "OnInsertComplete", querystr, Data ,DataSize)
-    }else{
-        new flaot_string[32]
-        SQL_ReadResult(Query , 1 ,flaot_string,charsmax(flaot_string))
-        AmmoPak[id] = str_to_float(flaot_string)
-        IsLoad[id] = true
-        log_amx("加载成功: %s 弹药余额%.2f", steamid, AmmoPak[id])
-        if(FirstInit[id] == true){
-            set_task(3.0, "GiveAmmoFirst", id + 1000,.flags = "b")
+        if(!SQL_NumResults(Query)){
+            log_amx("%s不存在数据开始初始化 id : %s", name,steamid)
+            formatex(querystr,charsmax(querystr),"INSERT INTO ammopaks (steamid,pakammo)\
+            VALUES ('%s', 0.0)", steamid)
+            SQL_ThreadQuery(g_SqlTuple, "OnInsertComplete", querystr, Data ,DataSize)
+        }else{
+            new flaot_string[32]
+            SQL_ReadResult(Query , 1 ,flaot_string,charsmax(flaot_string))
+            AmmoPak[id] = str_to_float(flaot_string)
+            IsLoad[id] = true
+            log_amx("加载成功: %s 弹药余额%.2f", steamid, AmmoPak[id])
+            if(FirstInit[id] == true){
+                set_task(3.0, "GiveAmmoFirst", id + 1000,.flags = "b")
+            }
         }
-    }
     #endif
 }
 
@@ -162,11 +163,16 @@ public decimal_SqlPlayer(Handle:Query , steamid[] , name[] , Data[] , DataSize){
     SQL_ReadResult(Query , Q_PakAmmo ,decimal_string,charsmax(decimal_string))
     InitDec_Map(id , decimal_string)
     IsLoad[id] = true
+    if(FirstInit[id] == true)
+        set_task(3.0, "GiveAmmoFirst", id + 1000,.flags = "b")
+    log_amx("加载成功: %s 弹药余额%s", steamid, decimal_string)
+            
 }
 #endif
 
 public GiveAmmoFirst(ids){
     new id = ids - 1000
+    ExecuteHam(Ham_CS_RoundRespawn , id)
     if(FirstInit[id] == true && is_user_connected(id) && is_user_alive(id)){
         new name[32]
         get_user_name(id , name , 31)

@@ -37,7 +37,6 @@ public round_start_event(){
 
 public client_putinserver(id){
     SkillCd[id] = 0.0
-    copy(g_CurrentModelName[id] , 31 , "")
 }
 
 public plugin_end(){
