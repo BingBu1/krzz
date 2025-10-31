@@ -417,7 +417,8 @@ public Ham_CWeapon_PostFrame_Pre(ent)
 public ReDeploy(id){
     id -= TaskId
     new Player = get_member(id , m_pPlayer)
-    if(!is_user_connected(Player) || !is_user_alive(Player) || !Had_Weapon(id, WaeponIDs))
+    new NowWpn = get_member(Player , m_pActiveItem)
+    if(!is_user_connected(Player) || !is_user_alive(Player) || !Had_Weapon(NowWpn, WaeponIDs))
         return
     new IsReloading = get_member(id , m_Weapon_fInReload)
     if(!IsReloading){
