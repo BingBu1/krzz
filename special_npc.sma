@@ -361,7 +361,7 @@ public NPC_ThinkPost(ent){
     get_entvar(follent,var_origin,targetorigin)
     hitent = fm_trace_line(ent,origin,targetorigin,hitorigin)
     InitAttack2Timer(ent, 3.0, 8.0)
-    if(hitent != follent)
+    if(hitent == 0)
         return 0
     new Float:attacktimer = get_prop_float(ent,"attackfire")
     if(get_gametime() < attacktimer)
@@ -373,20 +373,21 @@ public NPC_ThinkPost(ent){
             ResetAttack2(ent, 3.0, 8.0)
         }
         case 8:{
-            new randattack = random_num(0,1)
-            if(randattack)
-                FireBullets(ent, follent, 5.0)
-            else
-                ThrowHeGrenade(ent)
-            ResetAttack2(ent, 1.0 , 5.0)
+            if(istank){
+                //坦克 开炮 机枪逻辑
+                CreateTankBoom(ent,follent)
+                ResetAttack2(ent,1.0 , 5.0)
+            }else{
+                new randattack = random_num(0,1)
+                if(randattack)
+                    FireBullets(ent, follent, 5.0)
+                else
+                    ThrowHeGrenade(ent)
+                ResetAttack2(ent, 1.0 , 5.0)
+            }
         }
     }
     set_msg_block(get_user_msgid("DeathMsg"), BLOCK_NOT)
-    if(Judian_num == 8 && istank){
-        //坦克 开炮 机枪逻辑
-        CreateTankBoom(ent,follent)
-        ResetAttack2(ent,1.0 , 5.0)
-    }
     return 0
 }
 

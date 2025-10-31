@@ -91,6 +91,7 @@ public CreateMenu(id){
     menu_additem(menuid, "查询掉难度情况", "13")
     menu_additem(menuid, "一起来跳舞", "14")
     menu_additem(menuid, "查询VIP状态", "15")
+    menu_additem(menuid, "点歌系统", "16")
     menu_display(id, menuid)
 }
 
@@ -190,6 +191,7 @@ public menuHandle(id,menu,item){
         case 13 : client_cmd(id  , "kr_checklv")//查询掉难度
         case 14 : client_cmd(id  , "cheer")//跳舞
         case 15 : VipCheckPrint(id)
+        case 16 : client_cmd(id , "buysound")
     }
     menu_destroy(menu)
 }
@@ -272,9 +274,9 @@ public ReSpawnPlayer(id){
 
 public AddAmmo(id){
     new wpn = get_member(id, m_pActiveItem)
-    if(!wpn)
+    if(wpn <= 0)
         return
-    new MaxAmmo = rg_get_iteminfo(wpn,ItemInfo_iMaxAmmo1)
+    new MaxAmmo = rg_get_iteminfo(wpn , ItemInfo_iMaxAmmo1)
     new WeaponIdType:wpnid = WeaponIdType:rg_get_iteminfo(wpn, ItemInfo_iId)
     if(wpnid == WEAPON_KNIFE || wpnid == WEAPON_HEGRENADE ||
         wpnid == WEAPON_FLASHBANG || wpnid == WEAPON_SMOKEGRENADE){

@@ -277,6 +277,7 @@ public GiveHeroWeapon(id){
     if(!is_user_connected(id) || !is_user_alive(id))
         return
     new Rand = random_num(0,1)
+    server_cmd("give_kata %d" , id)
     if(!Rand){
         GiveWeaponByNames("暗影狙击", id)
     }else {

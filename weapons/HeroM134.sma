@@ -117,7 +117,9 @@ public m_TraceAttack(Victim, Attacker, Float:Damage, Float:Direction[3], Ptr, Da
     if(Get_BitVar(HasWaepon, Attacker) && get_user_weapon(Attacker) == CSW_M249){
         SetHamParamFloat(3, 200.0)//速杀 1.5x
     }
+    return HAM_IGNORED
 }
+
 public event_roundstart(){
     HasWaepon = 0
 }
@@ -148,12 +150,13 @@ public m_CreateWaeponBox_Post(const weaponent, const owner, modelName[], Float:o
     if(!equal(classname , "weaponbox")){
         return HC_CONTINUE
     }
-    new wpn = get_member(owner, m_pActiveItem)
+
     if(equal(modelName , DefWModule) && Get_BitVar(HasWaepon , owner)){
         set_entvar(weaponent, var_impulse, WaeponIDs)
         UnSet_BitVar(HasWaepon, owner)
         engfunc(EngFunc_SetModel , weaponbox, W_MODEL)
     }
+    return HC_CONTINUE
 }
 
 public m_DefaultDeploy(const this, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], skiplocal){
@@ -183,6 +186,7 @@ public m_AddPlayerItem (const this, const pItem){
 }
 
 public FreeGive(id){
+    
     new wpn = rg_give_custom_item(id , HeroGun , GT_DROP_AND_REPLACE, WaeponIDs)
     Set_BitVar(HasWaepon, id)
     rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
@@ -217,7 +221,13 @@ public GiveHeroGunFunc(){
     new argc = read_argc()
     if(argc >= 2){
         new id = read_argv_int(1)
+        if(!is_user_connected(id) || !is_user_alive(id)){
+            log_amx("给予深渊武器失败,玩家不在线或未存活")
+            return
+        }
         new wpn = rg_give_custom_item(id , HeroGun , GT_DROP_AND_REPLACE, WaeponIDs)
+        if(!wpn)
+            return
         Set_BitVar(HasWaepon, id)
         rg_set_iteminfo(wpn,ItemInfo_iMaxClip, CLIP)
         rg_set_iteminfo(wpn, ItemInfo_iMaxAmmo1, Max_bpammo)
@@ -270,9 +280,9 @@ public m_PrimaryAttack(this){
         return HAM_SUPERCEDE;
     }
     Stock_GetEyePosition(id, vecSrc);
-	Stock_GetAiming(id, vecAiming);
+    Stock_GetAiming(id, vecAiming);
 
-    rg_fire_bullets3(id, id, vecSrc, vecAiming, 0, 8192.0, 5, BULLET_PLAYER_556MM, FireDamage, 0.9, false, get_member(id, random_seed));
+    rg_fire_bullets3(id, id, vecSrc, vecAiming, 0.0, 8192.0, 5, BULLET_PLAYER_556MM, FireDamage, 0.9, false, get_member(id, random_seed));
     
     Stock_SendWeaponAnim(id, this, 1);
     rg_set_animation(id, PLAYER_ATTACK1);
@@ -289,7 +299,7 @@ public m_KickBack(const this, Float:up_base, Float:lateral_base, Float:up_modifi
     if(FireKickBack){
          return HC_SUPERCEDE
     }
-   return HC_CONTINUE
+    return HC_CONTINUE
 }
 
 public m_FireBullets3(pEntity, Float:vecSrc[3], Float:vecDirShooting[3], Float:vecSpread, Float:flDistance, iPenetration, iBulletType, iDamage, Float:flRangeModifier, pevAttacker, bool:bPistol, shared_rand){
@@ -328,8 +338,9 @@ stock GetWatchEnd(player , Float:OutEndOrigin[3]){
     global_get(glb_v_forward, fwd)
     xs_vec_mul_scalar(fwd, 8192.0, EndOrigin)
     xs_vec_add(StartOrigin,EndOrigin,EndOrigin)
-	new hitent = fm_trace_line(player,StartOrigin,EndOrigin,hitorigin)
+    new hitent = fm_trace_line(player,StartOrigin,EndOrigin,hitorigin)
     xs_vec_copy(hitorigin, OutEndOrigin)
+    return hitent
 }
 
 stock rg_radius_damage(const Float:origin[3], attacker, inflictor, Float:damage, Float:radius, dmg_bits)

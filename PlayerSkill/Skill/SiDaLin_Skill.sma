@@ -190,7 +190,7 @@
                 }
                 // 标记删除
                 set_entvar(this, var_flags, FL_KILLME)
-                rg_dmg_radius(org , master , master , 180.0 , 20.0 , CLASS_PLAYER , DMG_BLAST)
+                rg_dmg_radius(org , master , master , 180.0 , 3.0 , CLASS_PLAYER , DMG_BLAST)
                 break
             }
         }

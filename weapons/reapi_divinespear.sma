@@ -134,7 +134,7 @@ public plugin_init()
 
 public ItemSel_Post(id, items, Float:cost){
 	if(items == wpnid){
-		return Get_Divinespear(id , cost)
+		Get_Divinespear(id , cost)
 	}
 }
 
@@ -831,7 +831,7 @@ stock Do_Damage(const clientIndex, const Float:Damage_Range, const Float:Damage,
 		if(!Hit_Type) Hit_Type = HIT_ENEMY; 
 
 		if(Damage > 0.0) FakeTraceAttack(clientIndex, victimIndex, KnifeEntityID, Damage, DMG_BULLET);
-		if(Painshock > 0.0) set_pdata_float(victimIndex, 108, Painshock, 5);
+		if(Painshock > 0.0) set_member(victimIndex , m_flVelocityModifier , Painshock)
 		if(Knockback > 0.0 || KnockUp > 0.0) Hook_Entity(victimIndex, vOwnerPosition, Knockback, KnockUp, true);	
 	}
 
@@ -919,7 +919,7 @@ stock Get_Position(const iEntityIndex, const Float:fForwardAdd, const Float:fRig
 
 stock bool:Can_See(const clientIndex, const targetIndex)
 {
-	new flags = pev(clientIndex, pev_flags);
+	new flags = get_entvar(clientIndex, var_flags);
 	if (flags & EF_NODRAW || flags & FL_NOTARGET)
 	{
 		return false;
@@ -1012,7 +1012,6 @@ FakeTraceAttack(const iAttacker, const iVictim, const iInflictor, Float:fDamage,
 	fDamage *= Damage_Multiplier(iHitGroup);
 	if(!Compare_Target_And_Entity_Angle(iTarget, iAttacker, 90.0)) fDamage *= 3.0;
 	set_member(iTarget, m_LastHitGroup, iHitGroup);
-	// Spawn_Blood(vTargetOrigin, iHitGroup, 7);
 	ExecuteHamB(Ham_TakeDamage, iTarget, iInflictor, iAttacker, fDamage, iDamageType);
 }
 

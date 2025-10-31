@@ -276,7 +276,7 @@ public NPC_KillPlayer(this , killer){
 
 CreateHanJianMenu(id){
     new newTConut = get_member_game(m_iNumTerrorist)
-    if(newTConut == 1 || get_user_team(id) == _:CS_TEAM_CT || GetJuDianNum() >= 7){
+    if(newTConut == 1 || cs_get_user_team(id) == CS_TEAM_CT || GetJuDianNum() >= 7){
         return
     }
     new menu = menu_create("大日本黄军俘虏了你" , "HanjianHandle")
