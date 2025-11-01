@@ -425,7 +425,7 @@ public Attack2Release(clientIndex , iWeaponEntityID){
 			//执行右键攻击
 			new Float:timeNextAttaack = get_gametime() + (41.0 / 30.0)
 			Weapon_Animation(clientIndex , slash)
-			new Hit = Do_Damage(clientIndex, 300.0, 500.0, 360.0, 0.0, 0.0, 0.0);
+			new Hit = Do_Damage(clientIndex, 300.0, 500.0, 360.0, 1200.0, 400.0, 0.0);
 			switch(Hit)
 			{
 				case HIT_WALL:	UTIL_EmitSound_ByCmd(clientIndex , Res_sounds[5])

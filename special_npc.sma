@@ -73,6 +73,9 @@ public plugin_init(){
     register_event("HLTV", "event_roundstart", "a", "1=0", "2=0")
 
     register_forward(FM_AddToFullPack , "Fw_AddToFullPack")
+
+    RegisterHam(Ham_TakeDamage , "hostage_entity" , "Hostage_Dmg")
+
     MaxBossNpc = 3
 }
 
@@ -386,9 +389,28 @@ public NPC_ThinkPost(ent){
                 ResetAttack2(ent, 1.0 , 5.0)
             }
         }
+        default:{
+            if(istank){
+                //坦克 开炮 机枪逻辑
+                CreateTankBoom(ent,follent)
+                ResetAttack2(ent,1.0 , 5.0)
+            }
+        }
     }
     set_msg_block(get_user_msgid("DeathMsg"), BLOCK_NOT)
     return 0
+}
+
+public Hostage_Dmg(this , ack1 , attacker , Float:Damage , dmgbit){
+    if(GetRiJunRule() != JAP_RULE_Tank_Rampage)
+        return HAM_IGNORED
+    new istank = is_tank(this)
+    new judian_Count = GetJuDianNum()
+    if(!istank || judian_Count > 7)
+        return HAM_IGNORED
+    if(Damage > 10.0)
+        SetHamParamFloat(4 , 10.0)
+    return HAM_IGNORED
 }
 
 public native_is_tank(){

@@ -201,6 +201,7 @@ public FuckMapTank(){
 
 public KrEndRound(){
     remove_entity_name("hostage_entity")
+    remove_entity_name("Rpg_rock")
     ChangeJudian()
 }
 
