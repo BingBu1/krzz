@@ -11,6 +11,7 @@
 #include <CrashWeapon>
 #include <roundrule>
 #include <VipManager>
+
 enum EventInfo {
     _:EventName[32],          // 事件名称（调试用）
     Float:EventProbability, // 独立触发概率
@@ -19,11 +20,16 @@ enum EventInfo {
 }
 
 new Events[][EventInfo] ={
-    {"武器",        0.02,  5,      "RandWeapons"},
-    {"杂志",        0.10,  2,      "RandSexMagazine"},
-    {"武功",        0.05,  3,      "RandKongFu"},
-    {"金钱",        0.05,  3,      "RandMoney"},
-    {"屎",        0.30, 2,      "RandShit"},
+    {"武器",        0.005,  5,      "RandWeapons"},
+    {"杂志",        0.10,  3,      "RandSexMagazine"},
+    {"武功",        0.05,  2,      "RandKongFu"},
+    {"金钱",        0.05,  1,      "RandMoney"},
+    {"屎",          0.30, 5,      "RandShit"},
+    {"手雷",        0.15, 4,      "RandGrenade"},
+    {"武器补给",     0.10, 4,      "RandAmmo"},
+    {"长跳包",       0.08, 4,      "RandLongJump"},
+    {"护甲",        0.10, 4,      "RandKevlar"},
+    {"水旋涡",        0.10, 5,      "RandWater"},
 }
 
 #define CrashSound "misc/alsy_getmoney.wav"
@@ -52,6 +58,23 @@ new Array:GunNames,Array:GunCallBack,Array:GunWModule,Array:GunPlid
 #define W_KongFuBook "models/Bing_Kr_res/kr_CrashGun/books_2.mdl"
 #define W_Sex "models/Bing_Kr_res/kr_CrashGun/avs.mdl"
 #define W_Money "models/Bing_Kr_res/kr_CrashGun/money.mdl"
+#define W_HeGrende "models/w_hegrenade.mdl"
+#define W_kevlar "models/w_kevlar.mdl"
+#define W_WeaponBox "models/w_weaponbox.mdl"
+#define W_LongJump "models/w_longjump.mdl"
+#define W_Water "models/ef_m3dragonm_sign.mdl"
+
+new CrashModels[][]={
+    W_Shit,
+    W_KongFuBook,
+    W_Sex,
+    W_Money,
+    W_kevlar,
+    W_HeGrende,
+    W_WeaponBox,
+    W_LongJump,
+    W_Water
+}
 
 new Float:Weapon_EventProbability
 
@@ -120,10 +143,9 @@ public plugin_precache(){
     UTIL_Precache_Sound(SexSound)
     blastspr = precache_model("sprites/steam1.spr")
 
-    precache_model(W_Shit)
-    precache_model(W_Sex)
-    precache_model(W_KongFuBook)
-    precache_model(W_Money)
+    for(new i = 0 ; i < sizeof CrashModels ; i++){
+        precache_model(CrashModels[i])
+    }
 }
 
 public plugin_natives(){
@@ -270,6 +292,8 @@ public CreateItem(ownerid , Float:org[3]){
     callfunc_push_int(ownerid)
     callfunc_end()
 
+    SetTouch(ent, "Touch_Boxs")
+
     set_prop_float(ent , "picktime", get_gametime() + 2.0)
 
     ArrayDestroy(PriSomeEvent)
@@ -411,6 +435,48 @@ public RandShit(boxid , owner){
     SetTouch(boxid,"Touch_Boxs")
 }
 
+public RandGrenade(boxid , owner){
+    new name[32]
+    get_user_name(owner, name, 31)
+    engfunc(EngFunc_SetModel, boxid, W_HeGrende)
+    set_prop_string(boxid, "callback", "HeGrende_Touch")
+    m_print_color(0,"!g[砸枪提示]!t%s砸出了一颗手雷", name)
+}
+
+public RandAmmo(boxid , owner){
+    new name[32]
+    get_user_name(owner, name, 31)
+    engfunc(EngFunc_SetModel, boxid, W_WeaponBox)
+    set_prop_string(boxid, "callback", "Ammo_Touch")
+    m_print_color(0,"!g[砸枪提示]!t%s砸出了武器补给", name)
+}
+
+public RandLongJump(boxid , owner){
+    new name[32]
+    get_user_name(owner, name, 31)
+    engfunc(EngFunc_SetModel, boxid, W_LongJump)
+    set_prop_string(boxid, "callback", "LongJump_Touch")
+    m_print_color(0,"!g[砸枪提示]!t%s砸出了长跳包", name)
+}
+
+public RandKevlar(boxid , owner){
+    new name[32]
+    get_user_name(owner, name, 31)
+    engfunc(EngFunc_SetModel, boxid, W_kevlar)
+    set_prop_string(boxid, "callback", "Kevlar_Touch")
+    m_print_color(0,"!g[砸枪提示]!t%s砸出了护甲补给", name)
+}
+
+public RandWater(boxid, owner){
+    new name[32]
+    get_user_name(owner, name, 31)
+    engfunc(EngFunc_SetModel, boxid, W_Water)
+    m_print_color(0,"!g[砸枪提示]!t哦不！！%s砸出了水旋涡快跑！！", name)
+    SetThink(boxid , "Water_Think")
+    set_entvar(boxid , var_nextthink , get_gametime() + 0.1)
+    set_entvar(boxid , var_fuser1 , get_gametime() + 3.0)
+}
+
 public create_effect(Float:_origin[3]){
 	new origin[3]
 	FVecIVec(_origin, origin)
@@ -449,8 +515,7 @@ public WpnTouch_Boxs(this, other){
     get_prop_string(this,"wpncallback",callback,31)
     new plid = get_prop_int(this,"plid")
     new funcid = get_func_id(callback, plid)
-    new Float:picktime = get_prop_float(this, "picktime")
-    if(get_gametime() < picktime)
+    if(!CheckCanPick(this))
         return
     new pItem = get_member( other, m_rgpPlayerItems, PRIMARY_WEAPON_SLOT );
     if(!is_nullent(pItem)){
@@ -463,8 +528,7 @@ public WpnTouch_Boxs(this, other){
 }
 
 public ShitTouch_Boxs(this, other){
-    new Float:picktime = get_prop_float(this, "picktime")
-    if(get_gametime() < picktime)
+    if(!CheckCanPick(this))
         return
     new shitid = get_prop_int(this, "shitid")
     if(shitid == 0){
@@ -479,9 +543,62 @@ public ShitTouch_Boxs(this, other){
     rg_remove_entity(this)
 }
 
+public HeGrende_Touch(this , other){
+    if(!CheckCanPick(this))
+        return
+    new hegrenade_num = get_member(other , m_rgAmmo , 12)
+    if(hegrenade_num == 0){
+        rg_give_item(other, "weapon_hegrenade")
+    }else{
+        set_member(other ,m_rgAmmo , hegrenade_num + 1 , 12)
+    }
+    rg_remove_entity(this)
+}
+
+public LongJump_Touch(this , other){
+    if(!CheckCanPick(this))
+        return
+    // set_member(other , m_fLongJump , 1)
+    new LongJump = rg_create_entity("item_longjump")
+    if(is_nullent(LongJump)){
+        rg_remove_entity(this)
+        return
+    }
+    new Float:Origin[3]
+    get_entvar(this , var_origin , Origin)
+    set_entvar(LongJump , var_origin , Origin)
+    ExecuteHam(Ham_Spawn , LongJump)
+    rg_remove_entity(this)
+}
+
+public Kevlar_Touch(this , other){
+    if(!CheckCanPick(this))
+        return
+    rg_set_user_armor(other , 100 , ARMOR_KEVLAR)
+    rg_remove_entity(this)
+}
+
+public Ammo_Touch(this , other){
+    if(!CheckCanPick(this))
+        return
+    new wpn = get_member(other, m_pActiveItem)
+    if(wpn <= 0)
+        return
+    new MaxAmmo = rg_get_iteminfo(wpn , ItemInfo_iMaxAmmo1)
+    new WeaponIdType:wpnid = WeaponIdType:rg_get_iteminfo(wpn, ItemInfo_iId)
+    if(wpnid == WEAPON_KNIFE || wpnid == WEAPON_HEGRENADE ||
+        wpnid == WEAPON_FLASHBANG || wpnid == WEAPON_SMOKEGRENADE){
+        m_print_color(other, "!g[冰布提醒]!y此武器无法拾取次弹药。")
+        return;
+    }
+    MaxAmmo /= 2
+    new orbpammo = rg_get_user_bpammo(other,wpnid)
+    rg_set_user_bpammo(other,wpnid, orbpammo + MaxAmmo)
+    rg_remove_entity(this)
+}
+
 public SexTouch_Boxs(this,other){
-    new Float:picktime = get_prop_float(this, "picktime")
-    if(get_gametime() < picktime)
+    if(!CheckCanPick(this))
         return
     new sexid = get_prop_int(this, "Sexid")
     new Float:c_heal
@@ -523,7 +640,16 @@ public MoneyTouch_Boxs(this,other){
     UTIL_EmitSound_ByCmd(other, MoneySound)
 }
 
-
+public Water_Think(ent){
+    new Float:Origin[3]
+    get_entvar(ent , var_origin , Origin)
+    rg_dmg_radius(Origin ,ent ,ent , 15.0 , 100.0 , CLASS_NONE , DMG_FREEZE)
+    if(get_gametime() > get_entvar(ent , var_fuser1)){
+        rg_remove_entity(ent)
+        return
+    }
+    set_entvar(ent ,var_nextthink , get_gametime() + 0.9)
+}
 
 //(GunName[],WorldModel[],GiveFunc[],Plid)
 public native_BulidCrashGunWeapon(id,nums){
@@ -580,4 +706,11 @@ public plugin_end(){
     ArrayDestroy(GunCallBack)
     ArrayDestroy(GunWModule)
     ArrayDestroy(GunPlid)
+}
+
+stock CheckCanPick(boxid){
+    new Float:picktime = get_prop_float(boxid, "picktime")
+    if(get_gametime() < picktime)
+        return false
+    return true
 }

@@ -766,6 +766,7 @@ public FakeClientTask(){
 		set_entvar(FakeClient, var_effects,  EF_NODRAW);
 		set_entvar(FakeClient, var_solid, SOLID_NOT);
 		set_entvar(FakeClient, var_movetype, MOVETYPE_NOCLIP);
+		set_entvar(FakeClient, var_health , 99999999999999.0);
 		return;
     }
 }

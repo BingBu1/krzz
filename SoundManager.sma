@@ -13,6 +13,11 @@ enum SoundsData{
 new Mp3Sounds[][SoundsData] = {
     {"Bing_Kr_Sound/Xiangpi.mp3", "天真的橡皮DJ"},
     {"Bing_Kr_Sound/yinghuacai.mp3", "樱华彩"},
+    {"Bing_Kr_Sound/RunFree.mp3" , "Deep Chills-Run Free"},
+    {"Bing_Kr_Sound/xytl.mp3" , "等下一个天亮"},
+    {"Bing_Kr_Sound/Thatgirl.mp3" , "That Girl"},
+    {"Bing_Kr_Sound/恋人.mp3" , "恋人-李荣浩"},
+    {"Bing_Kr_Sound/黑色幽默.mp3" , "黑色幽默-周杰伦"},
     {"Bing_Kr_Sound/yoasobi.mp3" , "アイドル"},
     {"Bing_Kr_Sound/sandstorm.mp3" , "sandstorm变奏"},
     {"Bing_Kr_Sound/goahead.mp3" , "イケナイGO AHEAD"},
@@ -79,7 +84,7 @@ public FindSound(id){
     }
 
     new menu = menu_create("找到的歌曲" , "FindSoundHandle")
-    for(new i = 0 ; i < sizeof FindCount ; i++){
+    for(new i = 0 ; i < FindCount ; i++){
         new Name[64] , info[10] , Key
         ArrayGetString(FindSoundArray , i , Name , charsmax(Name))
         TrieGetCell(FindSoundMap , Name , Key)
@@ -173,6 +178,7 @@ public PlayForAll(id){
             continue
         Mp3Play(i , Mp3Sounds[Seled][SoundPath])
     }
+    SubAmmoPak(id , 5.0)
     new name[32]
     get_user_name(id , name , charsmax(name))
     m_print_color(0 , "!g[冰布提示]!t%s!y给大伙点了一首!t%s" , name , Mp3Sounds[Seled][SoundName])
