@@ -58,9 +58,9 @@ public Miku_Skill(id){
     get_user_name(id , username , charsmax(username))
     m_print_color(0 , "!g[冰布提示]!t%s释放了初音技能: 虚拟歌姬的支援" , username)
     InSkill = true
-    SkillTimer = get_gametime() + 35.0
+    SkillTimer = get_gametime() + 60.0
     SkillMaster = id
-    set_task(35.0 , "CloseSkill")
+    set_task(60.0 , "CloseSkill")
     EnableHamForward(DamgeHandle)
     // EnableHamForward(PostDamageHandle)
     PlayerSkillBuff()

@@ -58,7 +58,9 @@ new PreModules [][]= {
 new PrePlayerModel [][] = {
     "ramenchan_",
     "lemonfeijibei",
-    "bing_sidalin"
+    "bing_sidalin",
+    "anonim_player",
+    "Cirno2",
 }
 
 new g_ModelData[][ModelLvNames] = {
@@ -82,6 +84,9 @@ new g_ModelData[][ModelLvNames] = {
     { 1250, "金正恩"   ,"jinzhengen"     },//18
     { 1400, "斯大林"   ,"bing_sidalin"     },//18
     { 1700 , "戈登弗里曼" , "gordon"},
+    { 1850 , "低客的黑调" , "anonim_player"},
+    { 2000 , "时停角色-暂未" , "anonim_player"},
+    { 2150 , "奥摩-暂未" , "anonim_player"},
     {   0, "猫姬-管理模型" , "NecoArc" ,2},
     {   0, "红豆(Vip)" , "hongdou" ,1},
     {   800, "初音未来(Vip)" , "Miku" ,1},
@@ -102,6 +107,7 @@ new VipModelSize
 new ChangeModel_Hanle
 new Handle:g_SqlTuple
 new Trie:g_PlayerModelMap
+new bool:g_SpecialModelEnable[33]
 
 public plugin_init(){
     register_plugin("设置玩家模型", "1.0", "Bing")
@@ -118,12 +124,44 @@ public plugin_init(){
 
     register_clcmd("say /changemodle" , "CreateMoudleMenu")
 
+    register_clcmd("modelemenu" , "modelMenu")
+
     ChangeModel_Hanle = CreateMultiForward("OnModelChange" , ET_STOP , FP_CELL ,FP_STRING)
 
     GetVipModelSize()
 
     g_PlayerModelMap = TrieCreate()
 }
+
+
+public modelMenu(id){
+    if(!HasSpecialModel(id)){
+        m_print_color(id , "!g[冰布提示]!y你没有定制角色无法使用此菜单。")
+    }
+    new const EnableText [] = "定制角色 : [%s]"
+    new Buff[60]
+    formatex(Buff , charsmax(Buff) , EnableText , g_SpecialModelEnable[id] ? "开" : "关")
+    new menu = menu_create("定制角色菜单" , "ChangeSpecialHandle")
+    menu_additem(menu , Buff)
+    menu_display(id, menu)
+}
+
+public ChangeSpecialHandle(id , menu , item){
+    if(item == MENU_EXIT){
+        menu_destroy(menu)
+        return
+    }
+    switch(item){
+        case 0 : {
+            g_SpecialModelEnable[id] = g_SpecialModelEnable[id] ? false : true
+        }
+    }
+    menu_destroy(menu)
+    modelMenu(id)
+    return
+}
+
+
 
 public SqlInitOk(Handle:sqlHandle , Handle:ConnectHandle){
     g_SqlTuple = sqlHandle
@@ -165,6 +203,7 @@ public GetVipModelSize(){
 
 public client_putinserver(id){
     LastUseModel[id][Use_ed] = false
+    g_SpecialModelEnable[id] = true
 }
 
 public client_disconnected(id){
@@ -506,7 +545,7 @@ public SelMenuByid(id, selid){
 public OnModelChange(id , name[]){
     new steamid[32]
     get_user_authid(id , steamid , charsmax(steamid))
-    if(TrieKeyExists(g_PlayerModelMap , steamid)){
+    if(g_SpecialModelEnable[id] && TrieKeyExists(g_PlayerModelMap , steamid)){
         new modelname[32]
         TrieGetString(g_PlayerModelMap , steamid , modelname , charsmax(modelname))
         rg_set_user_model(id , modelname)
@@ -517,4 +556,12 @@ stock UTIL_ChaChePlayerModel(name[]){
     new ModelPath[256]
     formatex(ModelPath , 255 , "models/player/%s/%s.mdl" , name , name)
     precache_model(ModelPath)
+}
+
+stock HasSpecialModel(id){
+    new steamid[32]
+    get_user_authid(id , steamid , charsmax(steamid))
+    if(TrieKeyExists(g_PlayerModelMap , steamid))
+        return true
+    return false
 }

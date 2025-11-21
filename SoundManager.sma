@@ -18,6 +18,7 @@ new Mp3Sounds[][SoundsData] = {
     {"Bing_Kr_Sound/Thatgirl.mp3" , "That Girl"},
     {"Bing_Kr_Sound/恋人.mp3" , "恋人-李荣浩"},
     {"Bing_Kr_Sound/黑色幽默.mp3" , "黑色幽默-周杰伦"},
+    {"Bing_Kr_Sound/Centuries.mp3" , "Centuries"},
     {"Bing_Kr_Sound/yoasobi.mp3" , "アイドル"},
     {"Bing_Kr_Sound/sandstorm.mp3" , "sandstorm变奏"},
     {"Bing_Kr_Sound/goahead.mp3" , "イケナイGO AHEAD"},

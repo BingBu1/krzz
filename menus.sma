@@ -92,6 +92,7 @@ public CreateMenu(id){
     menu_additem(menuid, "一起来跳舞", "14")
     menu_additem(menuid, "查询VIP状态", "15")
     menu_additem(menuid, "点歌系统", "16")
+    menu_additem(menuid, "定制角色菜单", "17")
     menu_display(id, menuid)
 }
 
@@ -192,6 +193,7 @@ public menuHandle(id,menu,item){
         case 14 : client_cmd(id  , "cheer")//跳舞
         case 15 : VipCheckPrint(id)
         case 16 : client_cmd(id , "buysound")
+        case 17 : client_cmd(id , "modelemenu")
     }
     menu_destroy(menu)
 }

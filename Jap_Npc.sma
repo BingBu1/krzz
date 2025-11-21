@@ -156,6 +156,7 @@ public plugin_natives(){
 	register_native("GetNpcList" , "KrGetNpcList" , 1)
 	register_native("ExecNpcKillCallBack" , "native_ExecNpcKillCallBack")
 	register_native("GetLvDamageReduction" , "native_GetLvDamageReduction")
+	register_native("SetLvDamageReduction" , "native_SetLvDamageReduction")
 }
 
 public native_ExecNpcKillCallBack(){
@@ -164,6 +165,9 @@ public native_ExecNpcKillCallBack(){
 
 public Float:native_GetLvDamageReduction(){
 	return ClacLvDamageReduction()
+}
+public native_SetLvDamageReduction(pl_id , nums){
+	CurrentLeavelDamageReduction = get_param_f(1)
 }
 
 Float:ClacLvDamageReduction(){
@@ -841,7 +845,13 @@ public play_anim(id , anim , Float:PlayTimer){
 	set_prop_float(id, "reainmtime", get_gametime() + PlayTimer)
 }
 
-public SendDeathMessage(vim,attacker){
+public SendDeathMessage(vim , attacker){
+	if(!is_valid_ent(vim) || !is_valid_ent(attacker))
+		return
+	if(vim <= 0 || vim >= MaxClients)
+		return
+	if(!ExecuteHam(Ham_IsPlayer , attacker) || !is_user_connected(attacker))
+		return
 	new waeponname [32]
 	new wpnid = cs_get_user_weapon(attacker)
 	if(wpnid){

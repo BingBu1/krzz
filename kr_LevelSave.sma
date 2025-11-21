@@ -74,8 +74,11 @@ public event_roundstart(){
 }
 
 public EventRoundEnd(){
-    if(!IsNeedCheck || !IsLoad)
+    if(!IsNeedCheck || !IsLoad){
+        RoundNums = 0
         return
+    }
+        
     if(get_gametime() - StartRoundTime < 60.0)
         return
     RoundNums++

@@ -28,9 +28,9 @@ public plugin_init(){
 
     RegisterHam(Ham_Weapon_WeaponIdle , Gas , "GasIdel")
 
-    register_clcmd("give_gas" , "Give_Gas")
+    // register_clcmd("give_gas" , "Give_Gas")
     BulidCrashGunWeapon("煤气罐" , GasModels[0] , "Give_Gas" , pl_id)
-    BulidWeaponMenu("煤气罐" , cost)
+    wpnid = BulidWeaponMenu("煤气罐" , cost)
 }
 
 public ItemSel_Post(id , items , Float:cont){

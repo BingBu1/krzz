@@ -686,8 +686,15 @@ public ResetAttack2(ent , Float:Min,Float:Max){
 
 public MakeDie(beattack , DieStr[]){
     new g_msgDeathMsg = get_user_msgid("DeathMsg");
+    if(g_msgDeathMsg <= 0)
+        return
+    new FakeClient = GetFakeClient()
+    if(!ExecuteHam(Ham_IsPlayer , beattack) || !is_user_connected(beattack) || !is_valid_ent(beattack))
+        return
+    if(!is_valid_ent(FakeClient) || FakeClient<= 0 || FakeClient > MaxClients)
+        return
     message_begin(MSG_BROADCAST, g_msgDeathMsg);
-    write_byte(GetFakeClient());
+    write_byte(FakeClient);
     write_byte(beattack);
     write_byte(0);
     write_string(DieStr);
