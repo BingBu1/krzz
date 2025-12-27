@@ -61,6 +61,7 @@ new PrePlayerModel [][] = {
     "bing_sidalin",
     "anonim_player",
     "Cirno2",
+    "cs2"
 }
 
 new g_ModelData[][ModelLvNames] = {
@@ -85,6 +86,7 @@ new g_ModelData[][ModelLvNames] = {
     { 1400, "斯大林"   ,"bing_sidalin"     },//18
     { 1700 , "戈登弗里曼" , "gordon"},
     { 1850 , "低客的黑调" , "anonim_player"},
+    { 2000 , "donk" , "cs2"},
     { 2000 , "时停角色-暂未" , "anonim_player"},
     { 2150 , "奥摩-暂未" , "anonim_player"},
     {   0, "猫姬-管理模型" , "NecoArc" ,2},
@@ -98,6 +100,7 @@ new ModelSounds[][ModelSoundData]={
     {"jinzhengen", "kr_sound/jinzhengen.wav"}, // 假设的音乐路径
     {"NecoArc", "kr_sound/necoact-start.wav"},
     {"kobelaoda", "kr_sound/LaoDa_Start.wav"},
+    {"cs2", "kr_sound/Donk_Start.wav"},
 }
 
 new hero[33] , Float:ChangeModelsCd[33]
@@ -108,6 +111,7 @@ new ChangeModel_Hanle
 new Handle:g_SqlTuple
 new Trie:g_PlayerModelMap
 new bool:g_SpecialModelEnable[33]
+new g_CloseLv
 
 public plugin_init(){
     register_plugin("设置玩家模型", "1.0", "Bing")
@@ -125,6 +129,9 @@ public plugin_init(){
     register_clcmd("say /changemodle" , "CreateMoudleMenu")
 
     register_clcmd("modelemenu" , "modelMenu")
+
+    
+    bind_pcvar_num(register_cvar("Kr_CloseLv" , "0") , g_CloseLv)
 
     ChangeModel_Hanle = CreateMultiForward("OnModelChange" , ET_STOP , FP_CELL ,FP_STRING)
 
@@ -485,7 +492,7 @@ public CreateMoudleMenu(id){
     for(new i = 0 ; i < sizeof g_ModelData; i++){
         new buff[50],info[10]
         new module_lv = GetModeleLv(i)
-        if(player_lv < module_lv){
+        if(player_lv < module_lv && !g_CloseLv){
             formatex(buff, charsmax(buff), "\d%s\r(%d级)", g_ModelData[i][ModelNames], module_lv)
         }else{
             formatex(buff, charsmax(buff), "\y%s\r(%d级)", g_ModelData[i][ModelNames], module_lv)
@@ -513,7 +520,7 @@ public SelMenuByid(id, selid){
     new lv = GetLv(id)
     new modelLv = GetModeleLv(selid)
     const MAX_STANDARD_MODEL_ID = 13
-    if(access(id , ADMIN_RCON)){
+    if(access(id , ADMIN_RCON) || g_CloseLv){
         lv += 10000
     }
     if(modelLv > lv){

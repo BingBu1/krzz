@@ -39,7 +39,8 @@ new Jp_Name[][]={
 }
 
 new const Jp_Model [][]={
-	"models/rainych/krzz/Japanese4.mdl",
+	// "models/rainych/krzz/Japanese4.mdl",
+	"models/Bing_Kr_res/RiJun_Npc/Japanese4.mdl",
 	"models/rainych/krzz/tank.mdl",
 	"models/rainych/krzz/tank_died.mdl",
 }
@@ -324,7 +325,7 @@ public HOSTAGE_TakeDamage(this, idinflictor, idattacker, Float:damage, damagebit
 	new Float:newdamage = damage
 	new HumanRule = _:GetHunManRule()
 	new RiJunRule = _:GetRiJunRule()
-	if(CurTeam == CS_TEAM_CT){
+	if(CurTeam == CS_TEAM_CT && !(damagebits & DMG_NOARMOR)){
 		new Float:vel[3]
 		get_entvar(this, var_velocity, vel)
 		newdamage = damage * (1.0 - CurrentLeavelDamageReduction)
@@ -846,6 +847,8 @@ public play_anim(id , anim , Float:PlayTimer){
 }
 
 public SendDeathMessage(vim , attacker){
+	if(get_msg_block(DeadMsg) == MSG_BLOCK_ONCE || get_msg_block(DeadMsg) == MSG_BLOCK_SET)
+		return
 	if(!is_valid_ent(vim) || !is_valid_ent(attacker))
 		return
 	if(vim <= 0 || vim >= MaxClients)
